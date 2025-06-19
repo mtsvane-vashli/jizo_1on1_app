@@ -1,5 +1,6 @@
-// frontend/src/views/Settings.js (修正後)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext'; // ★追加
+import { useNavigate } from 'react-router-dom'; // ★追加
 
 function Settings() {
   const [employees, setEmployees] = useState([]);
@@ -8,27 +9,56 @@ function Settings() {
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [addingEmployee, setAddingEmployee] = useState(false);
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+  const { isAuthenticated, loading: authLoading } = useAuth(); // ★追加
+  const navigate = useNavigate(); // ★追加
 
   // 部下の一覧を取得する関数
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => { // useCallback でラップ
+    // 認証情報のロードが完了していない、または認証されていない場合は処理しない
+    if (authLoading || !isAuthenticated) {
+      console.log('Auth loading or not authenticated, skipping employee fetch in Settings.');
+      setLoadingEmployees(false); // ローディング状態を解除
+      setEmployees([]); // 部下リストを空にする
+      return;
+    }
+
     setLoadingEmployees(true);
     try {
-      const response = await fetch('http://localhost:5000/api/employees');
+      const token = localStorage.getItem('jwtToken'); // ★追加
+      if (!token) { // トークンがない場合はAPI呼び出しをスキップ
+        alert('認証に失敗しました。再度ログインしてください。');
+        navigate('/login', { replace: true });
+        throw new Error('No authentication token found.');
+      }
+
+      const response = await fetch('http://localhost:5000/api/employees', {
+          headers: {
+              'Authorization': `Bearer ${token}` // ★追加
+          }
+      });
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error:', response.status, response.statusText, errorText);
+        if (response.status === 401 || response.status === 403) {
+            alert('認証に失敗しました。再度ログインしてください。');
+            navigate('/login', { replace: true });
+        }
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       setEmployees(data);
     } catch (error) {
       console.error('Error fetching employees:', error);
-      alert('部下の一覧の取得に失敗しました。');
+      alert(`部下の一覧の取得に失敗しました: ${error.message || '不明なエラー'}`);
+      navigate('/login', { replace: true });
     } finally {
       setLoadingEmployees(false);
     }
-  };
+  }, [isAuthenticated, authLoading, setLoadingEmployees, setEmployees, navigate]); // 依存配列も更新
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]); // 依存配列に fetchEmployees を追加
 
   // 新しい部下を登録する関数
   const addEmployee = async (e) => {
@@ -40,9 +70,20 @@ function Settings() {
 
     setAddingEmployee(true);
     try {
+      const token = localStorage.getItem('jwtToken'); // ★追加
+      if (!token) {
+          alert('認証に失敗しました。再度ログインしてください。');
+          navigate('/login', { replace: true });
+          setAddingEmployee(false);
+          return;
+      }
+
       const response = await fetch('http://localhost:5000/api/employees', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // ★追加
+        },
         body: JSON.stringify({ name: newEmployeeName.trim(), email: newEmployeeEmail.trim() }),
       });
 
@@ -52,12 +93,20 @@ function Settings() {
         setNewEmployeeEmail('');
         fetchEmployees(); // リストを更新
       } else {
-        const errorData = await response.json();
-        alert(`部下の登録に失敗しました: ${errorData.error || '不明なエラー'}`);
+        const errorText = await response.text();
+        let errorMessage = errorText;
+        try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorMessage;
+        } catch (jsonParseError) { /* ignore */ }
+        alert(`部下の登録に失敗しました: ${errorMessage}`);
+        if (response.status === 401 || response.status === 403) {
+            navigate('/login', { replace: true });
+        }
       }
     } catch (error) {
       console.error('Error adding employee:', error);
-      alert('部下の登録中にエラーが発生しました。');
+      alert(`部下の登録中にエラーが発生しました: ${error.message || '不明なエラー'}`);
     } finally {
       setAddingEmployee(false);
     }
@@ -127,8 +176,8 @@ function Settings() {
         </div>
       </div>
 
-      {/* ★追加: 部下管理セクション */}
-      <div className="settings-card mt-8"> {/* mt-8 で上のカードとの間に余白 */}
+      {/* 部下管理セクション */}
+      <div className="settings-card mt-8">
         <h3 className="settings-password-section">部下管理</h3>
         <p className="screen-description mb-4">会話を行う部下を登録・管理します。</p>
 
@@ -176,9 +225,9 @@ function Settings() {
         ) : employees.length === 0 ? (
           <p className="text-gray-600">まだ部下が登録されていません。</p>
         ) : (
-          <ul className="employee-list"> {/* 新しいクラス名 */}
+          <ul className="employee-list">
             {employees.map(employee => (
-              <li key={employee.id} className="employee-list-item"> {/* 新しいクラス名 */}
+              <li key={employee.id} className="employee-list-item">
                 <span>{employee.name} {employee.email && `(${employee.email})`}</span>
                 {/* ここに編集・削除ボタンを追加することも可能 */}
               </li>

@@ -56,6 +56,14 @@ db.serialize(() => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // users テーブルの作成
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE, -- ユーザー名 (ログイン用、ユニーク)
+        password TEXT NOT NULL,       -- ハッシュ化されたパスワード
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     // ★修正/追加: conversations テーブルに employee_id カラムを追加
     // まず、カラムが存在しないか確認し、存在しない場合のみ追加
     // ★修正: db.run を db.all に変更

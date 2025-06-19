@@ -9,6 +9,17 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const db = require('./database'); // Step 5で作成したdatabase.jsをインポート
 
+const bcrypt = require('bcryptjs'); // ★追加: bcryptjs をインポート
+const jwt = require('jsonwebtoken'); // ★追加: jsonwebtoken をインポート
+
+// JWT のシークレットキーを設定 (環境変数から取得)
+const JWT_SECRET = process.env.JWT_SECRET; // ★追加: 環境変数から読み込む
+// WARNING: JWT_SECRET は .env ファイルに設定すること。本番環境では非常に複雑な文字列にすること。
+if (!JWT_SECRET || JWT_SECRET === 'your_super_secret_jwt_key_that_is_long_and_random_and_secure_like_this_example_but_longer') {
+    console.error('CRITICAL ERROR: JWT_SECRET is not properly set! Please configure it in your .env file with a secure, random string.');
+    process.exit(1); // 秘密鍵がない場合はサーバー起動を停止
+}
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -17,8 +28,28 @@ app.use(express.json()); // JSONボディをパースするために必要
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// 認証ミドルウェア
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // "Bearer TOKEN"
+
+    if (token == null) {
+        return res.status(401).json({ error: 'Authentication token required.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            console.error('JWT verification failed:', err.message);
+            // トークンが無効または期限切れの場合は 403 Forbidden を返す
+            return res.status(403).json({ error: 'Invalid or expired token.' });
+        }
+        req.user = user; // リクエストオブジェクトにユーザー情報を付与
+        next(); // 次のミドルウェアまたはルートハンドラに進む
+    });
+};
+
 // app.post('/api/chat') エンドポイントの定義全体
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', authenticateToken, async (req, res) => {
     const { message: userMessage, conversationId: reqConversationId, appState: clientAppState, employeeId: reqEmployeeId } = req.body; // ★修正: reqEmployeeId を追加
     let aiReply = '';
     let fullPrompt = '';
@@ -275,7 +306,7 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // 会話履歴全体を取得するAPIエンドポイント
-app.get('/api/conversations', (req, res) => {
+app.get('/api/conversations', authenticateToken, (req, res) => {
     // ★修正: employees テーブルと JOIN して部下の名前も取得する
     db.all(`
         SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions,
@@ -293,7 +324,7 @@ app.get('/api/conversations', (req, res) => {
 });
 
 // 特定の会話のメッセージ履歴を取得するAPIエンドポイント
-app.get('/api/conversations/:id/messages', (req, res) => {
+app.get('/api/conversations/:id/messages', authenticateToken, (req, res) => {
     const conversationId = req.params.id;
     db.all("SELECT sender, text FROM messages WHERE conversation_id = ? ORDER BY id ASC", [conversationId], (err, rows) => {
         if (err) {
@@ -305,7 +336,7 @@ app.get('/api/conversations/:id/messages', (req, res) => {
 });
 
 // 特定の会話の詳細（要約とネクストアクション含む）を取得するAPIエンドポイント
-app.get('/api/conversations/:id', (req, res) => {
+app.get('/api/conversations/:id', authenticateToken, (req, res) => {
     const conversationId = req.params.id;
     // ★修正: employees テーブルと JOIN して部下の名前も取得する
     db.get(`
@@ -328,7 +359,7 @@ app.get('/api/conversations/:id', (req, res) => {
 });
 
 // 要約とネクストアクションを生成・保存するAPIエンドポイント
-app.post('/api/summarize_and_next_action', async (req, res) => {
+app.post('/api/summarize_and_next_action', authenticateToken, async (req, res) => {
     const { conversationId } = req.body;
 
     if (!conversationId) {
@@ -464,7 +495,7 @@ app.post('/api/summarize_and_next_action', async (req, res) => {
     }
 });
 
-app.get('/api/dashboard/keywords', (req, res) => {
+app.get('/api/dashboard/keywords', authenticateToken, (req, res) => {
     // すべてのキーワードを集計し、頻度順に並べ替える
     db.all(`
         SELECT keyword, COUNT(keyword) as frequency
@@ -481,8 +512,31 @@ app.get('/api/dashboard/keywords', (req, res) => {
     });
 });
 
+// ダッシュボード用の感情推移データを取得するAPIエンドポイント
+app.get('/api/dashboard/sentiments', authenticateToken, (req, res) => { // authenticateToken も追加済み
+    // 会話と感情データを結合し、時系列順に並べ替える
+    db.all(`
+        SELECT
+            s.overall_sentiment,
+            s.positive_score,
+            s.negative_score,
+            s.neutral_score,
+            c.timestamp AS conversation_timestamp
+        FROM sentiments s
+        JOIN conversations c ON s.conversation_id = c.id
+        ORDER BY c.timestamp ASC
+        LIMIT 20 -- 最新の20件の会話の感情を取得
+    `, [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching dashboard sentiments:', err.message);
+            return res.status(500).json({ error: 'Failed to fetch dashboard sentiments.' });
+        }
+        res.json(rows);
+    });
+});
+
 // 新しい部下を登録するAPIエンドポイント
-app.post('/api/employees', async (req, res) => {
+app.post('/api/employees', authenticateToken, async (req, res) => {
     const { name, email } = req.body;
 
     if (!name) {
@@ -511,7 +565,7 @@ app.post('/api/employees', async (req, res) => {
 });
 
 // 登録されている部下の一覧を取得するAPIエンドポイント
-app.get('/api/employees', (req, res) => {
+app.get('/api/employees', authenticateToken, (req, res) => {
     db.all("SELECT id, name, email FROM employees ORDER BY name ASC", [], (err, rows) => {
         if (err) {
             console.error('Error fetching employees:', err.message);
@@ -519,6 +573,76 @@ app.get('/api/employees', (req, res) => {
         }
         res.json(rows);
     });
+});
+
+// ユーザー登録API
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required.' });
+    }
+
+    try {
+        // パスワードをハッシュ化
+        const hashedPassword = await bcrypt.hash(password, 10); // 10はソルトラウンド数
+
+        const userId = await new Promise((resolve, reject) => {
+            db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword], function(err) {
+                if (err) {
+                    if (err.message.includes('UNIQUE constraint failed')) {
+                        reject(new Error('Username already exists.'));
+                    } else {
+                        reject(err);
+                    }
+                } else {
+                    resolve(this.lastID);
+                }
+            });
+        });
+        res.status(201).json({ message: 'User registered successfully.', userId });
+    } catch (error) {
+        console.error('Error during user registration:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ユーザーログインAPI
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required.' });
+    }
+
+    try {
+        const user = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid username or password.' });
+        }
+
+        // パスワードを比較
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid username or password.' });
+        }
+
+        // JWT を生成
+        // トークンにユーザーのIDとユーザー名を含める
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' }); // トークンの有効期限を1時間に設定
+
+        res.status(200).json({ message: 'Logged in successfully.', token, username: user.username, userId: user.id }); // userIdも返す
+    } catch (error) {
+        console.error('Error during user login:', error.message);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
 });
 
 

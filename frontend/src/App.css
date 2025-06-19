@@ -774,3 +774,112 @@ code {
 .employee-selection-group .employee-option-button:hover {
     background-color: #bbdefb; /* hover:bg-blue-200 */
 }
+
+/* --- 認証フォーム (Login/Register) 関連スタイル --- */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f2f5; /* Appと同じ背景色 */
+}
+
+.auth-card {
+    background-color: #ffffff;
+    padding: 2.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+    max-width: 25rem; /* フォームの最大幅 */
+    width: 100%;
+    text-align: center;
+}
+
+.auth-header {
+    font-size: 2rem; /* text-3xl */
+    font-weight: 600; /* font-semibold */
+    margin-bottom: 1.5rem;
+    color: #34495e;
+}
+
+.auth-input-group {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.auth-input-group label {
+    display: block;
+    color: #4a5568;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.auth-input {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    appearance: none;
+    border: 1px solid #e0e6ed;
+    border-radius: 0.25rem;
+    width: 100%;
+    padding: 0.75rem 1rem; /* py-3 px-4 */
+    color: #333333;
+    line-height: 1.25;
+    outline: none;
+    font-size: 0.9rem;
+}
+
+.auth-input:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 1px #4299e1;
+}
+
+.auth-button {
+    background-color: #4299e1;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.25rem;
+    outline: none;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: background-color 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    width: 100%;
+    margin-top: 1.5rem; /* mt-6 */
+}
+
+.auth-button:hover {
+    background-color: #3182ce;
+}
+
+.auth-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.auth-link-text {
+    font-size: 0.85rem;
+    color: #617387;
+    margin-top: 1.5rem;
+}
+
+.auth-link {
+    color: #4299e1;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+/* --- ローディング画面 --- */
+.loading-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    font-size: 1.2rem;
+    color: #34495e;
+}
