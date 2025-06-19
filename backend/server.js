@@ -478,6 +478,62 @@ app.post('/api/summarize_and_next_action', authenticateToken, async (req, res) =
             // キーワード抽出に失敗しても、要約は返す
         }
 
+        // ★追加: 会話から感情を抽出する Gemini API 呼び出し ★
+        let sentimentResult = { overall_sentiment: 'Neutral', positive_score: 0, negative_score: 0, neutral_score: 0 };
+        try {
+            const promptForSentiment = `以下の1on1の会話履歴を読み、会話全体の感情を分析してください。
+            以下のJSON形式で出力してください。感情スコアは0から1の範囲で指定してください。
+
+            ## 1on1会話履歴
+            ${formattedMessages}
+
+            ## 出力形式
+            {
+            "overall_sentiment": "Positive" | "Negative" | "Neutral" | "Mixed",
+            "positive_score": 0.0,
+            "negative_score": 0.0,
+            "neutral_score": 0.0
+            }
+            `;
+
+            const sentimentModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // またはgemini-1.5-pro
+            // ★修正: generateContent は result オブジェクトを返す
+            const sentimentResultObj = await sentimentModel.generateContent(promptForSentiment);
+            // ★修正: 実際のレスポンステキストは result オブジェクトの response プロパティから取得する
+            const sentimentText = sentimentResultObj.response.text();
+
+            const cleanSentimentText = sentimentText.replace(/```json\n|```/g, '').trim(); // '```json' と '```' を削除
+            sentimentResult = JSON.parse(cleanSentimentText); // ★修正: クリーンなテキストをパース
+
+            // スコアが数値であることを保証
+            sentimentResult.positive_score = parseFloat(sentimentResult.positive_score) || 0;
+            sentimentResult.negative_score = parseFloat(sentimentResult.negative_score) || 0;
+            sentimentResult.neutral_score = parseFloat(sentimentResult.neutral_score) || 0;
+
+
+            // 既存の感情データを削除してから新しい感情データを保存する (重複防止)
+            await new Promise((resolve, reject) => {
+                db.run('DELETE FROM sentiments WHERE conversation_id = ?', [conversationId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+
+            // sentiments テーブルに保存
+            await new Promise((resolve, reject) => {
+                db.run('INSERT INTO sentiments (conversation_id, overall_sentiment, positive_score, negative_score, neutral_score) VALUES (?, ?, ?, ?, ?)',
+                    [conversationId, sentimentResult.overall_sentiment, sentimentResult.positive_score, sentimentResult.negative_score, sentimentResult.neutral_score], function(err) {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+            console.log(`Sentiment saved for conversation ${conversationId}:`, sentimentResult.overall_sentiment);
+
+        } catch (sentimentError) {
+            console.error('Error extracting or saving sentiment:', sentimentError);
+            // 感情抽出に失敗しても、要約は返す
+        }
+
         // データベースに保存
         db.run('UPDATE conversations SET summary = ?, next_actions = ? WHERE id = ?',
             [summary, nextActions, conversationId], function(err) {
@@ -513,7 +569,7 @@ app.get('/api/dashboard/keywords', authenticateToken, (req, res) => {
 });
 
 // ダッシュボード用の感情推移データを取得するAPIエンドポイント
-app.get('/api/dashboard/sentiments', authenticateToken, (req, res) => { // authenticateToken も追加済み
+app.get('/api/dashboard/sentiments', authenticateToken, (req, res) => {
     // 会話と感情データを結合し、時系列順に並べ替える
     db.all(`
         SELECT

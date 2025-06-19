@@ -110,8 +110,8 @@ code {
   /* font-size: 1.25rem;  ★この行は削除またはコメントアウト */
   color: #90a4ae;
   /* ★SVG アイコンのためのサイズ指定と表示調整 */
-  width: 0.2rem;  /* SVGの幅を明示的に指定 */
-  height: 0.2rem; /* SVGの高さを明示的に指定 */
+  width: 1.25rem;  /* SVGの幅を明示的に指定 */
+  height: 1.25rem; /* SVGの高さを明示的に指定 */
   min-width: 1.25rem; /* 縮まないようにするための保険 */
   display: flex; /* SVGが中央に配置されやすいように */
   align-items: center;

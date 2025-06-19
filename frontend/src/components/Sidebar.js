@@ -3,6 +3,14 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+import {
+  CalendarIcon,
+  BookOpenIcon,
+  ChartBarIcon,
+  AcademicCapIcon,
+  Cog6ToothIcon
+} from '@heroicons/react/24/outline';
+
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,11 +23,11 @@ function Sidebar() {
 
   // ナビゲーションアイテムの定義
   const navItems = [
-    { name: '新規1on1サポート', path: '/', icon: '🗓️' },
-    { name: '過去のセッションログ', path: '/logs', icon: '📖' },
-    { name: '分析ダッシュボード', path: '/dashboard', icon: '📊' },
-    { name: '学習リソース', path: '/resources', icon: '📚' },
-    { name: '設定', path: '/settings', icon: '⚙️' },
+    { name: '新規1on1サポート', path: '/', icon: <CalendarIcon /> }, // ★修正: SVGコンポーネントに置き換え
+    { name: '過去のセッションログ', path: '/logs', icon: <BookOpenIcon /> }, // ★修正
+    { name: '分析ダッシュボード', path: '/dashboard', icon: <ChartBarIcon /> }, // ★修正
+    { name: '学習リソース', path: '/resources', icon: <AcademicCapIcon /> }, // ★修正
+    { name: '設定', path: '/settings', icon: <Cog6ToothIcon /> }, // ★修正
   ];
 
   return (
@@ -38,11 +46,8 @@ function Sidebar() {
                 to={item.path}
                 className={`sidebar-nav-link ${location.pathname === item.path ? 'active' : ''}`}
               >
-                {typeof item.icon === 'string' ? (
-                    <span className="sidebar-icon">{item.icon}</span>
-                ) : (
-                    <span className="sidebar-icon">{item.icon}</span> // SVGコンポーネントの場合もspanでラップ
-                )}
+                {/* ★修正: item.icon が SVG コンポーネントであることを想定し、span でラップ */}
+                <span className="sidebar-icon">{item.icon}</span>
                 {item.name}
               </Link>
             </li>

@@ -36,15 +36,15 @@ db.serialize(() => {
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     )`);
 
-    // sentiments テーブルの作成（既に存在する場合は何もしない）
+    // sentiments テーブルの作成
     db.run(`CREATE TABLE IF NOT EXISTS sentiments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         conversation_id INTEGER NOT NULL,
-        overall_sentiment TEXT NOT NULL,
+        overall_sentiment TEXT NOT NULL, -- 例: 'Positive', 'Negative', 'Neutral', 'Mixed'
         positive_score REAL,
         negative_score REAL,
         neutral_score REAL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- 感情分析時のタイムスタンプ
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     )`);
 
