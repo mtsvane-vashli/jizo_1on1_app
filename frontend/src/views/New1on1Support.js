@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom'; // ★追加: useLocationをインポート
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function New1on1Support() {
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [appState, setAppState] = useState('initial'); // 'initial', 'theme_selection', 'engagement_selection', 'on_demand'
-  const [currentConversationId, setCurrentConversationId] = useState(null); // 新規会話のIDを保持
+  const [appState, setAppState] = useState('initial'); // 'initial', 'employee_selection', 'theme_selection', 'engagement_selection', 'on_demand'
+  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [currentEmployee, setCurrentEmployee] = useState(null); // 現在選択されている部下
+  const [employees, setEmployees] = useState([]); // 登録済みの部下リスト
+  const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [currentSummary, setCurrentSummary] = useState('');
   const [currentNextActions, setCurrentNextActions] = useState('');
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
-  const messagesEndRef = useRef(null); // スクロール用のref
-  const location = useLocation(); // URLのクエリパラメータを読み取るため
+  const messagesEndRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // 会話テーマの選択肢
   const themes = [
@@ -47,14 +51,41 @@ function New1on1Support() {
     const convId = queryParams.get('conversationId');
 
     if (convId && convId !== currentConversationId) {
-      // 過去の会話をロードする
       loadPastConversation(convId);
     } else if (!convId && appState === 'initial' && chatHistory.length === 0) {
-      // クエリパラメータがない、かつ初回ロード時であれば最初のプロンプトをAIにリクエスト
-      // ただし、DBにはまだ保存しない
-      requestInitialPrompt();
+      // 部下選択フローを開始
+      fetchEmployeesForSelection();
     }
-  }, [location.search, currentConversationId, appState, chatHistory.length]);
+  }, [location.search, currentConversationId, appState, chatHistory.length, navigate]); // navigate を依存に追加
+
+  const fetchEmployeesForSelection = useCallback(async () => { // ★修正: useCallback でラップ
+    setLoadingEmployees(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/employees');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setEmployees(data);
+      if (data.length === 0) {
+        alert('まだ部下が登録されていません。会話を開始する前に、まず設定画面で部下を登録してください。');
+        navigate('/settings');
+      } else {
+        setAppState('employee_selection');
+      }
+    } catch (error) {
+      console.error('Error fetching employees for selection:', error);
+      alert('部下の一覧の取得に失敗しました。');
+    } finally {
+      setLoadingEmployees(false);
+    }
+  }, [setLoadingEmployees, setEmployees, setAppState, navigate]);
+
+  // 部下を選択するハンドラ
+  const handleEmployeeSelect = (employee) => {
+    setCurrentEmployee(employee);
+    requestInitialPrompt(); // 部下選択後、初期プロンプトをリクエスト
+  };
 
   // チャットウィンドウを最下部へスクロールする関数
   const scrollToBottom = () => {
@@ -64,22 +95,21 @@ function New1on1Support() {
   // AIに最初のプロンプトをリクエストする関数 (__START__を送るだけ)
   const requestInitialPrompt = async () => {
     setIsLoading(true);
-    setChatHistory([]); // チャット履歴をクリア
-    setCurrentConversationId(null); // IDをリセット
-    setCurrentSummary(''); // 要約もクリア
-    setCurrentNextActions(''); // ネクストアクションもクリア
-    setAppState('initial'); // 初期状態に戻す
+    setChatHistory([]);
+    setCurrentConversationId(null);
+    setCurrentSummary('');
+    setCurrentNextActions('');
+    // appState は既に 'employee_selection' から変わっているはずなので、ここでは更新しない
 
     try {
       const response = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: '__START__' }), // 固定フロー開始のシグナル
+        body: JSON.stringify({ message: '__START__' }),
       });
       const data = await response.json();
       setChatHistory([{ sender: 'ai', text: data.reply }]);
-      setAppState('theme_selection'); // テーマ選択状態に移行
-      // この段階では conversationId は返ってこない (DBに未保存のため)
+      setAppState('theme_selection'); // テーマ選択状態へ移行
     } catch (error) {
       console.error('Error requesting initial prompt:', error);
       setChatHistory([{ sender: 'ai', text: '初期プロンプトの取得に失敗しました。' }]);
@@ -90,25 +120,26 @@ function New1on1Support() {
 
 
   // 過去の会話をロードする関数 (SessionLogからの遷移用)
-  const loadPastConversation = async (conversationId) => {
+  const loadPastConversation = useCallback(async (conversationId) => { // ★修正: useCallback でラップ
     setIsLoading(true);
-    setCurrentConversationId(conversationId); // 現在の会話IDを設定
-    setChatHistory([]); // チャット履歴をクリア
-    setCurrentSummary(''); // 要約もクリア
-    setCurrentNextActions(''); // ネクストアクションもクリア
-    setAppState('on_demand'); // 直接オンデマンド状態へ
+    setCurrentConversationId(conversationId);
+    setChatHistory([]);
+    setCurrentSummary('');
+    setCurrentNextActions('');
+    setAppState('on_demand');
 
     try {
-        // 会話のメッセージ履歴を取得
         const messagesResponse = await fetch(`http://localhost:5000/api/conversations/${conversationId}/messages`);
         const messagesData = await messagesResponse.json();
         setChatHistory(messagesData);
 
-        // 会話自体の詳細（要約とネクストアクション）を取得
         const conversationDetailResponse = await fetch(`http://localhost:5000/api/conversations/${conversationId}`);
         const conversationDetailData = await conversationDetailResponse.json();
         setCurrentSummary(conversationDetailData.summary || '');
         setCurrentNextActions(conversationDetailData.next_actions || '');
+        if (conversationDetailData.employee_id && conversationDetailData.employee_name) {
+            setCurrentEmployee({ id: conversationDetailData.employee_id, name: conversationDetailData.employee_name });
+        }
 
     } catch (error) {
         console.error('Error loading past conversation:', error);
@@ -118,12 +149,30 @@ function New1on1Support() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [setIsLoading, setCurrentConversationId, setChatHistory, setCurrentSummary, setCurrentNextActions, setAppState, setCurrentEmployee]); // ★依存配列に含める
+
+  // ... (既存の関数定義) ...
+
+  // URLクエリパラメータのconversationIdを監視し、過去の会話をロードする
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const convId = queryParams.get('conversationId');
+
+    if (convId && convId !== currentConversationId) {
+      loadPastConversation(convId);
+    } else if (!convId && appState === 'initial' && chatHistory.length === 0) {
+      fetchEmployeesForSelection();
+    }
+  }, [location.search, currentConversationId, appState, chatHistory.length, loadPastConversation, fetchEmployeesForSelection]); // 依存配列はこれでOK
 
 
   // メッセージをバックエンドに送信
   const sendMessage = async () => {
     if (!message.trim()) return;
+    if (!currentEmployee && appState !== 'initial') { // 部下選択フロー中に部下未選択の場合
+      alert('会話を開始する部下を選択してください。');
+      return;
+    }
 
     const currentMessage = message;
     const newChatHistory = [...chatHistory, { sender: 'user', text: currentMessage }];
@@ -135,27 +184,24 @@ function New1on1Support() {
       const response = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ★修正: conversationId と現在の appState をバックエンドに渡す
         body: JSON.stringify({
           message: currentMessage,
           conversationId: currentConversationId, // null の場合もある (テーマ選択前)
-          appState: appState // 現在のフロントエンドの状態を渡す
+          appState: appState, // 現在のフロントエンドの状態を渡す
+          employeeId: currentEmployee ? currentEmployee.id : null // 部下IDを渡す
         }),
       });
       const data = await response.json();
       setChatHistory(prev => [...prev, { sender: 'ai', text: data.reply }]);
 
-      // アプリの状態遷移ロジック
       if (appState === 'theme_selection') {
           setAppState('engagement_selection');
       } else if (appState === 'engagement_selection') {
           setAppState('on_demand');
       }
-      // ★修正: バックエンドから会話IDが返ってきたら更新
       if (data.conversationId) {
         setCurrentConversationId(data.conversationId);
       }
-
     } catch (error) {
       console.error('Error sending message:', error);
       setChatHistory(prev => [...prev, { sender: 'ai', text: 'エラーが発生しました。' }]);
@@ -213,10 +259,11 @@ function New1on1Support() {
     <div className="view-container">
       <h2 className="screen-header">新規1on1サポート</h2>
       <p className="screen-description">
-        こんにちは。1on1傾聴サポートAIです。部下の方との1on1、私が傾聴の側面からサポートします。
-        地蔵1on1メソッドに基づき、部下の方の内省を深め、心理的安全性の高い対話を実現するお手伝いをします。
-        もし前回の1on1で部下に宿題や考えておいてほしいことをお伝えしていた場合は、まずそちらの確認から始めるとよいでしょう。
-        本日はどのようなテーマについてお話ししたいですか? もしよろしければ、以下の選択肢から近いものを選ぶか、自由にお聞かせください。
+        {/* メッセージも動的に変更 */}
+        {appState === 'employee_selection' ? '会話を開始する部下を選択してください。' :
+         currentEmployee ? `${currentEmployee.name}さんとの1on1セッションです。` :
+         'こんにちは。1on1傾聴サポートAIです。部下の方との1on1、私が傾聴の側面からサポートします。'
+        }
       </p>
 
       <button
@@ -252,22 +299,50 @@ function New1on1Support() {
 
 
       <div className="chat-window-container">
-        <div className="chat-window">
-          {chatHistory.map((chat, index) => (
-            <div key={index} className={`chat-message ${chat.sender}`}>
-              <strong className="chat-sender">{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
-              <p className="chat-text">{chat.text}</p>
-              <span className="chat-timestamp">{new Date().toLocaleTimeString()}</span>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="chat-message ai loading-message">
-              <strong className="chat-sender">AI:</strong>
-              <p className="chat-text">返信を生成中...</p>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+        {/* 部下選択UI */}
+        {appState === 'employee_selection' && (
+          <div className="input-area fixed-flow">
+            <p className="prompt-text"></p>
+            {loadingEmployees ? (
+              <p className="text-gray-600">部下情報を読み込み中...</p>
+            ) : employees.length === 0 ? (
+              <p className="text-red-600">部下が登録されていません。設定画面で登録してください。</p>
+            ) : (
+              <div className="button-group employee-selection-group">
+                {employees.map(employee => (
+                  <button
+                    key={employee.id}
+                    onClick={() => handleEmployeeSelect(employee)}
+                    disabled={isLoading}
+                    className="option-button employee-option-button"
+                  >
+                    {employee.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* チャットウィンドウ (部下選択中は非表示) */}
+        {appState !== 'employee_selection' && (
+          <div className="chat-window">
+            {chatHistory.map((chat, index) => (
+              <div key={index} className={`chat-message ${chat.sender}`}>
+                <strong className="chat-sender">{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
+                <p className="chat-text">{chat.text}</p>
+                <span className="chat-timestamp">{new Date().toLocaleTimeString()}</span>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="chat-message ai loading-message">
+                <strong className="chat-sender">AI:</strong>
+                <p className="chat-text">返信を生成中...</p>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
 
         {/* テーマ選択UI */}
         {appState === 'theme_selection' && (

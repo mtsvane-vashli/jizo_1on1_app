@@ -604,14 +604,16 @@ code {
 }
 
 .dashboard-chart-placeholder {
-  background-color: #edf2f7; /* bg-gray-200 */
-  height: 8rem; /* h-32 */
-  display: flex;
+  /* background-color: #edf2f7;  ★削除またはコメントアウト */
+  /* height: 8rem; ★削除またはコメントアウト */
+  display: flex; /* これがChart.jsのキャンバスを中央寄せするために必要 */
   align-items: center;
   justify-content: center;
-  color: #a0aec0; /* 文字色 */
-  border-radius: 0.25rem; /* rounded */
-  font-size: 0.9rem; /* 追加 */
+  color: #a0aec0;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+  padding: 1rem; /* グラフのパディング */
+  min-height: 250px; /* グラフの最低限の高さ */
 }
 
 .dashboard-engagement-score {
@@ -732,4 +734,43 @@ code {
 
 .settings-save-button:hover {
   background-color: #3182ce; /* hover:bg-blue-700 */
+}
+
+/* 設定画面 - 部下リスト */
+.employee-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #e0e6ed;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.employee-list-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e0e6ed;
+    color: #333333;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.employee-list-item:last-child {
+    border-bottom: none;
+}
+
+/* 新規1on1サポート - 部下選択ボタン */
+.employee-selection-group .employee-option-button {
+    background-color: #e3f2fd; /* bg-blue-100 */
+    color: #1f2937; /* text-gray-800 */
+    font-weight: 500;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.375rem; /* rounded-md */
+    font-size: 1rem; /* text-base */
+    transition: background-color 0.2s ease-in-out;
+    border: 1px solid #90caf9; /* border-blue-200 */
+}
+
+.employee-selection-group .employee-option-button:hover {
+    background-color: #bbdefb; /* hover:bg-blue-200 */
 }

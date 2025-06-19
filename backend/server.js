@@ -19,14 +19,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // app.post('/api/chat') エンドポイントの定義全体
 app.post('/api/chat', async (req, res) => {
-    const { message: userMessage, conversationId: reqConversationId, appState: clientAppState } = req.body;
+    const { message: userMessage, conversationId: reqConversationId, appState: clientAppState, employeeId: reqEmployeeId } = req.body; // ★修正: reqEmployeeId を追加
     let aiReply = '';
     let fullPrompt = '';
-    let newConversationId = reqConversationId; // 新しいリクエストのたびにIDを渡す
+    let newConversationId = reqConversationId;
 
-    // バックエンドでの会話状態管理を簡略化し、フロントエンドのappStateに頼る
-    // ただし、selectedThemeとselectedEngagementは、その会話のコンテキストとして保持したい
-    // これらはDBに保存されているので、必要に応じてDBから取得するようにする
     let currentTheme = '未設定';
     let currentEngagement = '未設定';
 
@@ -48,8 +45,6 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // ユーザーメッセージをDBに保存
-    // '__START__' は特殊なシグナルなので、DBには保存しない
-    // 'theme_selection' の最初のユーザーメッセージは、会話レコード作成と同時に保存されるため、ここではスキップ
     if (userMessage !== '__START__' && clientAppState !== 'theme_selection' && newConversationId) {
         db.run('INSERT INTO messages (conversation_id, sender, text) VALUES (?, ?, ?)',
             [newConversationId, 'user', userMessage], function(err) {
@@ -62,27 +57,22 @@ app.post('/api/chat', async (req, res) => {
     if (userMessage === '__START__') {
         aiReply = `こんにちは。1on1傾聴サポートAIです。部下の方との1on1、私が傾聴の側面からサポートします。地蔵1on1メソッドに基づき、部下の方の内省を深め、心理的安全性の高い対話を実現するお手伝いをします。
             もし前回の1on1で部下に宿題や考えておいてほしいことをお伝えしていた場合は、まずそちらの確認から始めるとよいでしょう。
-            本日はどのようなテーマについてお話ししたいですか? もしよろしければ、以下の選択肢から近いものを選ぶか、自由にお聞かせください。
-            【お話ししたいテーマ】
-            1. 日々の業務やタスクの進め方について
-            2. コンディションや心身の健康について
-            3. 職場や周囲の人との関わりについて
-            4. 将来のキャリアパスや成長について
-            5. スキルアップや学びについて
-            6. プライベートな出来事や関心事について
-            7. 組織や会社全体に関することについて
-            8. その他、自由に話したいこと(前回の宿題等)`;
-        // この段階ではまだDBに保存しない、IDも返さない
+            本日はどのようなテーマについてお話ししたいですか? もしよろしければ、以下の選択肢から近いものを選ぶか、自由にお聞かせください。`;
         return res.json({ reply: aiReply });
 
-    } else if (clientAppState === 'theme_selection') { // フロントエンドの状態がテーマ選択段階
-        currentTheme = userMessage; // ユーザーが選択したテーマ
+    } else if (clientAppState === 'theme_selection') {
+        currentTheme = userMessage;
 
-        // ★ここで初めて会話レコードを作成し、そのIDを取得する★
+        // ★修正: employee_id もINSERT文に追加する
+        if (!reqEmployeeId) { // employeeId が渡されていない場合はエラー
+            console.error('Employee ID is required for starting a new conversation.');
+            return res.status(400).json({ error: 'Employee ID is required to start a new conversation.' });
+        }
+
         try {
             newConversationId = await new Promise((resolve, reject) => {
-                db.run('INSERT INTO conversations (theme, engagement) VALUES (?, ?)',
-                    [currentTheme, '初期設定中'], function(err) {
+                db.run('INSERT INTO conversations (theme, engagement, employee_id) VALUES (?, ?, ?)', // ★修正
+                    [currentTheme, '初期設定中', reqEmployeeId], function(err) { // ★修正
                     if (err) reject(err);
                     else resolve(this.lastID);
                 });
@@ -92,27 +82,21 @@ app.post('/api/chat', async (req, res) => {
             return res.status(500).json({ error: 'Failed to start conversation.' });
         }
 
-        // 最初のユーザーメッセージをDBに保存 (会話レコード作成と同時に)
+        // 最初のユーザーメッセージをDBに保存
         db.run('INSERT INTO messages (conversation_id, sender, text) VALUES (?, ?, ?)',
             [newConversationId, 'user', userMessage], function(err) {
             if (err) console.error('Error saving initial user message:', err.message);
         });
 
-        aiReply = `ありがとうございます。そのテーマの中で期待する関わり方の中から最も近いものを教えていただけますでしょうか。
-            【期待する関わり方】
-            1. ただただ、じっくり話を聞いてほしい
-            2. 考えを深めるための壁打ち相手になってほしい
-            3. 具体的な助言やヒントが欲しい
-            4. 多様な視点や考え方を聞いてみたい
-            5. 状況や結果を共有・報告したい
-            6. その他`;
+        aiReply = `ありがとうございます。そのテーマの中で期待する関わり方の中から最も近いものを教えていただけますでしょうか。`;
 
         // AIの返信をDBに保存
         db.run('INSERT INTO messages (conversation_id, sender, text) VALUES (?, ?, ?)',
             [newConversationId, 'ai', aiReply], function(err) {
             if (err) console.error('Error saving AI reply:', err.message);
         });
-        return res.json({ reply: aiReply, conversationId: newConversationId }); // 新しいIDを返す
+        // ★修正: conversationId と employeeId を返す
+        return res.json({ reply: aiReply, conversationId: newConversationId, employeeId: reqEmployeeId });
 
     } else if (clientAppState === 'engagement_selection') { // フロントエンドの状態が関わり方選択段階
         currentEngagement = userMessage; // ユーザーが選択した関わり方
@@ -292,7 +276,14 @@ app.post('/api/chat', async (req, res) => {
 
 // 会話履歴全体を取得するAPIエンドポイント
 app.get('/api/conversations', (req, res) => {
-    db.all("SELECT id, timestamp, theme, engagement, summary, next_actions FROM conversations ORDER BY timestamp DESC", [], (err, rows) => {
+    // ★修正: employees テーブルと JOIN して部下の名前も取得する
+    db.all(`
+        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions,
+               e.name AS employee_name, e.id AS employee_id
+        FROM conversations c
+        LEFT JOIN employees e ON c.employee_id = e.id
+        ORDER BY c.timestamp DESC
+    `, [], (err, rows) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
@@ -316,7 +307,14 @@ app.get('/api/conversations/:id/messages', (req, res) => {
 // 特定の会話の詳細（要約とネクストアクション含む）を取得するAPIエンドポイント
 app.get('/api/conversations/:id', (req, res) => {
     const conversationId = req.params.id;
-    db.get("SELECT id, timestamp, theme, engagement, summary, next_actions FROM conversations WHERE id = ?", [conversationId], (err, row) => {
+    // ★修正: employees テーブルと JOIN して部下の名前も取得する
+    db.get(`
+        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.employee_id,
+               e.name AS employee_name, e.email AS employee_email
+        FROM conversations c
+        LEFT JOIN employees e ON c.employee_id = e.id
+        WHERE c.id = ?
+    `, [conversationId], (err, row) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
@@ -400,6 +398,55 @@ app.post('/api/summarize_and_next_action', async (req, res) => {
             nextActions = nextActionsMatch[1].trim();
         }
 
+        let extractedKeywords = [];
+        try {
+            const promptForKeywords = `以下の1on1の会話履歴を読み、会話の**主要なトピックやテーマ**を表すキーワードを5〜10個、カンマ区切りで抽出してください。
+
+**キーワード抽出のルール:**
+- 会話の具体的な内容や課題に焦点を当てた名詞（句）を抽出してください。
+- 個人名（例: 石田さん、田中）、役職名（例: 部長、リーダー）は含めないでください。
+- 「感情」「状況」「課題」「対応」「進捗」のような漠然としすぎた一般的な言葉は含めないでください。
+- 「良い」「悪い」「正しい」「間違っている」のような評価や判断に関する言葉は含めないでください。
+- 「について」「のこと」「に関する」など、トピックの本質ではない助詞・助動詞は除外してください。
+- 意味が重複する類似の言葉は、より代表的で簡潔な表現に統一してください（例: 「評価」「評価基準」「評価方法」→「評価」または「人事評価」）。
+- 日本語の名詞を中心に、3〜5文字程度の簡潔なキーワードを優先してください。
+- 各キーワードは独立した意味を持つようにしてください。
+            ## 1on1会話履歴
+            ${formattedMessages}
+            ## 出力形式
+            キーワード1, キーワード2, キーワード3, ...`;
+
+            const keywordModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const keywordResult = await keywordModel.generateContent(promptForKeywords);
+            const keywordResponse = await keywordResult.response;
+            const keywordText = keywordResponse.text();
+            extractedKeywords = keywordText.split(',').map(k => k.trim()).filter(k => k.length > 0);
+
+            // 既存のキーワードを削除してから新しいキーワードを保存する (重複防止)
+            await new Promise((resolve, reject) => {
+                db.run('DELETE FROM keywords WHERE conversation_id = ?', [conversationId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+
+            const insertPromises = extractedKeywords.map(keyword => {
+                return new Promise((resolve, reject) => {
+                    db.run('INSERT INTO keywords (conversation_id, keyword) VALUES (?, ?)',
+                        [conversationId, keyword], function(err) {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+            });
+            await Promise.all(insertPromises);
+            console.log(`Keywords saved for conversation ${conversationId}:`, extractedKeywords);
+
+        } catch (keywordError) {
+            console.error('Error extracting or saving keywords:', keywordError);
+            // キーワード抽出に失敗しても、要約は返す
+        }
+
         // データベースに保存
         db.run('UPDATE conversations SET summary = ?, next_actions = ? WHERE id = ?',
             [summary, nextActions, conversationId], function(err) {
@@ -415,6 +462,63 @@ app.post('/api/summarize_and_next_action', async (req, res) => {
         console.error('Error generating summary or next actions:', error);
         res.status(500).json({ error: 'Failed to generate summary or next actions.' });
     }
+});
+
+app.get('/api/dashboard/keywords', (req, res) => {
+    // すべてのキーワードを集計し、頻度順に並べ替える
+    db.all(`
+        SELECT keyword, COUNT(keyword) as frequency
+        FROM keywords
+        GROUP BY keyword
+        ORDER BY frequency DESC
+        LIMIT 10 -- 上位10個のキーワードを取得
+    `, [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching dashboard keywords:', err.message);
+            return res.status(500).json({ error: 'Failed to fetch dashboard keywords.' });
+        }
+        res.json(rows);
+    });
+});
+
+// 新しい部下を登録するAPIエンドポイント
+app.post('/api/employees', async (req, res) => {
+    const { name, email } = req.body;
+
+    if (!name) {
+        return res.status(400).json({ error: 'Employee name is required.' });
+    }
+
+    try {
+        const employeeId = await new Promise((resolve, reject) => {
+            db.run('INSERT INTO employees (name, email) VALUES (?, ?)', [name, email], function(err) {
+                if (err) {
+                    if (err.message.includes('UNIQUE constraint failed')) {
+                        reject(new Error('Employee with this name or email already exists.'));
+                    } else {
+                        reject(err);
+                    }
+                } else {
+                    resolve(this.lastID);
+                }
+            });
+        });
+        res.status(201).json({ id: employeeId, name, email });
+    } catch (error) {
+        console.error('Error adding new employee:', error.message);
+        res.status(409).json({ error: error.message }); // 衝突エラー
+    }
+});
+
+// 登録されている部下の一覧を取得するAPIエンドポイント
+app.get('/api/employees', (req, res) => {
+    db.all("SELECT id, name, email FROM employees ORDER BY name ASC", [], (err, rows) => {
+        if (err) {
+            console.error('Error fetching employees:', err.message);
+            return res.status(500).json({ error: 'Failed to fetch employees.' });
+        }
+        res.json(rows);
+    });
 });
 
 
