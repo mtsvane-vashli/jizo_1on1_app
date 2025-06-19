@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // useAuth をインポート
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'; // ローカル開発用フォールバック
+
 function New1on1Support() {
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
@@ -76,9 +78,9 @@ function New1on1Support() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/employees', {
+      const response = await fetch(`${BACKEND_URL}/api/employees`, { // ★修正
           headers: {
-              'Authorization': `Bearer ${token}` // ★認証ヘッダー
+              'Authorization': `Bearer ${token}`
           }
       });
       if (!response.ok) {
@@ -125,7 +127,7 @@ function New1on1Support() {
             throw new Error('No authentication token found.');
         }
 
-        const messagesResponse = await fetch(`http://localhost:5000/api/conversations/${conversationId}/messages`, {
+        const messagesResponse = await fetch(`${BACKEND_URL}/api/conversations/${conversationId}/messages`, {
             headers: { 'Authorization': `Bearer ${token}` } // ★追加
         });
         if (!messagesResponse.ok) {
@@ -135,7 +137,7 @@ function New1on1Support() {
         const messagesData = await messagesResponse.json();
         setChatHistory(messagesData);
 
-        const conversationDetailResponse = await fetch(`http://localhost:5000/api/conversations/${conversationId}`, {
+        const conversationDetailResponse = await fetch(`${BACKEND_URL}/api/conversations/${conversationId}`, {
             headers: { 'Authorization': `Bearer ${token}` } // ★追加
         });
         if (!conversationDetailResponse.ok) {
@@ -199,7 +201,7 @@ function New1on1Support() {
             throw new Error('No authentication token found.');
         }
 
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -247,7 +249,7 @@ function New1on1Support() {
             throw new Error('No authentication token found.');
         }
 
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,7 +328,7 @@ function New1on1Support() {
             throw new Error('No authentication token found.');
         }
 
-        const response = await fetch('http://localhost:5000/api/summarize_and_next_action', {
+        const response = await fetch(`${BACKEND_URL}/api/summarize_and_next_action`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

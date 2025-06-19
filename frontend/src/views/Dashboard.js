@@ -14,6 +14,8 @@ import {
 import { useAuth } from '../context/AuthContext'; // ★追加
 import { useNavigate } from 'react-router-dom'; // ★追加
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
 // Chart.jsに必要なコンポーネントを登録
 ChartJS.register(
   CategoryScale,
@@ -57,7 +59,7 @@ function Dashboard() {
           navigate('/login', { replace: true });
           throw new Error('No authentication token found.');
       }
-      const response = await fetch('http://localhost:5000/api/dashboard/keywords', {
+      const response = await fetch(`${BACKEND_URL}/api/dashboard/keywords`, {
           headers: {
               'Authorization': `Bearer ${token}`
           }
@@ -109,7 +111,7 @@ function Dashboard() {
           navigate('/login', { replace: true });
           throw new Error('No authentication token found.');
       }
-      const response = await fetch('http://localhost:5000/api/dashboard/sentiments', {
+      const response = await fetch(`${BACKEND_URL}/api/dashboard/sentiments`, {
           headers: {
               'Authorization': `Bearer ${token}`
           }

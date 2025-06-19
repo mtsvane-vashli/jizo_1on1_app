@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // useAuth をインポート (必要に応じて)
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
 function SessionLog() {
   const [pastConversations, setPastConversations] = useState([]); // 初期値は常に配列
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +40,7 @@ function SessionLog() {
           return;
       }
 
-      const response = await fetch('http://localhost:5000/api/conversations', {
+      const response = await fetch(`${BACKEND_URL}/api/conversations`, {
           headers: {
               'Authorization': `Bearer ${token}`
           }
@@ -113,7 +115,7 @@ function SessionLog() {
           return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/conversations/${conversationId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/conversations/${conversationId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` } // ★追加: 認証ヘッダー
       });

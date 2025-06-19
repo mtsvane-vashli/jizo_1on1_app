@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext'; // ★追加
 import { useNavigate } from 'react-router-dom'; // ★追加
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
 function Settings() {
   const [employees, setEmployees] = useState([]);
   const [newEmployeeName, setNewEmployeeName] = useState('');
@@ -31,7 +33,7 @@ function Settings() {
         throw new Error('No authentication token found.');
       }
 
-      const response = await fetch('http://localhost:5000/api/employees', {
+      const response = await fetch(`${BACKEND_URL}/api/employees`, {
           headers: {
               'Authorization': `Bearer ${token}` // ★追加
           }
@@ -78,7 +80,7 @@ function Settings() {
           return;
       }
 
-      const response = await fetch('http://localhost:5000/api/employees', {
+      const response = await fetch(`${BACKEND_URL}/api/employees`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
