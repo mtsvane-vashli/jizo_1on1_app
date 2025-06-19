@@ -1,6 +1,8 @@
 // frontend/src/context/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'; // ローカル開発用フォールバック
+
 // AuthContextの作成
 export const AuthContext = createContext(null);
 
@@ -31,7 +33,7 @@ export const AuthProvider = ({ children }) => {
   // ログイン処理
   const login = async (username, password) => {
     try {
-      const response = await fetch('http://localhost:5000/api/login', {
+      const response = await fetch(`${BACKEND_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
