@@ -1,7 +1,6 @@
 // frontend/src/context/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'; // ローカル開発用フォールバック
+import { loginUser } from '../services/authService';
 
 // AuthContextの作成
 export const AuthContext = createContext(null);
@@ -33,27 +32,21 @@ export const AuthProvider = ({ children }) => {
   // ログイン処理
   const login = async (username, password) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await response.json();
+      // サービス層の関数を呼び出す
+      const data = await loginUser(username, password);
+      
+      // 成功した場合、状態を更新する
+      localStorage.setItem('jwtToken', data.token);
+      localStorage.setItem('user', JSON.stringify({ username: data.username, id: data.userId }));
+      setToken(data.token);
+      setUser({ username: data.username, id: data.userId });
+      
+      return { success: true, message: data.message };
 
-      if (response.ok) {
-        localStorage.setItem('jwtToken', data.token);
-        // user オブジェクトには userId も含める
-        localStorage.setItem('user', JSON.stringify({ username: data.username, id: data.userId }));
-        setToken(data.token);
-        setUser({ username: data.username, id: data.userId });
-        console.log('Login successful, token saved to localStorage and state.');
-        return { success: true, message: data.message };
-      } else {
-        return { success: false, message: data.error || 'ログインに失敗しました。' };
-      }
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, message: 'ネットワークエラーが発生しました。' };
+      // サービス層からスローされたエラーをキャッチ
+      console.error('Login error:', error.message);
+      return { success: false, message: error.message };
     }
   };
 

@@ -1,4 +1,5 @@
-// frontend/src/components/Sidebar.js
+// frontend/src/components/Sidebar.js (修正後)
+
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -17,18 +18,20 @@ function Sidebar() {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    logout(); // AuthContext の logout 関数を呼び出す
-    navigate('/login', { replace: true }); // ログアウト後、ログイン画面へリダイレクト
+    logout();
+    navigate('/login', { replace: true });
   };
 
-  // ナビゲーションアイテムの定義
   const navItems = [
-    { name: '新規1on1サポート', path: '/', icon: <CalendarIcon /> }, // ★修正: SVGコンポーネントに置き換え
-    { name: '過去のセッションログ', path: '/logs', icon: <BookOpenIcon /> }, // ★修正
-    { name: '分析ダッシュボード', path: '/dashboard', icon: <ChartBarIcon /> }, // ★修正
-    { name: '学習リソース', path: '/resources', icon: <AcademicCapIcon /> }, // ★修正
-    { name: '設定', path: '/settings', icon: <Cog6ToothIcon /> }, // ★修正
+    { name: '新規1on1サポート', path: '/', icon: <CalendarIcon /> },
+    { name: '過去のセッションログ', path: '/logs', icon: <BookOpenIcon /> },
+    { name: '分析ダッシュボード', path: '/dashboard', icon: <ChartBarIcon /> },
+    { name: '学習リソース', path: '/resources', icon: <AcademicCapIcon /> },
+    { name: '設定', path: '/settings', icon: <Cog6ToothIcon /> },
   ];
+
+  // ★追加: ユーザー名の頭文字を取得するロジック
+  const avatarInitial = user ? user.username.charAt(0).toUpperCase() : '?';
 
   return (
     <div className="sidebar-container">
@@ -46,7 +49,6 @@ function Sidebar() {
                 to={item.path}
                 className={`sidebar-nav-link ${location.pathname === item.path ? 'active' : ''}`}
               >
-                {/* ★修正: item.icon が SVG コンポーネントであることを想定し、span でラップ */}
                 <span className="sidebar-icon">{item.icon}</span>
                 {item.name}
               </Link>
@@ -59,11 +61,13 @@ function Sidebar() {
       <div className="sidebar-user-info">
         <div className="sidebar-user-info-flex">
           <div className="sidebar-user-avatar">
-            <img src="https://via.placeholder.com/32/cccccc?text=U" alt="User" />
+            {/* ★修正: <img> タグの代わりに、取得した頭文字を表示 */}
+            {avatarInitial}
           </div>
           <div>
             <p className="sidebar-user-name">{user ? user.username : 'ゲスト'}</p>
-            <p className="sidebar-user-id">test-user-01</p>
+            {/* ★修正: ハードコーディングされたIDを user オブジェクトから表示 */}
+            <p className="sidebar-user-id">{user ? `ID: ${user.id}` : 'ID: ---'}</p>
           </div>
         </div>
         <button onClick={handleLogout} className="sidebar-logout-button">

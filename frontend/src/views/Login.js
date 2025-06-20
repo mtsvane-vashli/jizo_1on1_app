@@ -7,18 +7,22 @@ function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(''); // ★エラーメッセージ用のstateを追加
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(''); // ★送信開始時にエラーをクリア
+
     const result = await login(username, password);
 
     if (result.success) {
       navigate('/'); // ログイン成功後はメイン画面へ
     } else {
-      alert(result.message);
+      setError(result.message);
     }
     setLoading(false);
   };
@@ -52,6 +56,9 @@ function Login() {
               required
             />
           </div>
+          
+          {error && <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem' }}>{error}</p>}
+          
           <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
