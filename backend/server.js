@@ -358,6 +358,30 @@ app.get('/api/conversations/:id', authenticateToken, (req, res) => {
     });
 });
 
+// 特定の会話履歴とそのメッセージを削除するAPIエンドポイント
+app.delete('/api/conversations/:id', authenticateToken, (req, res) => {
+    const conversationId = req.params.id;
+
+    // まず、その会話に関連するメッセージを削除
+    db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId], function(err) {
+        if (err) {
+            console.error('Error deleting messages:', err.message);
+            return res.status(500).json({ error: 'Failed to delete messages.' });
+        }
+        // 次に、会話自体を削除
+        db.run('DELETE FROM conversations WHERE id = ?', [conversationId], function(err) {
+            if (err) {
+                console.error('Error deleting conversation:', err.message);
+                return res.status(500).json({ error: 'Failed to delete conversation.' });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Conversation not found.' });
+            }
+            res.status(200).json({ message: 'Conversation and messages deleted successfully.' });
+        });
+    });
+});
+
 // 要約とネクストアクションを生成・保存するAPIエンドポイント
 app.post('/api/summarize_and_next_action', authenticateToken, async (req, res) => {
     const { conversationId } = req.body;
