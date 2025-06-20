@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // useAuth をインポート
 
+import { marked } from 'marked'; // ★追加
+import DOMPurify from 'dompurify'; // ★追加
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'; // ローカル開発用フォールバック
 
 function New1on1Support() {
@@ -429,7 +432,16 @@ function New1on1Support() {
             {chatHistory.map((chat, index) => (
               <div key={index} className={`chat-message ${chat.sender}`}>
                 <strong className="chat-sender">{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
-                <p className="chat-text">{chat.text}</p>
+                {/* ★ここを修正します★ */}
+                {/* AIのメッセージのみMarkdownをHTMLに変換 */}
+                {chat.sender === 'ai' ? (
+                  <p
+                    className="chat-text"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}
+                  ></p>
+                ) : (
+                  <p className="chat-text">{chat.text}</p>
+                )}
                 <span className="chat-timestamp">{new Date().toLocaleTimeString()}</span>
               </div>
             ))}
