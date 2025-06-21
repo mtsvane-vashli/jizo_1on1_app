@@ -1,41 +1,28 @@
-// backend/models/userModel.js
+// backend/models/userModel.js (修正後)
 
-const db = require('../database');
+const db = require('../database'); // ここで pool を取得
 
-/**
- * ユーザー名でユーザーを検索する
- * @param {string} username - 検索するユーザー名
- * @returns {Promise<object|null>} ユーザーオブジェクト or null
- */
-const findUserByUsername = (username) => {
-    return new Promise((resolve, reject) => {
-        db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
+const findUserByUsername = async (username) => {
+    const sql = 'SELECT * FROM users WHERE username = $1';
+    try {
+        const { rows } = await db.query(sql, [username]);
+        return rows[0];
+    } catch (err) {
+        throw err;
+    }
 };
 
-/**
- * 新しいユーザーを作成する
- * @param {string} username - 新しいユーザー名
- * @param {string} hashedPassword - ハッシュ化されたパスワード
- * @returns {Promise<number>} 作成されたユーザーのID
- */
-const createUser = (username, hashedPassword) => {
-    return new Promise((resolve, reject) => {
-        db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword], function(err) {
-            if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
-                    reject(new Error('Username already exists.'));
-                } else {
-                    reject(err);
-                }
-            } else {
-                resolve(this.lastID);
-            }
-        });
-    });
+const createUser = async (username, hashedPassword) => {
+    const sql = 'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id';
+    try {
+        const { rows } = await db.query(sql, [username, hashedPassword]);
+        return rows[0].id;
+    } catch (err) {
+        if (err.code === '23505') { // UNIQUE constraint violation
+            throw new Error('Username already exists.');
+        }
+        throw err;
+    }
 };
 
 module.exports = {

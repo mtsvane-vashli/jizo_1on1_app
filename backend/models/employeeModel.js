@@ -1,4 +1,4 @@
-// backend/models/employeeModel.js
+// backend/models/employeeModel.js (PostgreSQL版)
 
 const db = require('../database');
 
@@ -8,33 +8,32 @@ const db = require('../database');
  * @param {string} email - 部下のメールアドレス
  * @returns {Promise<number>} 作成された部下のID
  */
-const createEmployee = (name, email) => {
-    return new Promise((resolve, reject) => {
-        db.run('INSERT INTO employees (name, email) VALUES (?, ?)', [name, email], function(err) {
-            if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
-                    reject(new Error('Employee with this name or email already exists.'));
-                } else {
-                    reject(err);
-                }
-            } else {
-                resolve(this.lastID);
-            }
-        });
-    });
+const createEmployee = async (name, email) => {
+    const sql = 'INSERT INTO employees (name, email) VALUES ($1, $2) RETURNING id';
+    try {
+        const { rows } = await db.query(sql, [name, email]);
+        return rows[0].id;
+    } catch (err) {
+        // 23505 は UNIQUE 制約違反のエラーコード
+        if (err.code === '23505') {
+            throw new Error('Employee with this name or email already exists.');
+        }
+        throw err;
+    }
 };
 
 /**
  * 全ての部下情報を取得する
  * @returns {Promise<Array<object>>} 部下情報の配列
  */
-const getAllEmployees = () => {
-    return new Promise((resolve, reject) => {
-        db.all("SELECT id, name, email FROM employees ORDER BY name ASC", [], (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
+const getAllEmployees = async () => {
+    const sql = "SELECT id, name, email FROM employees ORDER BY name ASC";
+    try {
+        const { rows } = await db.query(sql);
+        return rows;
+    } catch (err) {
+        throw err;
+    }
 };
 
 module.exports = {
