@@ -1,0 +1,209 @@
+/* frontend/src/views/New1on1Support.module.css */
+.error {
+    color: var(--color-danger);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.summaryButton {
+  display: block;
+  margin: 0 auto var(--space-lg) auto;
+  background-color: var(--color-accent);
+  color: var(--color-text-light);
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+  font-size: 0.9rem;
+}
+.summaryButton:hover {
+  background-color: var(--color-accent-hover);
+}
+.summaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summaryArea {
+  background-color: var(--color-bg-summary);
+  border: 1px solid var(--color-border-summary);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+.summaryHeader {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--color-summary-title);
+  display: flex;
+  align-items: center;
+}
+.summaryText {
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  margin-bottom: var(--space-md);
+}
+.summaryListItem {
+  margin-bottom: var(--space-xs);
+  padding-left: var(--space-lg);
+  position: relative;
+  font-size: 0.9rem;
+}
+.summaryListItem::before {
+  content: '•';
+  position: absolute;
+  left: var(--space-sm);
+  color: var(--color-summary-icon);
+}
+
+.chatContainer {
+  margin-top: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.chatWindow {
+  flex-grow: 1;
+  border: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-card);
+  overflow-y: auto;
+  margin-bottom: var(--space-lg);
+  min-height: 400px;
+}
+
+.message {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  max-width: 75%;
+  word-wrap: break-word;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+}
+.message p { /* markedがPタグを生成するため */
+  margin: 0;
+}
+
+.user {
+  background-color: var(--color-bg-user-message);
+  align-self: flex-end;
+  margin-left: auto;
+}
+.ai {
+  background-color: var(--color-bg-ai-message);
+  align-self: flex-start;
+  margin-right: auto;
+}
+.loading {
+  color: var(--color-text-secondary);
+}
+
+.sender {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+  color: var(--color-text-secondary);
+}
+.text {
+  white-space: pre-wrap;
+}
+
+/* --- Input Area --- */
+.inputArea {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: var(--color-bg-card);
+}
+.inputArea.fixedFlow {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+  border: none;
+}
+.promptText {
+  margin-bottom: var(--space-md);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+.buttonGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+.optionButton {
+  background-color: #e0e6ed;
+  color: #4a5568;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  transition: var(--transition-fast);
+}
+.optionButton:hover {
+  background-color: #cdd4df;
+}
+.optionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.employeeSelectionGroup .employeeOptionButton {
+  background-color: var(--color-bg-user-message);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  border: 1px solid #90caf9;
+}
+.employeeSelectionGroup .employeeOptionButton:hover {
+    background-color: #bbdefb;
+}
+
+.normalInput {
+  flex-grow: 1;
+  padding: var(--space-md);
+  border: none;
+  border-radius: 0;
+  outline: none;
+  font-size: 0.9rem;
+  width: 100%; /* For fixed flow */
+}
+.fixedFlow .normalInput {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+}
+
+.sendButton {
+  background-color: var(--color-primary);
+  color: var(--color-text-light);
+  font-weight: 600;
+  padding: 0 var(--space-lg);
+  transition: var(--transition-fast);
+}
+.sendButton:hover {
+    background-color: var(--color-primary-hover);
+}
+.sendButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.fixedFlowSendButton {
+  composes: sendButton;
+  width: auto;
+  align-self: flex-end;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+}

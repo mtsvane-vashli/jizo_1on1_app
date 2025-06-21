@@ -1,10 +1,10 @@
-// frontend/src/views/SessionLog.js (修正後)
-
+// frontend/src/views/SessionLog.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-// ★ サービスをインポート
 import { getConversations, deleteConversationById } from '../services/conversationService';
+import layoutStyles from '../App.module.css';
+import styles from './SessionLog.module.css';
 
 function SessionLog() {
     const [pastConversations, setPastConversations] = useState([]);
@@ -13,7 +13,6 @@ function SessionLog() {
     const navigate = useNavigate();
     const { isAuthenticated, loading: authLoading } = useAuth();
 
-    // ★ useCallbackを使って関数をメモ化
     const fetchPastConversations = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -31,7 +30,7 @@ function SessionLog() {
         } finally {
             setIsLoading(false);
         }
-    }, []); // 依存配列は空
+    }, []);
 
     useEffect(() => {
         if (!authLoading && isAuthenticated) {
@@ -48,10 +47,8 @@ function SessionLog() {
         if (!window.confirm('この会話履歴を完全に削除してもよろしいですか？')) {
             return;
         }
-
         try {
             await deleteConversationById(conversationId);
-            // 成功したらリストを再読み込み
             await fetchPastConversations();
         } catch (err) {
             console.error('Error deleting conversation:', err);
@@ -61,41 +58,41 @@ function SessionLog() {
 
     if (authLoading || (isLoading && pastConversations.length === 0)) {
         return (
-            <div className="view-container">
-                 <h2 className="screen-header">過去のセッションログ</h2>
-                 <p className="screen-description">会話履歴を読み込み中...</p>
+            <div className={layoutStyles.viewContainer}>
+                 <h2 className={layoutStyles.screenHeader}>過去のセッションログ</h2>
+                 <p className={layoutStyles.screenDescription}>会話履歴を読み込み中...</p>
             </div>
         );
     }
-    
-    return (
-        <div className="view-container">
-            <h2 className="screen-header">過去のセッションログ</h2>
-            <p className="screen-description">左のリストからセッションを選択してください。</p>
 
-            <div className="session-list-container">
-                {error && <p style={{ color: 'red' }}>{error}</p>}
+    return (
+        <div className={layoutStyles.viewContainer}>
+            <h2 className={layoutStyles.screenHeader}>過去のセッションログ</h2>
+            <p className={layoutStyles.screenDescription}>リストからセッションを選択して会話を再開・確認できます。</p>
+
+            <div className={styles.container}>
+                {error && <p className={styles.error}>{error}</p>}
                 {!isLoading && pastConversations.length === 0 && !error && (
-                    <p className="screen-description">過去の会話はありません。</p>
+                    <p className={styles.emptyMessage}>過去の会話はありません。</p>
                 )}
-                <ul>
+                <ul className={styles.list}>
                     {pastConversations.map(conv => (
-                        <li key={conv.id} className="session-list-item">
+                        <li key={conv.id} className={styles.item}>
                             <button
                                 onClick={() => loadConversation(conv.id)}
-                                className="session-list-button"
+                                className={styles.button}
                             >
-                                <span className="session-date-theme">
+                                <span className={styles.dateTheme}>
                                     {conv.employee_name && <strong>{conv.employee_name}さんとの会話 - </strong>}
                                     {new Date(conv.timestamp).toLocaleString()} - テーマ: {conv.theme || '未設定'}
                                 </span>
                                 {conv.summary && (
-                                    <span className="session-summary-preview line-clamp-2">
+                                    <span className={`${styles.preview} ${styles.lineClamp2}`}>
                                         要約: {conv.summary}
                                     </span>
                                 )}
                                 {conv.next_actions && (
-                                    <span className="session-next-action-preview line-clamp-2">
+                                    <span className={`${styles.preview} ${styles.lineClamp2}`}>
                                         ネクストアクション: {conv.next_actions}
                                     </span>
                                 )}
@@ -105,7 +102,7 @@ function SessionLog() {
                                     e.stopPropagation();
                                     deleteConversation(conv.id);
                                 }}
-                                className="delete-button"
+                                className={styles.deleteButton}
                             >
                                 削除
                             </button>

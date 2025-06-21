@@ -1,11 +1,12 @@
-// frontend/src/views/New1on1Support.js (全面改訂版)
-
+// frontend/src/views/New1on1Support.js
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getEmployees, getConversationById, getMessagesByConversationId, sendMessage, generateSummary } from '../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import layoutStyles from '../App.module.css';
+import styles from './New1on1Support.module.css';
 
 // Reducerのための初期状態
 const initialState = {
@@ -34,10 +35,10 @@ function chatReducer(state, action) {
       return { ...state, isLoading: false, chatHistory: [action.payload], appState: 'theme_selection' };
     case 'LOAD_PAST_CONVERSATION_SUCCESS':
       const { messages, details } = action.payload;
-      return { 
-        ...state, 
-        isLoading: false, 
-        appState: 'on_demand', 
+      return {
+        ...state,
+        isLoading: false,
+        appState: 'on_demand',
         chatHistory: messages,
         currentConversationId: details.id,
         currentSummary: details.summary || '',
@@ -51,9 +52,9 @@ function chatReducer(state, action) {
       let nextAppState = state.appState;
       if (state.appState === 'theme_selection') nextAppState = 'engagement_selection';
       else if (state.appState === 'engagement_selection') nextAppState = 'on_demand';
-      return { 
-        ...state, 
-        isLoading: false, 
+      return {
+        ...state,
+        isLoading: false,
         chatHistory: [...state.chatHistory, { sender: 'ai', text: reply }],
         currentConversationId: conversationId || state.currentConversationId,
         appState: nextAppState
@@ -79,7 +80,7 @@ function New1on1Support() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  
+
   // スクロール処理
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -125,6 +126,7 @@ function New1on1Support() {
 
   const handleSendMessage = useCallback(async (text) => {
     if (!text.trim()) return;
+    setMessage(''); // 入力欄をクリア
     dispatch({ type: 'SEND_MESSAGE', payload: text });
     try {
         const data = await sendMessage({
@@ -140,7 +142,6 @@ function New1on1Support() {
   }, [state.appState, state.currentConversationId, state.currentEmployee]);
 
   const handleFixedFlowSelect = useCallback((text) => {
-    setMessage(text);
     handleSendMessage(text);
   }, [handleSendMessage]);
 
@@ -154,18 +155,18 @@ function New1on1Support() {
         dispatch({ type: 'ERROR', payload: err.message });
     }
   }, [state.currentConversationId]);
-  
+
   const renderInputArea = () => {
       const themes = ["日々の業務やタスクの進め方について", "コンディションや心身の健康について", "職場や周囲の人との関わりについて", "将来のキャリアパスや成長について", "スキルアップや学びについて", "プライベートな出来事や関心事について", "組織や会社全体に関することについて", "その他、自由に話したいこと(前回の宿題等)"];
       const engagementTypes = ["ただただ、じっくり話を聞いてほしい", "考えを深めるための壁打ち相手になってほしい", "具体的な助言やヒントが欲しい", "多様な視点や考え方を聞いてみたい", "状況や結果を共有・報告したい", "その他"];
-      
+
       switch (state.appState) {
           case 'employee_selection':
               return (
-                  <div className="input-area fixed-flow">
-                    <p className="prompt-text">会話を開始する部下を選んでください。</p>
-                    <div className="button-group employee-selection-group">
-                      {state.employees.map(emp => <button key={emp.id} onClick={() => handleEmployeeSelect(emp)} className="option-button employee-option-button">{emp.name}</button>)}
+                  <div className={`${styles.inputArea} ${styles.fixedFlow}`}>
+                    <p className={styles.promptText}>会話を開始する部下を選んでください。</p>
+                    <div className={`${styles.buttonGroup} ${styles.employeeSelectionGroup}`}>
+                      {state.employees.map(emp => <button key={emp.id} onClick={() => handleEmployeeSelect(emp)} className={styles.employeeOptionButton}>{emp.name}</button>)}
                     </div>
                   </div>
               );
@@ -173,62 +174,61 @@ function New1on1Support() {
           case 'engagement_selection':
               const options = state.appState === 'theme_selection' ? themes : engagementTypes;
               return (
-                  <div className="input-area fixed-flow">
-                      <p className="prompt-text">{state.appState === 'theme_selection' ? '【お話ししたいテーマ】' : '【期待する関わり方】'}</p>
-                      <div className="button-group">
-                          {options.map((opt, i) => <button key={i} onClick={() => handleFixedFlowSelect(opt)} disabled={state.isLoading} className="option-button">{i + 1}. {opt}</button>)}
+                  <div className={`${styles.inputArea} ${styles.fixedFlow}`}>
+                      <p className={styles.promptText}>{state.appState === 'theme_selection' ? '【お話ししたいテーマ】' : '【期待する関わり方】'}</p>
+                      <div className={styles.buttonGroup}>
+                          {options.map((opt, i) => <button key={i} onClick={() => handleFixedFlowSelect(opt)} disabled={state.isLoading} className={styles.optionButton}>{i + 1}. {opt}</button>)}
                       </div>
-                      <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)} placeholder="その他のテーマを自由に入力..." className="normal-input" />
-                      <button onClick={() => handleSendMessage(message)} disabled={state.isLoading || !message.trim()} className="fixed-flow-send-button">送信</button>
+                      <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)} placeholder="その他のテーマを自由に入力..." className={styles.normalInput} />
+                      <button onClick={() => handleSendMessage(message)} disabled={state.isLoading || !message.trim()} className={styles.fixedFlowSendButton}>送信</button>
                   </div>
               );
           case 'on_demand':
               return (
-                  <div className="input-area">
-                      <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)} placeholder="メッセージを入力..." className="normal-input" />
-                      <button onClick={() => handleSendMessage(message)} disabled={state.isLoading || !message.trim()} className="send-button">送信</button>
+                  <div className={styles.inputArea}>
+                      <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)} placeholder="メッセージを入力..." className={styles.normalInput} />
+                      <button onClick={() => handleSendMessage(message)} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>送信</button>
                   </div>
               );
           default: return null;
       }
   };
 
-  // --- JSX (return) 部分 ---
-  if (authLoading) return <div className="loading-screen"><p>認証情報を確認中...</p></div>;
-  if (state.appState === 'initial' && state.isLoading) return <div className="loading-screen"><p>データを読み込み中...</p></div>;
+  if (authLoading) return <div className={layoutStyles.loadingScreen}><p>認証情報を確認中...</p></div>;
+  if (state.appState === 'initial' && state.isLoading) return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>;
 
   return (
-    <div className="view-container">
-      <h2 className="screen-header">新規1on1サポート</h2>
-      <p className="screen-description">
+    <div className={layoutStyles.viewContainer}>
+      <h2 className={layoutStyles.screenHeader}>新規1on1サポート</h2>
+      <p className={layoutStyles.screenDescription}>
         {state.appState === 'employee_selection' ? '会話を開始する部下を選択してください。' : state.currentEmployee ? `${state.currentEmployee.name}さんとの1on1セッションです。` : 'こんにちは。'}
       </p>
 
-      <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId || state.appState !== 'on_demand'} className="generate-summary-button">
+      <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId || state.appState !== 'on_demand'} className={styles.summaryButton}>
         {state.isGeneratingSummary ? '要約を生成中...' : '会話を要約しネクストアクションを提案'}
       </button>
 
       {(state.currentSummary || state.currentNextActions) && (
-        <div className="summary-area">
-          <h3 className="summary-header">会話の要約</h3>
-          <p className="summary-text">{state.currentSummary}</p>
-          <h3 className="summary-header">ネクストアクション</h3>
-          {state.currentNextActions.split('\n').map((line, i) => <p key={i} className="summary-list-item">{line.replace(/^- /, '')}</p>)}
+        <div className={styles.summaryArea}>
+          <h3 className={styles.summaryHeader}>会話の要約</h3>
+          <p className={styles.summaryText}>{state.currentSummary}</p>
+          <h3 className={styles.summaryHeader}>ネクストアクション</h3>
+          {state.currentNextActions.split('\n').map((line, i) => <p key={i} className={styles.summaryListItem}>{line.replace(/^- /, '')}</p>)}
         </div>
       )}
 
-      {state.error && <p style={{color: 'red'}}>{state.error}</p>}
+      {state.error && <p className={styles.error}>{state.error}</p>}
 
-      <div className="chat-window-container">
+      <div className={styles.chatContainer}>
         {state.appState !== 'employee_selection' && (
-            <div className="chat-window">
+            <div className={styles.chatWindow}>
               {state.chatHistory.map((chat, index) => (
-                <div key={index} className={`chat-message ${chat.sender}`}>
-                  <strong className="chat-sender">{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
-                  {chat.sender === 'ai' ? <p className="chat-text" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></p> : <p className="chat-text">{chat.text}</p>}
+                <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
+                  <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
+                  <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div>
                 </div>
               ))}
-              {state.isLoading && <div className="chat-message ai loading-message"><p className="chat-text">返信を生成中...</p></div>}
+              {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>返信を生成中...</p></div>}
               <div ref={messagesEndRef} />
             </div>
         )}

@@ -1,0 +1,62 @@
+/* frontend/src/views/Dashboard.module.css */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-xl);
+}
+
+.card {
+  background-color: var(--color-bg-card);
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text-primary);
+}
+
+.cardDescription {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.chartContainer {
+  position: relative;
+  height: 250px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingText {
+  color: var(--color-text-secondary);
+}
+
+.engagementScore {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.engagementChange {
+  font-size: 0.9rem;
+  color: #38a169; /* Green */
+}
+
+.error {
+    color: var(--color-danger);
+    padding: var(--space-lg);
+    background-color: rgba(239, 68, 68, 0.1);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-xl);
+}

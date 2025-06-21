@@ -1,0 +1,114 @@
+/* frontend/src/views/Auth.module.css */
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--color-bg-app);
+  padding: var(--space-lg);
+}
+
+.card {
+  background-color: var(--color-bg-card);
+  padding: var(--space-2xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  max-width: 25rem;
+  width: 100%;
+  text-align: center;
+}
+
+.header {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-xl);
+  color: var(--color-text-primary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.inputGroup {
+  margin-bottom: var(--space-lg);
+  text-align: left;
+}
+
+.label {
+  display: block;
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.9rem;
+  color: var(--color-text-dark);
+  transition: var(--transition-fast);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.button {
+  background-color: var(--color-primary);
+  color: var(--color-text-light);
+  font-weight: bold;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  width: 100%;
+  margin-top: var(--space-lg);
+}
+
+.button:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.linkText {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-xl);
+}
+
+.link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.errorMessage {
+  color: var(--color-danger);
+  text-align: center;
+  font-size: 0.9rem;
+  margin-bottom: var(--space-md);
+}
+
+.successMessage {
+  color: #38a169; /* Green */
+  text-align: center;
+  font-size: 0.9rem;
+  margin-bottom: var(--space-md);
+}

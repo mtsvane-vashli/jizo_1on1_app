@@ -1,8 +1,8 @@
-// frontend/src/components/Sidebar.js (修正後)
-
+// frontend/src/components/Sidebar.js
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import styles from './Sidebar.module.css';
 
 import {
   CalendarIcon,
@@ -13,7 +13,6 @@ import {
 } from '@heroicons/react/24/outline';
 
 function Sidebar() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -30,51 +29,48 @@ function Sidebar() {
     { name: '設定', path: '/settings', icon: <Cog6ToothIcon /> },
   ];
 
-  // ★追加: ユーザー名の頭文字を取得するロジック
   const avatarInitial = user ? user.username.charAt(0).toUpperCase() : '?';
 
   return (
-    <div className="sidebar-container">
-      {/* ヘッダー/ロゴ */}
-      <div className="sidebar-header">
+    <aside className={styles.container}>
+      <div className={styles.header}>
         <h1>おたすけ地蔵くん</h1>
       </div>
 
-      {/* ナビゲーションメニュー */}
-      <nav className="sidebar-nav">
-        <ul>
+      <nav className={styles.nav}>
+        <ul className={styles.navList}>
           {navItems.map((item) => (
-            <li key={item.name}>
-              <Link
+            <li key={item.name} className={styles.navItem}>
+              <NavLink
                 to={item.path}
-                className={`sidebar-nav-link ${location.pathname === item.path ? 'active' : ''}`}
+                end //  '/' が他のパスにマッチしないようにする
+                className={({ isActive }) =>
+                  `${styles.navLink} ${isActive ? styles.active : ''}`
+                }
               >
-                <span className="sidebar-icon">{item.icon}</span>
+                <span className={styles.icon}>{item.icon}</span>
                 {item.name}
-              </Link>
+              </NavLink>
             </li>
           ))}
         </ul>
       </nav>
 
-      {/* ユーザー情報とログアウト */}
-      <div className="sidebar-user-info">
-        <div className="sidebar-user-info-flex">
-          <div className="sidebar-user-avatar">
-            {/* ★修正: <img> タグの代わりに、取得した頭文字を表示 */}
+      <div className={styles.userInfo}>
+        <div className={styles.userInfoFlex}>
+          <div className={styles.userAvatar}>
             {avatarInitial}
           </div>
           <div>
-            <p className="sidebar-user-name">{user ? user.username : 'ゲスト'}</p>
-            {/* ★修正: ハードコーディングされたIDを user オブジェクトから表示 */}
-            <p className="sidebar-user-id">{user ? `ID: ${user.id}` : 'ID: ---'}</p>
+            <p className={styles.userName}>{user ? user.username : 'ゲスト'}</p>
+            <p className={styles.userId}>{user ? `ID: ${user.id}` : 'ID: ---'}</p>
           </div>
         </div>
-        <button onClick={handleLogout} className="sidebar-logout-button">
+        <button onClick={handleLogout} className={styles.logoutButton}>
           ログアウト
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
 

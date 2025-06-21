@@ -1,0 +1,37 @@
+/* frontend/src/views/LearningResources.module.css */
+.card {
+  background-color: var(--color-bg-card);
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.card + .card {
+    margin-top: var(--space-xl);
+}
+
+.card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--space-lg);
+  color: var(--color-text-primary);
+}
+
+.card ul {
+  list-style-type: disc;
+  padding-left: 1.25rem; /* pl-5 */
+}
+
+.card li {
+  color: var(--color-text-dark);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.card li + li {
+    margin-top: var(--space-sm);
+}
+
+.card li strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}

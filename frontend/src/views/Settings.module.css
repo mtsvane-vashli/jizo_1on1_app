@@ -1,0 +1,118 @@
+/* frontend/src/views/Settings.module.css */
+
+.card {
+  background-color: var(--color-bg-card);
+  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  max-width: 36rem; /* 少し広げる */
+  margin-left: auto;
+  margin-right: auto;
+}
+/* 2つ目以降のカードの上にマージンを追加 */
+.card + .card {
+    margin-top: var(--space-2xl);
+}
+
+
+.sectionHeader {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: var(--space-lg);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-sm);
+}
+
+.sectionDescription {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+}
+
+.inputGroup {
+  margin-bottom: var(--space-lg);
+}
+
+.inputGroup label {
+  display: block;
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.input {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  color: var(--color-text-dark);
+  outline: none;
+  font-size: 0.9rem;
+  transition: var(--transition-fast);
+}
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+.input[readOnly] {
+    background-color: var(--color-bg-disabled);
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-xl);
+}
+
+.saveButton {
+  background-color: var(--color-primary);
+  color: var(--color-text-light);
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+  font-size: 0.9rem;
+}
+.saveButton:hover {
+  background-color: var(--color-primary-hover);
+}
+.saveButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 部下管理リスト */
+.employeeListHeader {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: var(--space-md);
+    color: var(--color-text-primary);
+}
+.loadingText, .emptyText {
+    color: var(--color-text-secondary);
+}
+
+.employeeList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.employeeListItem {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.employeeListItem:last-child {
+  border-bottom: none;
+}

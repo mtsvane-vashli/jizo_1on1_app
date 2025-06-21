@@ -1,0 +1,47 @@
+/* src/App.module.css */
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.contentArea {
+  flex-grow: 1;
+  padding: var(--space-xl);
+}
+
+.contentCard {
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xl);
+  min-height: calc(100vh - (var(--space-xl) * 2));
+}
+
+.viewContainer {
+  /* このコンテナ自体にスタイルは不要な場合が多い */
+  /* 必要であれば padding などを設定 */
+}
+
+.screenHeader {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  color: var(--color-text-primary);
+}
+
+.screenDescription {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: var(--space-xl);
+}
+
+.loadingScreen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--color-bg-app);
+  font-size: 1.2rem;
+  color: var(--color-text-primary);
+}
