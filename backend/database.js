@@ -1,4 +1,4 @@
-// backend/database.js (PostgreSQL版)
+// backend/database.js (修正後)
 
 const { Pool } = require('pg');
 
@@ -10,6 +10,4 @@ const pool = new Pool({
 });
 
 // アプリケーション全体でこの pool を使ってクエリを実行する
-module.exports = {
-    query: (text, params) => pool.query(text, params),
-};
+module.exports = pool;
