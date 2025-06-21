@@ -2,6 +2,12 @@
 
 const express = require('express');
 const cors = require('cors');
+// 本番環境用のCORS設定
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // 環境変数からフロントエンドのURLを取得
+  optionsSuccessStatus: 200
+};
+
 const path = require('path');
 
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
@@ -17,7 +23,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // ミドルウェアの設定
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // ルーターの接続
