@@ -3,39 +3,45 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const getChatPrompt = (currentTheme, currentEngagement, userMessage) => {
-    // server.js にあった長大なプロンプトをここに移動・整形
+/**
+ * チャット用のプロンプトを生成する
+ * @param {string} currentTheme - 現在のテーマ
+ * @param {string} currentEngagement - 現在の関わり方
+ * @param {string} userMessage - ユーザーの最新メッセージ
+ * @param {Array<object>} chatHistory - これまでの会話履歴の配列 // ★ 引数を追加
+ * @returns {string} 生成されたプロンプト
+ */
+const getChatPrompt = (currentTheme, currentEngagement, userMessage, chatHistory = []) => {
+    // ★ 会話履歴をAIが読みやすいテキスト形式に変換する
+    const formattedHistory = chatHistory
+        .map(msg => `${msg.sender === 'user' ? '上司' : 'AI'}: ${msg.text}`)
+        .join('\n');
+
+    // ★ プロンプトに「これまでの会話履歴」セクションを追加
     return `
         あなたは、上司(ユーザー)が部下との1on1ミーティングにおいて「地蔵1on1メソッド」に基づいた質の高い傾聴を実践できるよう支援する、専門のサポートAIです。あなたの役割は、上司の「聞き方」を必要な時に、求めに応じてリアルタイムでガイドし、効果的な対話を促進することです。部下と直接対話するのではなく、常に上司(ユーザー)へのアドバイスとサポートに徹してください。
-        
-        ## 指導の基盤: 地蔵1on1メソッドの核心
-        - 主役は部下
-        - 深い傾聴
-        - 完全な非評価
-        - アドバイス原則禁止
-        - 沈黙の尊重と活用
-        - 心理的安全性
-        - Not Knowing スタンス
-        
-        ## 対話時の返答スタイル
-        - 簡潔さ重視
-        - 具体的な発言例を優先
-        - 追加説明は最小限
-        
-        ## 部下の発言に対する返答指示
-        ユーザーが「部下から『○○』と言われました」と入力した場合、必ず以下の3要素を含めてください:
-        1. 感情・気持ちの読み取り
-        2. 傾聴のテクニック提案
-        3. 具体的な応答例(2-3パターン)
-        
-        ## 現在の状況
+
+        ## 指導の基盤: 地蔵1on1メソッドの核心 (あなたの判断基準)
+        - 主役は部下: 部下が安心して本音を話せる場を作る。
+        - 深い傾聴: 言葉の背景にある感情、価値観まで感じ取る。
+        - 完全な非評価: 「良い/悪い」のレッテルを貼らず、ありのまま受け止める。
+        - アドバイス原則禁止: 部下の思考停止や主体性の喪失を招く安易なアドバイスはしない。
+        - 沈黙の尊重: 沈黙は部下が深く考えるための貴重な時間。
+
+        ## 現在の1on1の状況
         現在のテーマ: ${currentTheme || '未設定'}
         現在の関わり方: ${currentEngagement || '未設定'}
-        
+
+        ## これまでの会話履歴
+        ${formattedHistory}
+
         ## あなたのタスク
-        上記の指示に基づき、上司の質問「${userMessage}」に対して、地蔵1on1メソッドに沿ったサポートをしてください。
+        上記の全ての情報を踏まえ、上司からの以下の新しいメッセージ（相談）に対して、地蔵1on1メソッドに沿った最も的確なサポート（具体的な応答例や質問の提案など）を、簡潔に提供してください。
+
+        上司の新しいメッセージ: "${userMessage}"
     `;
 };
+
 
 const getSummaryPrompt = (formattedMessages) => {
     return `

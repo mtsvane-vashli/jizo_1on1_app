@@ -210,10 +210,26 @@ function New1on1Support() {
 
       {(state.currentSummary || state.currentNextActions) && (
         <div className={styles.summaryArea}>
-          <h3 className={styles.summaryHeader}>会話の要約</h3>
-          <p className={styles.summaryText}>{state.currentSummary}</p>
-          <h3 className={styles.summaryHeader}>ネクストアクション</h3>
-          {state.currentNextActions.split('\n').map((line, i) => <p key={i} className={styles.summaryListItem}>{line.replace(/^- /, '')}</p>)}
+          {state.currentSummary && (
+            <>
+              <h3 className={styles.summaryHeader}>会話の要約</h3>
+              {/* ★ 修正: dangerouslySetInnerHTMLを使ってMarkdownをレンダリング */}
+              <div
+                className={styles.summaryText}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }}
+              />
+            </>
+          )}
+          {state.currentNextActions && (
+            <>
+              <h3 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h3>
+              {/* ★ 修正: こちらも同様にMarkdownをレンダリング */}
+              <div
+                className={`${styles.summaryText} ${styles.summaryList}`}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }}
+              />
+            </>
+          )}
         </div>
       )}
 

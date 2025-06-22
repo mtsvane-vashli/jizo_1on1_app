@@ -1,6 +1,6 @@
 // frontend/src/views/Login.js
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Auth.module.css'; // ★共通のAuthスタイルをインポート
 
@@ -64,9 +64,6 @@ function Login() {
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
         </form>
-        <p className={styles.linkText}>
-          アカウントをお持ちでないですか？ <Link to="/register" className={styles.link}>登録はこちら</Link>
-        </p>
       </div>
     </div>
   );
