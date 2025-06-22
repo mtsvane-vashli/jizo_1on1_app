@@ -1,80 +1,62 @@
-// frontend/src/context/AuthContext.js
+// frontend/src/context/AuthContext.js (最終修正版)
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import { loginUser } from '../services/authService';
 
-// AuthContextの作成
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // ログイン中のユーザー情報 (username, id)
-  const [token, setToken] = useState(null); // JWT
-  const [loading, setLoading] = useState(true); // 初期ロード中か
+    const [user, setUser] = useState(null); // ★ userオブジェクトに {id, username, role, organizationId} が入る
+    const [token, setToken] = useState(localStorage.getItem('jwtToken')); // ★ 初期値をlocalStorageから取得
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // コンポーネントマウント時にlocalStorageからトークンを読み込む
-    const storedToken = localStorage.getItem('jwtToken');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setToken(storedToken);
-        setUser(parsedUser);
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-        // パース失敗時はクリア
+    useEffect(() => {
+        if (token) {
+            try {
+                const decodedUser = jwtDecode(token);
+                if (decodedUser.exp * 1000 > Date.now()) {
+                    setUser(decodedUser);
+                } else {
+                    // 有効期限切れ
+                    localStorage.removeItem('jwtToken');
+                    setToken(null);
+                }
+            } catch (e) {
+                console.error("Failed to decode token", e);
+                localStorage.removeItem('jwtToken');
+                setToken(null);
+            }
+        }
+        setLoading(false);
+    }, [token]);
+
+    const login = async (username, password) => {
+        try {
+            const data = await loginUser(username, password);
+            localStorage.setItem('jwtToken', data.token);
+            setToken(data.token); // ★ トークンを更新することで、useEffectが走り、userが設定される
+            return { success: true };
+        } catch (error) {
+            console.error('Login error:', error.message);
+            return { success: false, message: error.message };
+        }
+    };
+
+    const logout = () => {
         localStorage.removeItem('jwtToken');
-        localStorage.removeItem('user');
-      }
-    }
-    setLoading(false);
-  }, []);
+        setToken(null);
+        setUser(null);
+    };
 
-  // ログイン処理
-  const login = async (username, password) => {
-    try {
-      // サービス層の関数を呼び出す
-      const data = await loginUser(username, password);
-      
-      // 成功した場合、状態を更新する
-      localStorage.setItem('jwtToken', data.token);
-      localStorage.setItem('user', JSON.stringify({ username: data.username, id: data.userId }));
-      setToken(data.token);
-      setUser({ username: data.username, id: data.userId });
-      
-      return { success: true, message: data.message };
+    const value = { user, token, loading, isAuthenticated: !!user, login, logout };
 
-    } catch (error) {
-      // サービス層からスローされたエラーをキャッチ
-      console.error('Login error:', error.message);
-      return { success: false, message: error.message };
-    }
-  };
-
-  // ログアウト処理
-  const logout = () => {
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-  };
-
-  const authContextValue = {
-    user,
-    token,
-    loading,
-    isAuthenticated: !!user && !!token, // ユーザーとトークンがあれば認証済み
-    login,
-    logout,
-  };
-
-  return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 };
 
-// 認証コンテキストを使用するためのカスタムフック
 export const useAuth = () => {
-  return useContext(AuthContext);
+    return useContext(AuthContext);
 };

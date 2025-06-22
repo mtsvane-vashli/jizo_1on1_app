@@ -1,10 +1,10 @@
-// backend/controllers/conversationController.js
+// backend/controllers/conversationController.js (修正後)
 
 const conversationModel = require('../models/conversationModel');
 
 const listConversations = async (req, res) => {
     try {
-        const conversations = await conversationModel.getAllConversations();
+        const conversations = await conversationModel.getAllConversations(req.user); // ★
         res.json(conversations);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -13,9 +13,9 @@ const listConversations = async (req, res) => {
 
 const getConversationDetails = async (req, res) => {
     try {
-        const conversation = await conversationModel.getConversationById(req.params.id);
+        const conversation = await conversationModel.getConversationById(req.params.id, req.user); // ★
         if (!conversation) {
-            return res.status(404).json({ error: "Conversation not found." });
+            return res.status(404).json({ error: "Conversation not found or you don't have permission to access it." });
         }
         res.json(conversation);
     } catch (error) {
@@ -34,9 +34,9 @@ const getConversationMessages = async (req, res) => {
 
 const deleteConversation = async (req, res) => {
     try {
-        const changes = await conversationModel.deleteConversationAndMessages(req.params.id);
+        const changes = await conversationModel.deleteConversationAndMessages(req.params.id, req.user); // ★
         if (changes === 0) {
-            return res.status(404).json({ error: 'Conversation not found.' });
+            return res.status(404).json({ error: 'Conversation not found or you don\'t have permission to delete it.' });
         }
         res.status(200).json({ message: 'Conversation and related data deleted successfully.' });
     } catch (error) {

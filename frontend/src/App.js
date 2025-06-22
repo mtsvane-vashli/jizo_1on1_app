@@ -13,7 +13,6 @@ import Settings from './views/Settings';
 
 // 認証関連のコンポーネントとコンテキスト
 import Login from './views/Login';
-import Register from './views/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -62,7 +61,6 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/*" element={<ProtectedRoute><AppContent /></ProtectedRoute>} />
       </Routes>
     </AuthProvider>
