@@ -5,6 +5,9 @@
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+
+    "db:migrate": "npm run db:migrate:schema && npm run db:migrate:002 && npm run db:migrate:003",
+
     "db:migrate:schema": "node run-migration.js migrations/schema.sql",
     "db:migrate:002": "node run-migration.js migrations/002_add_user_id_columns.sql",
     "db:migrate:003": "node run-migration.js migrations/003_add_transcript_column.sql"
