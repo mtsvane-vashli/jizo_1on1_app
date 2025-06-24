@@ -9,7 +9,8 @@ import {
   BookOpenIcon,
   ChartBarIcon,
   AcademicCapIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  MicrophoneIcon
 } from '@heroicons/react/24/outline';
 
 function Sidebar() {
@@ -25,6 +26,7 @@ function Sidebar() {
     { name: '新規1on1サポート', path: '/', icon: <CalendarIcon /> },
     { name: '過去のセッションログ', path: '/logs', icon: <BookOpenIcon /> },
     { name: '分析ダッシュボード', path: '/dashboard', icon: <ChartBarIcon /> },
+    { name: 'リアルタイム文字起こし', path: '/transcription', icon: <MicrophoneIcon /> },
     { name: '学習リソース', path: '/resources', icon: <AcademicCapIcon /> },
     { name: '設定', path: '/settings', icon: <Cog6ToothIcon /> },
   ];

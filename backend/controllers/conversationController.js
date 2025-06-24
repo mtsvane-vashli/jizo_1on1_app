@@ -44,9 +44,31 @@ const deleteConversation = async (req, res) => {
     }
 };
 
+/**
+ * 文字起こし結果を保存する
+ */
+const saveTranscript = async (req, res) => {
+    const { transcript, employeeId } = req.body;
+    const user = req.user;
+
+    // バリデーション
+    if (!transcript || typeof transcript !== 'string' || transcript.trim() === '') {
+        return res.status(400).json({ error: 'Transcript is required and must be a non-empty string.' });
+    }
+
+    try {
+        const newConversation = await conversationModel.createConversationFromTranscript(transcript, employeeId, user);
+        res.status(201).json({ message: 'Transcript saved successfully.', conversation: newConversation });
+    } catch (error) {
+        console.error('Failed to save transcript:', error);
+        res.status(500).json({ error: 'Failed to save transcript.' });
+    }
+};
+
 module.exports = {
     listConversations,
     getConversationDetails,
     getConversationMessages,
-    deleteConversation
+    deleteConversation,
+    saveTranscript,
 };

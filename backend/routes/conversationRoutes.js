@@ -17,4 +17,7 @@ router.get('/conversations/:id/messages', authenticateToken, conversationControl
 // 特定の会話を削除
 router.delete('/conversations/:id', authenticateToken, conversationController.deleteConversation);
 
+// 文字起こし結果から新しい会話として保存
+router.post('/conversations', authenticateToken, conversationController.saveTranscript);
+
 module.exports = router;

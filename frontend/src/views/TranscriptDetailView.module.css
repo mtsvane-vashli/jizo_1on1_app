@@ -1,0 +1,51 @@
+/* frontend/src/views/TranscriptDetailView.module.css */
+.metaInfo {
+    background-color: var(--color-bg-card);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+}
+.metaInfo p {
+    margin: 0 0 0.5rem;
+    color: #374151;
+}
+.metaInfo strong {
+    color: #111827;
+}
+
+.transcriptContainer {
+    background-color: var(--color-bg-card);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+}
+
+.transcriptContainer h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1rem;
+}
+
+.transcriptContent {
+    background-color: #f9fafb;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    white-space: pre-wrap; /* 改行をそのまま表示 */
+    word-wrap: break-word; /* 長い単語を折り返す */
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #1f2937;
+}
+
+.error {
+    color: var(--color-danger);
+    text-align: center;
+    padding: 2rem;
+}

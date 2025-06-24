@@ -38,11 +38,6 @@ function SessionLog() {
         }
     }, [isAuthenticated, authLoading, fetchPastConversations]);
 
-
-    const loadConversation = (conversationId) => {
-        navigate(`/?conversationId=${conversationId}`);
-    };
-
     const deleteConversation = async (conversationId) => {
         if (!window.confirm('この会話履歴を完全に削除してもよろしいですか？')) {
             return;
@@ -79,13 +74,27 @@ function SessionLog() {
                     {pastConversations.map(conv => (
                         <li key={conv.id} className={styles.item}>
                             <button
-                                onClick={() => loadConversation(conv.id)}
+                                onClick={() => {
+                                    if (conv.transcript) {
+                                        // transcriptがあれば、新しい閲覧ページへ
+                                        navigate(`/log/transcript/${conv.id}`);
+                                    } else {
+                                        // なければ、従来のチャット再開ページへ
+                                        navigate(`/?conversationId=${conv.id}`);
+                                    }
+                                }}
                                 className={styles.button}
                             >
                                 <span className={styles.dateTheme}>
                                     {conv.employee_name && <strong>{conv.employee_name}さんとの会話 - </strong>}
                                     {new Date(conv.timestamp).toLocaleString()} - テーマ: {conv.theme || '未設定'}
                                 </span>
+                                {/* もしtranscriptがあれば、それを表示する */}
+                                {conv.transcript && (
+                                    <span className={`${styles.preview} ${styles.lineClamp2}`}>
+                                        文字起こし: {conv.transcript}
+                                    </span>
+                                )}
                                 {conv.summary && (
                                     <span className={`${styles.preview} ${styles.lineClamp2}`}>
                                         要約: {conv.summary}

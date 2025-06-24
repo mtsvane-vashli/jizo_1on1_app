@@ -8,8 +8,10 @@ import styles from './App.module.css'; // ★ CSS Modules をインポート
 import New1on1Support from './views/New1on1Support';
 import SessionLog from './views/SessionLog';
 import Dashboard from './views/Dashboard';
+import RealTimeTranscription from './views/RealTimeTranscription';
 import LearningResources from './views/LearningResources';
 import Settings from './views/Settings';
+import TranscriptDetailView from './views/TranscriptDetailView';
 
 // 認証関連のコンポーネントとコンテキスト
 import Login from './views/Login';
@@ -47,6 +49,8 @@ function AppContent() {
             <Route path="/" element={<New1on1Support />} />
             <Route path="/logs" element={<SessionLog />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/transcription" element={<RealTimeTranscription />} />
+            <Route path="/log/transcript/:id" element={<TranscriptDetailView />} />
             <Route path="/resources" element={<LearningResources />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

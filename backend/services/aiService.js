@@ -100,10 +100,48 @@ async function generateContent(prompt) {
     }
 }
 
+// ★ Speech-to-Text APIのクライアントをインポート
+const { SpeechClient } = require('@google-cloud/speech');
+const speechClient = new SpeechClient();
+
+/**
+ * リアルタイム文字起こしのためのストリームをセットアップする関数
+ * @param {function} onTranscription - 文字起こし結果が得られたときに呼び出されるコールバック関数
+ * @returns {object} - startとstopメソッドを持つストリームハンドラオブジェクト
+ */
+function setupTranscriptionStream(onTranscription) {
+  const requestConfig = {
+    encoding: 'WEBM_OPUS', // MediaRecorderのデフォルトに合わせて調整
+    sampleRateHertz: 48000, // 一般的なマイクのサンプルレート
+    languageCode: 'ja-JP',  // 日本語
+  };
+
+  const recognizeStream = speechClient
+    .streamingRecognize({
+      config: {
+        ...requestConfig,
+        enableAutomaticPunctuation: true, // 自動で句読点を付与
+      },
+      interimResults: true, // 翻訳の途中結果を取得する
+    })
+    .on('error', (err) => {
+      console.error('Speech-to-Text API Error:', err);
+    })
+    .on('data', (data) => {
+      // 確定した翻訳結果のみを対象とする
+      if (data.results[0] && data.results[0].isFinal) {
+        onTranscription(data.results[0].alternatives[0].transcript);
+      }
+    });
+
+  return recognizeStream;
+}
+
 module.exports = {
     getChatPrompt,
     getSummaryPrompt,
     getKeywordsPrompt,
     getSentimentPrompt,
-    generateContent
+    generateContent,
+    setupTranscriptionStream
 };

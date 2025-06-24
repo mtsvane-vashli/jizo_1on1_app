@@ -38,3 +38,16 @@ export const deleteConversationById = (id) => {
         method: 'DELETE',
     });
 };
+
+/**
+ * 文字起こしテキストを新しい会話として保存する
+ * @param {string} transcript - 保存する文字起こしテキスト
+ * @param {number} employeeId - 紐付ける従業員のID
+ * @returns {Promise<object>} 保存された会話データ
+ */
+export const saveTranscript = (transcript, employeeId) => {
+    return apiClient('/api/conversations', {
+        method: 'POST',
+        body: JSON.stringify({ transcript, employeeId })
+    });
+};

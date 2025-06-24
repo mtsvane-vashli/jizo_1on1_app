@@ -8,7 +8,7 @@ const pool = require('../database');
  */
 const getAllConversations = async (user) => {
     let sql = `
-        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions,
+        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
                e.name AS employee_name, e.id AS employee_id
         FROM conversations c
         LEFT JOIN employees e ON c.employee_id = e.id `;
@@ -35,7 +35,7 @@ const getAllConversations = async (user) => {
  */
 const getConversationById = async (id, user) => {
     let sql = `
-        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.employee_id, c.user_id,
+        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.employee_id, c.user_id, c.transcript,
                e.name AS employee_name, e.email AS employee_email
         FROM conversations c
         LEFT JOIN employees e ON c.employee_id = e.id
@@ -97,6 +97,27 @@ const deleteConversationAndMessages = async (id, user) => {
     }
     const result = await pool.query(sql, params);
     return result.rowCount;
+};
+
+/**
+ * 文字起こし結果から新しい会話レコードを作成する
+ * @param {string} transcript - 保存する文字起こしテキスト
+ * @param {number} employeeId - 紐付ける従業員のID 
+ * @param {object} user - ログイン中のユーザー情報
+ * @returns {object} 作成された会話レコード
+ */
+const createConversationFromTranscript = async (transcript, employeeId, user) => {
+    const sql = `
+        INSERT INTO conversations (transcript, user_id, organization_id, theme, employee_id) 
+        VALUES ($1, $2, $3, $4, $5) 
+        RETURNING *`;
+    
+    // themeは必須項目のようなので、仮のテーマを設定
+    const theme = "リアルタイム文字起こしセッション";
+    const params = [transcript, user.id, user.organizationId, theme, employeeId];
+    
+    const { rows } = await pool.query(sql, params);
+    return rows[0];
 };
 
 /**
@@ -164,7 +185,6 @@ const saveSentiment = async (conversationId, sentimentResult) => {
         client.release();
     }
 };
-// --- ここまで変更不要な関数 ---
 
 
 /**
@@ -225,4 +245,5 @@ module.exports = {
     saveSentiment,
     getDashboardKeywords,
     getDashboardSentiments,
+    createConversationFromTranscript,
 };
