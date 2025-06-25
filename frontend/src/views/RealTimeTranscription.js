@@ -7,7 +7,8 @@ import { getEmployees } from '../services/employeeService';
 
 const RealTimeTranscription = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  // ★ Stateを文字列からオブジェクトの配列に変更
+  const [transcript, setTranscript] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState({ message: '', type: '' });
   const [employees, setEmployees] = useState([]);
@@ -31,9 +32,13 @@ const RealTimeTranscription = () => {
 
   useEffect(() => {
     socketRef.current = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000');
+    
+    // ★ オブジェクトを受け取り、配列に追加する
     socketRef.current.on('transcript_data', (data) => {
-      setTranscript(prev => prev === '録音中...' ? data : prev + data);
+      // dataは { speakerTag, transcript }
+      setTranscript(prev => [...prev, data]);
     });
+
     return () => {
       socketRef.current.disconnect();
     };
@@ -43,6 +48,9 @@ const RealTimeTranscription = () => {
     if (isRecording) {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
+        if (socketRef.current) {
+          socketRef.current.emit('stop_transcription');
+        }
       }
       if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach(track => track.stop());
@@ -50,9 +58,10 @@ const RealTimeTranscription = () => {
       setIsRecording(false);
     } else {
       setSaveStatus({ message: '', type: '' });
-      setTranscript('');
+      // ★ 配列を初期化
+      setTranscript([]);
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: true, echoCancellation: true } });
         audioStreamRef.current = stream;
         const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         mediaRecorderRef.current = recorder;
@@ -61,9 +70,11 @@ const RealTimeTranscription = () => {
             socketRef.current.emit('audio_stream', event.data);
           }
         };
-        recorder.start(1000);
+        if (socketRef.current) {
+          socketRef.current.emit('start_transcription');
+        }
+        recorder.start(1000); 
         setIsRecording(true);
-        setTranscript('録音中...');
       } catch (error) {
         console.error('マイクへのアクセスに失敗しました:', error);
         alert('マイクへのアクセス許可が必要です。ブラウザの設定を確認してください。');
@@ -72,11 +83,17 @@ const RealTimeTranscription = () => {
   };
 
   const handleSave = async () => {
-    if (!transcript || isRecording || !selectedEmployeeId) return;
+    // ★ 保存条件を配列の長さに変更
+    if (transcript.length === 0 || isRecording || !selectedEmployeeId) return;
     setIsSaving(true);
     setSaveStatus({ message: '', type: '' });
     try {
-      await saveTranscript(transcript, selectedEmployeeId);
+      // ★ 配列から保存用の文字列を生成
+      const formattedTranscript = transcript
+        .map(item => `話者${item.speakerTag}: ${item.transcript}\n`)
+        .join('');
+      
+      await saveTranscript(formattedTranscript, selectedEmployeeId);
       setSaveStatus({ message: 'セッションログに保存しました！', type: 'success' });
     } catch (error) {
       console.error('Failed to save transcript:', error);
@@ -99,9 +116,7 @@ const RealTimeTranscription = () => {
           {employees.map(emp => (
             <button 
               key={emp.id} 
-              onClick={() => {
-                setSelectedEmployeeId(emp.id);
-              }}
+              onClick={() => setSelectedEmployeeId(emp.id)}
               className={`${styles.employeeOptionButton} ${selectedEmployeeId === emp.id ? styles.selected : ''}`}
               disabled={isRecording}
             >
@@ -111,10 +126,16 @@ const RealTimeTranscription = () => {
         </div>
       </div>
       
+      {/* ★ 表示ロジックを配列のマップに変更 */}
       <div className={styles.transcriptionArea}>
-        <div className={transcript ? styles.content : styles.placeholder}>
-          {transcript || '従業員を選択して、録音を開始してください。'}
-        </div>
+        {transcript.length === 0 && !isRecording && <div className={styles.placeholder}>従業員を選択して、録音を開始してください。</div>}
+        {transcript.length === 0 && isRecording && <div className={styles.placeholder}>録音中...</div>}
+        {transcript.map((item, index) => (
+          <p key={index} className={styles.transcriptLine}>
+            <strong className={styles.speakerLabel}>話者{item.speakerTag}:</strong>
+            <span>{item.transcript}</span>
+          </p>
+        ))}
       </div>
 
       {saveStatus.message && (
@@ -124,22 +145,18 @@ const RealTimeTranscription = () => {
       )}
 
       <div className={styles.controls}>
-        {/* ★★★ 変更点1 ★★★ */}
-        {/* 従業員が選択されるまで、または録音中はボタンを無効化 */}
         <button 
           onClick={handleToggleRecording} 
           className={`${styles.actionButton} ${isRecording ? styles.recording : ''}`}
-          disabled={isRecording ? false : !selectedEmployeeId}
+          disabled={!selectedEmployeeId && !isRecording}
         >
           {isRecording ? '録音停止' : '録音開始'}
         </button>
 
-        {/* ★★★ 変更点2 ★★★ */}
-        {/* 従業員が選択されていないと保存ボタンも無効化 */}
         <button
           onClick={handleSave}
           className={styles.saveButton}
-          disabled={!transcript || transcript === '録音中...' || isRecording || isSaving || !selectedEmployeeId}
+          disabled={transcript.length === 0 || isRecording || isSaving || !selectedEmployeeId}
         >
           {isSaving ? '保存中...' : 'ログとして保存'}
         </button>
