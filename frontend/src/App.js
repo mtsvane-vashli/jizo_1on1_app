@@ -13,6 +13,7 @@ import LearningResources from './views/LearningResources';
 import Settings from './views/Settings';
 import TranscriptDetailView from './views/TranscriptDetailView';
 
+
 // 認証関連のコンポーネントとコンテキスト
 import Login from './views/Login';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -49,8 +50,9 @@ function AppContent() {
             <Route path="/" element={<New1on1Support />} />
             <Route path="/logs" element={<SessionLog />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            
             <Route path="/log/transcript/:id" element={<TranscriptDetailView />} />
+            
+            
             <Route path="/resources" element={<LearningResources />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

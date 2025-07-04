@@ -75,13 +75,7 @@ function SessionLog() {
                         <li key={conv.id} className={styles.item}>
                             <button
                                 onClick={() => {
-                                    if (conv.transcript) {
-                                        // transcriptがあれば、新しい閲覧ページへ
-                                        navigate(`/log/transcript/${conv.id}`);
-                                    } else {
-                                        // なければ、従来のチャット再開ページへ
-                                        navigate(`/?conversationId=${conv.id}`);
-                                    }
+                                    navigate(`/log/transcript/${conv.id}`);
                                 }}
                                 className={styles.button}
                             >
@@ -89,7 +83,6 @@ function SessionLog() {
                                     {conv.employee_name && <strong>{conv.employee_name}さんとの会話 - </strong>}
                                     {new Date(conv.timestamp).toLocaleString()} - テーマ: {conv.theme || '未設定'}
                                 </span>
-                                {/* もしtranscriptがあれば、それを表示する */}
                                 {conv.transcript && (
                                     <span className={`${styles.preview} ${styles.lineClamp2}`}>
                                         文字起こし: {conv.transcript}

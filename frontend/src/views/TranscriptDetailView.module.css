@@ -1,51 +1,90 @@
-/* frontend/src/views/TranscriptDetailView.module.css */
-.metaInfo {
+.detailContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.chatHistory, .transcriptArea, .summaryArea {
     background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
     padding: 1.5rem;
-    border-radius: var(--radius-lg);
-    margin-bottom: 2rem;
     box-shadow: var(--shadow-sm);
-    border: 1px solid var(--color-border);
-}
-.metaInfo p {
-    margin: 0 0 0.5rem;
-    color: #374151;
-}
-.metaInfo strong {
-    color: #111827;
 }
 
-.transcriptContainer {
-    background-color: var(--color-bg-card);
-    padding: 2rem;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--color-border);
-}
-
-.transcriptContainer h3 {
+.chatHistory h3, .transcriptArea h3, .summaryArea h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    color: var(--color-text-primary);
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    max-width: 80%;
+    word-wrap: break-word;
+    font-size: 0.9rem;
+}
+
+.message.user {
+    background-color: var(--color-bg-user-message);
+    margin-left: auto;
+}
+
+.message.ai {
+    background-color: var(--color-bg-ai-message);
+    margin-right: auto;
+}
+
+.sender {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--color-text-secondary);
+}
+
+.text {
+    white-space: pre-wrap;
 }
 
 .transcriptContent {
-    background-color: #f9fafb;
-    padding: 1.5rem;
-    border-radius: var(--radius-md);
-    white-space: pre-wrap; /* 改行をそのまま表示 */
-    word-wrap: break-word; /* 長い単語を折り返す */
-    font-family: inherit;
-    font-size: 0.95rem;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
     line-height: 1.6;
-    color: #1f2937;
+    color: var(--color-text-primary);
 }
 
-.error {
-    color: var(--color-danger);
-    text-align: center;
-    padding: 2rem;
+.summaryArea h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-secondary);
+}
+
+.summaryArea div {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+}
+
+.backButton {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.backButton:hover {
+    background-color: var(--color-primary-hover);
 }
