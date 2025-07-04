@@ -50,26 +50,23 @@ const handleChat = async (req, res) => {
 };
 
 const summarizeConversation = async (req, res) => {
-    const { conversationId } = req.body;
-    const user = req.user; // ★
+    const { conversationId, transcript } = req.body;
+    const user = req.user;
     if (!conversationId) return res.status(400).json({ error: 'Conversation ID is required.' });
 
     try {
-        // ★ 権限チェック: この会話を操作する権限があるか確認
         const conversation = await model.getConversationById(conversationId, user);
         if (!conversation) return res.status(404).json({ error: 'Conversation not found or permission denied.' });
         
-        // ★ getMessagesByConversationId は権限チェックが不要なモデルに変更したので、引数はIDのみ
         const messages = await model.getMessagesByConversationId(conversationId);
         const formattedMessages = messages.map(msg => `${msg.sender === 'user' ? '上司' : 'AI'}: ${msg.text}`).join('\n');
 
         const [summaryContent, keywordsText, sentimentJsonText] = await Promise.all([
-            aiService.generateContent(aiService.getSummaryPrompt(formattedMessages)),
-            aiService.generateContent(aiService.getKeywordsPrompt(formattedMessages)),
-            aiService.generateContent(aiService.getSentimentPrompt(formattedMessages))
+            aiService.generateContent(aiService.getSummaryPrompt(formattedMessages, transcript)),
+            aiService.generateContent(aiService.getKeywordsPrompt(formattedMessages, transcript)),
+            aiService.generateContent(aiService.getSentimentPrompt(formattedMessages, transcript))
         ]);
         
-        // パース処理...
         const summaryMatch = summaryContent.match(/\*\*要約:\*\*\n([\s\S]*?)(?=\*\*ネクストアクション:\*\*|$)/);
         const nextActionsMatch = summaryContent.match(/\*\*ネクストアクション:\*\*\n([\s\S]*)/);
         const summary = summaryMatch ? summaryMatch[1].trim() : '';
@@ -78,10 +75,10 @@ const summarizeConversation = async (req, res) => {
         const sentimentResult = JSON.parse(sentimentJsonText.replace(/```json\n|```/g, '').trim());
 
         await Promise.all([
-            // ★ updateとsave系のモデル関数は、権限チェック済みの前提なので引数は変更なし
             model.updateConversationSummary(summary, nextActions, conversationId),
             model.saveKeywords(conversationId, keywords),
-            model.saveSentiment(conversationId, sentimentResult)
+            model.saveSentiment(conversationId, sentimentResult),
+            model.updateConversationTranscript(transcript, conversationId)
         ]);
 
         res.json({ summary, nextActions });

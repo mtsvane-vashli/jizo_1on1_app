@@ -43,14 +43,17 @@ const getChatPrompt = (currentTheme, currentEngagement, userMessage, chatHistory
 };
 
 
-const getSummaryPrompt = (formattedMessages) => {
+const getSummaryPrompt = (formattedMessages, transcript) => {
     return `
-        あなたは、上司の1on1傾聴を支援するAIです。以下の1on1の会話履歴を読み、
+        あなたは、上司の1on1傾聴を支援するAIです。以下の「AIとのチャット履歴」と「1on1の文字起こし」を読み、
         「上司向け」に、以下の形式で要約とネクストアクションを提案してください。
         部下へのアドバイスや評価は行わず、あくまで「上司が次に行うべき行動」に焦点を当ててください。
 
-        ## 1on1会話履歴
+        ## AIとのチャット履歴
         ${formattedMessages}
+
+        ## 1on1の文字起こし
+        ${transcript}
 
         ## 出力形式
         **要約:**

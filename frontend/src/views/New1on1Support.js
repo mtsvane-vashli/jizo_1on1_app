@@ -7,6 +7,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import layoutStyles from '../App.module.css';
 import styles from './New1on1Support.module.css';
+import RealTimeTranscription from './RealTimeTranscription';
 
 // Reducerのための初期状態
 const initialState = {
@@ -20,6 +21,8 @@ const initialState = {
   currentEmployee: null,
   currentSummary: '',
   currentNextActions: '',
+  isRecording: false,
+  transcript: [],
 };
 
 // 状態遷移を管理するReducer関数
@@ -30,7 +33,7 @@ function chatReducer(state, action) {
     case 'FETCH_EMPLOYEES_SUCCESS':
       return { ...state, isLoading: false, employees: action.payload, appState: 'employee_selection' };
     case 'SELECT_EMPLOYEE':
-      return { ...state, currentEmployee: action.payload, chatHistory: [], currentConversationId: null, currentSummary: '', currentNextActions: '' };
+      return { ...state, currentEmployee: action.payload, chatHistory: [], currentConversationId: null, currentSummary: '', currentNextActions: '', transcript: [] };
     case 'START_CONVERSATION_SUCCESS':
       return { ...state, isLoading: false, chatHistory: [action.payload], appState: 'theme_selection' };
     case 'LOAD_PAST_CONVERSATION_SUCCESS':
@@ -65,6 +68,12 @@ function chatReducer(state, action) {
       return { ...state, isGeneratingSummary: false, currentSummary: action.payload.summary, currentNextActions: action.payload.nextActions };
     case 'ERROR':
       return { ...state, isLoading: false, isGeneratingSummary: false, error: action.payload };
+    case 'START_RECORDING':
+      return { ...state, isRecording: true, transcript: [] };
+    case 'STOP_RECORDING':
+      return { ...state, isRecording: false };
+    case 'UPDATE_TRANSCRIPT':
+        return { ...state, transcript: [...state.transcript, action.payload] };
     case 'RESET':
         return { ...initialState, appState: 'employee_selection', employees: state.employees };
     default:
@@ -120,7 +129,10 @@ function New1on1Support() {
     dispatch({ type: 'SELECT_EMPLOYEE', payload: employee });
     dispatch({ type: 'START_LOADING' });
     sendMessage({ message: '__START__' })
-      .then(data => dispatch({ type: 'START_CONVERSATION_SUCCESS', payload: { sender: 'ai', text: data.reply } }))
+      .then(data => {
+          dispatch({ type: 'START_CONVERSATION_SUCCESS', payload: { sender: 'ai', text: data.reply } });
+          dispatch({ type: 'START_RECORDING' });
+      })
       .catch(err => dispatch({ type: 'ERROR', payload: err.message }));
   }, []);
 
@@ -147,14 +159,22 @@ function New1on1Support() {
 
   const handleGenerateSummary = useCallback(async () => {
     if (!state.currentConversationId) return;
+    dispatch({ type: 'STOP_RECORDING' });
     dispatch({ type: 'START_SUMMARY_GENERATION' });
     try {
-        const data = await generateSummary(state.currentConversationId);
+        const formattedTranscript = state.transcript
+            .map(item => `話者${item.speakerTag}: ${item.transcript}\n`)
+            .join('');
+        const data = await generateSummary(state.currentConversationId, formattedTranscript);
         dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data });
     } catch (err) {
         dispatch({ type: 'ERROR', payload: err.message });
     }
-  }, [state.currentConversationId]);
+  }, [state.currentConversationId, state.transcript]);
+
+  const handleTranscriptUpdate = useCallback((newTranscript) => {
+    dispatch({ type: 'UPDATE_TRANSCRIPT', payload: newTranscript });
+  }, []);
 
   const renderInputArea = () => {
       const themes = ["日々の業務やタスクの進め方について", "コンディションや心身の健康について", "職場や周囲の人との関わりについて", "将来のキャリアパスや成長について", "スキルアップや学びについて", "プライベートな出来事や関心事について", "組織や会社全体に関することについて", "その他、自由に話したいこと(前回の宿題等)"];
@@ -204,51 +224,61 @@ function New1on1Support() {
         {state.appState === 'employee_selection' ? '会話を開始する部下を選択してください。' : state.currentEmployee ? `${state.currentEmployee.name}さんとの1on1セッションです。` : 'こんにちは。'}
       </p>
 
-      <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId || state.appState !== 'on_demand'} className={styles.summaryButton}>
-        {state.isGeneratingSummary ? '要約を生成中...' : '会話を要約しネクストアクションを提案'}
-      </button>
+      <div className={styles.mainContent}>
+        <div className={styles.leftPanel}>
+          <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId || state.appState !== 'on_demand'} className={styles.summaryButton}>
+            {state.isGeneratingSummary ? '要約を生成中...' : '会話を要約しネクストアクションを提案'}
+          </button>
 
-      {(state.currentSummary || state.currentNextActions) && (
-        <div className={styles.summaryArea}>
-          {state.currentSummary && (
-            <>
-              <h3 className={styles.summaryHeader}>会話の要約</h3>
-              {/* ★ 修正: dangerouslySetInnerHTMLを使ってMarkdownをレンダリング */}
-              <div
-                className={styles.summaryText}
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }}
-              />
-            </>
-          )}
-          {state.currentNextActions && (
-            <>
-              <h3 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h3>
-              {/* ★ 修正: こちらも同様にMarkdownをレンダリング */}
-              <div
-                className={`${styles.summaryText} ${styles.summaryList}`}
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }}
-              />
-            </>
-          )}
-        </div>
-      )}
-
-      {state.error && <p className={styles.error}>{state.error}</p>}
-
-      <div className={styles.chatContainer}>
-        {state.appState !== 'employee_selection' && (
-            <div className={styles.chatWindow}>
-              {state.chatHistory.map((chat, index) => (
-                <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
-                  <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
-                  <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div>
-                </div>
-              ))}
-              {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>返信を生成中...</p></div>}
-              <div ref={messagesEndRef} />
+          {(state.currentSummary || state.currentNextActions) && (
+            <div className={styles.summaryArea}>
+              {state.currentSummary && (
+                <>
+                  <h3 className={styles.summaryHeader}>会話の要約</h3>
+                  <div
+                    className={styles.summaryText}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }}
+                  />
+                </>
+              )}
+              {state.currentNextActions && (
+                <>
+                  <h3 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h3>
+                  <div
+                    className={`${styles.summaryText} ${styles.summaryList}`}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }}
+                  />
+                </>
+              )}
             </div>
-        )}
-        {renderInputArea()}
+          )}
+
+          {state.error && <p className={styles.error}>{state.error}</p>}
+
+          <div className={styles.chatContainer}>
+            {state.appState !== 'employee_selection' && (
+                <div className={styles.chatWindow}>
+                  {state.chatHistory.map((chat, index) => (
+                    <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
+                      <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
+                      <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div>
+                    </div>
+                  ))}
+                  {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>返信を生成中...</p></div>}
+                  <div ref={messagesEndRef} />
+                </div>
+            )}
+            {renderInputArea()}
+          </div>
+        </div>
+        <div className={styles.rightPanel}>
+          <RealTimeTranscription 
+            isRecording={state.isRecording}
+            transcript={state.transcript}
+            onTranscriptUpdate={handleTranscriptUpdate}
+            employeeName={state.currentEmployee ? state.currentEmployee.name : ''}
+          />
+        </div>
       </div>
     </div>
   );

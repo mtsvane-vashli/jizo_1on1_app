@@ -8,9 +8,9 @@ export const sendMessage = (payload) => {
     });
 };
 
-export const generateSummary = (conversationId) => {
+export const generateSummary = (conversationId, transcript) => {
     return apiClient('/api/summarize_and_next_action', {
         method: 'POST',
-        body: JSON.stringify({ conversationId })
+        body: JSON.stringify({ conversationId, transcript })
     });
 };

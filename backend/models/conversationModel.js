@@ -145,6 +145,18 @@ const updateConversationSummary = async (summary, nextActions, conversationId) =
     return rows;
 };
 
+/**
+ * 特定の会話の文字起こしを更新する
+ * (権限チェックはコントローラーで行う)
+ * @param {string} transcript
+ * @param {number} conversationId
+ */
+const updateConversationTranscript = async (transcript, conversationId) => {
+    const sql = 'UPDATE conversations SET transcript = $1 WHERE id = $2';
+    const { rows } = await pool.query(sql, [transcript, conversationId]);
+    return rows;
+};
+
 // --- 権限チェックをコントローラーに委ねる関数群（変更不要） ---
 const addMessage = async (conversationId, sender, text) => {
     const sql = 'INSERT INTO messages (conversation_id, sender, text) VALUES ($1, $2, $3) RETURNING id';
@@ -246,4 +258,5 @@ module.exports = {
     getDashboardKeywords,
     getDashboardSentiments,
     createConversationFromTranscript,
+    updateConversationTranscript,
 };

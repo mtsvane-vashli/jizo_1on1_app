@@ -1,4 +1,18 @@
 /* frontend/src/views/New1on1Support.module.css */
+.mainContent {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    height: 100%;
+}
+
+.leftPanel, .rightPanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+}
+
 .error {
     color: var(--color-danger);
     padding: var(--space-md);
