@@ -12,6 +12,7 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+error_log_for_GC.txt
 
 # Runtime data
 pids
