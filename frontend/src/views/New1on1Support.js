@@ -115,8 +115,8 @@ function New1on1Support() {
       getEmployees()
         .then(data => {
             if(data.length === 0) {
-                alert('部下が登録されていません。設定画面で登録してください。');
-                navigate('/settings');
+                alert('部下が登録されていません。ダッシュボード画面で登録してください。');
+                navigate('/dashboard');
             } else {
                 dispatch({ type: 'FETCH_EMPLOYEES_SUCCESS', payload: data });
             }

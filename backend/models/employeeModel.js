@@ -46,7 +46,33 @@ const getAllEmployees = async (user) => {
     return rows;
 };
 
+/**
+ * 部下を削除する
+ * @param {number} employeeId - 削除する部下のID
+ * @param {object} user - 削除を実行したユーザー
+ * @returns {Promise<number>} - 削除された行数
+ */
+const deleteEmployeeById = async (employeeId, user) => {
+    let sql = "DELETE FROM employees WHERE id = $1";
+    let params = [employeeId];
+
+    // ユーザーの役割に応じて、削除条件を動的に変更
+    if (user.role === 'admin') {
+        // 管理者なら、組織全体の部下を削除可能
+        sql += " AND organization_id = $2";
+        params.push(user.organizationId);
+    } else {
+        // 一般ユーザーなら、自分が登録した部下のみ削除可能
+        sql += " AND user_id = $2";
+        params.push(user.id);
+    }
+
+    const { rowCount } = await pool.query(sql, params);
+    return rowCount;
+};
+
 module.exports = {
     createEmployee,
-    getAllEmployees
+    getAllEmployees,
+    deleteEmployeeById
 };

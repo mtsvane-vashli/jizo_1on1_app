@@ -21,3 +21,14 @@ export const createEmployee = (employeeData) => {
         body: JSON.stringify(employeeData),
     });
 };
+
+/**
+ * 部下を削除する
+ * @param {number} employeeId - 削除する部下のID
+ * @returns {Promise<void>}
+ */
+export const deleteEmployee = (employeeId) => {
+    return apiClient(`/api/employees/${employeeId}`, {
+        method: 'DELETE',
+    });
+};

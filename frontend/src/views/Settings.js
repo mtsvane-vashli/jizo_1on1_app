@@ -1,59 +1,19 @@
 // frontend/src/views/Settings.js (CSSモジュール対応版)
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getEmployees, createEmployee } from '../services/employeeService'; 
 import { createUser } from '../services/userService';
 import styles from './Settings.module.css'; // ★ CSSモジュールをインポート
 
 function Settings() {
   const { user } = useAuth();
 
-  // (stateと関数の定義は変更なし)
-  const [employees, setEmployees] = useState([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(true);
-  const [newEmployeeName, setNewEmployeeName] = useState('');
-  const [addingEmployee, setAddingEmployee] = useState(false);
-  const [employeeError, setEmployeeError] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newUserPassword, setNewPassword] = useState('');
   const [addingUser, setAddingUser] = useState(false);
   const [userCreationError, setUserCreationError] = useState('');
   const [userCreationSuccess, setUserCreationSuccess] = useState('');
 
-  const fetchEmployeesCallback = useCallback(async () => {
-    if (!user) return;
-    setLoadingEmployees(true);
-    try {
-      const data = await getEmployees();
-      setEmployees(data);
-    } catch (err) {
-      setEmployeeError(`部下の一覧の取得に失敗しました: ${err.message}`);
-    } finally {
-      setLoadingEmployees(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchEmployeesCallback();
-  }, [fetchEmployeesCallback]);
-
-  const handleAddEmployee = async (e) => {
-    e.preventDefault();
-    setAddingEmployee(true);
-    setEmployeeError('');
-    try {
-      await createEmployee({ name: newEmployeeName.trim() });
-      alert('部下を登録しました。');
-      setNewEmployeeName('');
-      fetchEmployeesCallback();
-    } catch (err) {
-      setEmployeeError(`部下の登録に失敗しました: ${err.message}`);
-    } finally {
-      setAddingEmployee(false);
-    }
-  };
-  
   const handleCreateUser = async (e) => {
       e.preventDefault();
       setAddingUser(true);
@@ -75,7 +35,7 @@ function Settings() {
     // ★ view-containerなどは全体レイアウトなのでグローバルクラス名のまま
     <div className="view-container">
       <h2 className="screen-header">設定</h2>
-      <p className="screen-description">アカウント情報、部下、組織のユーザーを管理します。</p>
+      <p className="screen-description">アカウント情報、組織のユーザーを管理します。</p>
 
       {/* ユーザー情報カード */}
       <div className={styles.card}> {/* ★ classNameをstylesオブジェクトから指定 */}
@@ -114,30 +74,6 @@ function Settings() {
             </form>
         </div>
       )}
-
-      {/* 部下管理カード */}
-      <div className={styles.card}> {/* ★ */}
-        <h3 className={styles.sectionHeader}>部下管理</h3> {/* ★ */}
-        <form onSubmit={handleAddEmployee}>
-          <div className={styles.inputGroup}> {/* ★ */}
-            <label htmlFor="employee-name">部下名</label>
-            <input type="text" id="employee-name" className={styles.input} value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} disabled={addingEmployee} /> {/* ★ */}
-          </div>
-          {employeeError && <p style={{color: 'red'}}>{employeeError}</p>}
-          <div className={styles.buttonGroup}> {/* ★ */}
-            <button type="submit" className={styles.saveButton} disabled={addingEmployee || !newEmployeeName.trim()}> {/* ★ */}
-              {addingEmployee ? '登録中...' : 'この部下を登録'}
-            </button>
-          </div>
-        </form>
-
-        <div className={styles.employeeList}> {/* ★ */}
-            {loadingEmployees ? <p className={styles.loadingText}>読み込み中...</p> :  /* ★ */
-             employees.length === 0 ? <p className={styles.emptyText}>まだ部下が登録されていません。</p> : /* ★ */
-             employees.map(emp => <div key={emp.id} className={styles.employeeListItem}><span>{emp.name}</span></div>) /* ★ */
-            }
-        </div>
-      </div>
     </div>
   );
 }

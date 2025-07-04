@@ -35,7 +35,24 @@ const getEmployees = async (req, res) => {
     }
 };
 
+const deleteEmployee = async (req, res) => {
+    const { id } = req.params;
+    const user = req.user;
+
+    try {
+        const deletedCount = await employeeModel.deleteEmployeeById(id, user);
+        if (deletedCount === 0) {
+            return res.status(404).json({ error: 'Employee not found or you do not have permission to delete this employee.' });
+        }
+        res.status(200).json({ message: 'Employee deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting employee:', error.message);
+        res.status(500).json({ error: 'Failed to delete employee.' });
+    }
+};
+
 module.exports = {
     addEmployee,
-    getEmployees
+    getEmployees,
+    deleteEmployee
 };

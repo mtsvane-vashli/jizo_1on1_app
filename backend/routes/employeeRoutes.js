@@ -11,4 +11,7 @@ router.get('/employees', authenticateToken, employeeController.getEmployees);
 // POST /api/employees - 認証が必要
 router.post('/employees', authenticateToken, employeeController.addEmployee);
 
+// DELETE /api/employees/:id - 認証が必要
+router.delete('/employees/:id', authenticateToken, employeeController.deleteEmployee);
+
 module.exports = router;

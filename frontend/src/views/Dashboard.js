@@ -7,6 +7,7 @@ import {
 } from 'chart.js';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardKeywords, getDashboardSentiments } from '../services';
+import { getEmployees, createEmployee, deleteEmployee } from '../services/employeeService';
 import layoutStyles from '../App.module.css'; // ★共通レイアウトスタイル
 import styles from './Dashboard.module.css'; // ★Dashboard専用スタイル
 
@@ -17,9 +18,23 @@ ChartJS.register(
 function Dashboard() {
   const [keywordsData, setKeywordsData] = useState({ labels: [], datasets: [] });
   const [sentimentChartData, setSentimentChartData] = useState({ labels: [], datasets: [] });
+  const [employees, setEmployees] = useState([]); // 部下リストの状態
+  const [newEmployeeName, setNewEmployeeName] = useState(''); // 新しい部下の名前
+  const [newEmployeeEmail, setNewEmployeeEmail] = useState(''); // 新しい部下のメールアドレス
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isAuthenticated, loading: authLoading } = useAuth();
+
+  // 部下リストの取得
+  const fetchEmployees = async () => {
+    try {
+      const data = await getEmployees();
+      setEmployees(data);
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+      setError(`部下データの取得に失敗しました: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) {
@@ -33,7 +48,7 @@ function Dashboard() {
       try {
         const [keywords, sentiments] = await Promise.all([
           getDashboardKeywords(),
-          getDashboardSentiments()
+          getDashboardSentiments(),
         ]);
 
         if (Array.isArray(keywords)) {
@@ -59,6 +74,7 @@ function Dashboard() {
             ],
           });
         }
+        fetchEmployees(); // ダッシュボードデータ取得後に部下リストも取得
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError(`データの取得に失敗しました: ${err.message}`);
@@ -71,6 +87,40 @@ function Dashboard() {
 
   const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: false } }, scales: { x: { title: { display: true, text: '頻度' }, beginAtZero: true }, y: { ticks: { autoSkip: false } } }, indexAxis: 'y' };
   const sentimentOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: false } }, scales: { x: { title: { display: true, text: '日付' } }, y: { title: { display: true, text: 'スコア' }, min: 0, max: 1 } } };
+
+  // 新しい部下を追加するハンドラ
+  const handleAddEmployee = async () => {
+    if (!newEmployeeName.trim()) {
+      alert('部下の名前は必須です。');
+      return;
+    }
+    try {
+      await createEmployee({ name: newEmployeeName, email: newEmployeeEmail });
+      setNewEmployeeName('');
+      setNewEmployeeEmail('');
+      fetchEmployees(); // リストを更新
+      alert('部下を追加しました。');
+    } catch (err) {
+      console.error('Error adding employee:', err);
+      setError(`部下の追加に失敗しました: ${err.message}`);
+      alert(`部下の追加に失敗しました: ${err.message}`);
+    }
+  };
+
+  // 部下を削除するハンドラ
+  const handleDeleteEmployee = async (id, name) => {
+    if (window.confirm(`${name} を削除してもよろしいですか？`)) {
+      try {
+        await deleteEmployee(id);
+        fetchEmployees(); // リストを更新
+        alert('部下を削除しました。');
+      } catch (err) {
+        console.error('Error deleting employee:', err);
+        setError(`部下の削除に失敗しました: ${err.message}`);
+        alert(`部下の削除に失敗しました: ${err.message}`);
+      }
+    }
+  };
 
   if (authLoading) {
     return <div className={layoutStyles.viewContainer}><p>認証情報を確認中...</p></div>;
@@ -107,6 +157,52 @@ function Dashboard() {
             <p className={styles.cardDescription}>(サンプル表示)</p>
             <p className={styles.engagementScore}>82 / 100</p>
             <p className={styles.engagementChange}>前月比:+5</p>
+        </div>
+      </div>
+
+      <div className={styles.card}>
+        <h3 className={styles.cardHeader}>部下管理</h3>
+        <p className={styles.cardDescription}>登録済みの部下を管理します。</p>
+        <div className={styles.employeeList}>
+          {isLoading ? (
+            <p className={styles.loadingText}>部下データを読み込み中...</p>
+          ) : employees.length > 0 ? (
+            <ul>
+              {employees.map((employee) => (
+                <li key={employee.id} className={styles.employeeItem}>
+                  {employee.name} ({employee.email})
+                  <button
+                    className={styles.deleteButton}
+                    onClick={() => handleDeleteEmployee(employee.id, employee.name)}
+                  >
+                    削除
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.loadingText}>登録済みの部下がいません。</p>
+          )}
+        </div>
+        <div className={styles.addEmployeeForm}>
+          <h4>新しい部下を追加</h4>
+          <input
+            type="text"
+            placeholder="名前"
+            value={newEmployeeName}
+            onChange={(e) => setNewEmployeeName(e.target.value)}
+            className={styles.inputField}
+          />
+          <input
+            type="email"
+            placeholder="メールアドレス (任意)"
+            value={newEmployeeEmail}
+            onChange={(e) => setNewEmployeeEmail(e.target.value)}
+            className={styles.inputField}
+          />
+          <button onClick={handleAddEmployee} className={styles.addButton}>
+            追加
+          </button>
         </div>
       </div>
     </div>
