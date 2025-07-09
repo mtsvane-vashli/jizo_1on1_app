@@ -145,13 +145,15 @@ function New1on1Support() {
             message: text,
             conversationId: state.currentConversationId,
             appState: state.appState,
-            employeeId: state.currentEmployee ? state.currentEmployee.id : null
+            employeeId: state.currentEmployee ? state.currentEmployee.id : null,
+            chatHistory: state.chatHistory,
+            transcript: state.transcript
         });
         dispatch({ type: 'RECEIVE_REPLY', payload: data });
     } catch (err) {
         dispatch({ type: 'ERROR', payload: err.message });
     }
-  }, [state.appState, state.currentConversationId, state.currentEmployee]);
+  }, [state.appState, state.currentConversationId, state.currentEmployee, state.chatHistory, state.transcript]);
 
   const handleFixedFlowSelect = useCallback((text) => {
     handleSendMessage(text);
