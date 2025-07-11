@@ -78,7 +78,6 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
         {transcript.length === 0 && isRecording && <div className={styles.placeholder}>録音中...</div>}
         {transcript.map((item, index) => (
           <p key={index} className={styles.transcriptLine}>
-            <strong className={styles.speakerLabel}>話者{item.speakerTag}:</strong>
             <span>{item.transcript}</span>
           </p>
         ))}

@@ -88,10 +88,7 @@ function setupTranscriptionStream(onTranscription) {
     encoding: 'WEBM_OPUS', // MediaRecorderのデフォルトに合わせて調整
     sampleRateHertz: 48000, // 一般的なマイクのサンプルレート
     languageCode: 'ja-JP',  // 日本語
-    diarizationSpeakerCount: 2,
     enableAutomaticPunctuation: true,
-    enableSpeakerDiarization: true,
-    enableWordTimeOffsets: true,
     model: 'telephony'
   };
 
@@ -107,34 +104,13 @@ function setupTranscriptionStream(onTranscription) {
       console.error('Speech-to-Text API Error:', err);
     })
     .on('data', (data) => {
-      if (data.results[0] && data.results[0].isFinal && data.results[0].alternatives[0].words.length > 0) {
-        
-        const result = data.results[0].alternatives[0];
-        const words = result.words;
-
-        // 話者タグごとに発言をグループ化する
-        const transcriptions = [];
-        let currentSpeaker = words[0].speakerTag;
-        let currentTranscript = '';
-
-        words.forEach(wordInfo => {
-          if (wordInfo.speakerTag === currentSpeaker) {
-            currentTranscript += wordInfo.word.replace(/▁/g, '');
-          } else {
-            transcriptions.push({ speakerTag: currentSpeaker, transcript: currentTranscript.trim() });
-            currentSpeaker = wordInfo.speakerTag;
-            currentTranscript = wordInfo.word.replace(/▁/g, '');
-          }
-        });
-        transcriptions.push({ speakerTag: currentSpeaker, transcript: currentTranscript.trim() });
-
-        // グループ化した発言をコールバックで一つずつ渡す
-        transcriptions.forEach(transcription => {
-            onTranscription({
-                speakerTag: transcription.speakerTag,
-                transcript: transcription.transcript
-            });
-        });
+      if (data.results[0] && data.results[0].isFinal && data.results[0].alternatives[0]) {
+        const transcript = data.results[0].alternatives[0].transcript;
+        if (transcript) {
+          onTranscription({
+            transcript: transcript.trim()
+          });
+        }
       }
     });
 

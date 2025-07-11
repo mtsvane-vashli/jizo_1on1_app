@@ -39,7 +39,7 @@ const handleChat = async (req, res) => {
         }
 
         const formattedTranscript = transcript && transcript.length > 0
-            ? transcript.map(item => `話者${item.speakerTag}: ${item.transcript}`).join('\n')
+            ? transcript.map(item => item.transcript).join('\n')
             : '';
 
         const fullPrompt = aiService.getChatPrompt(
