@@ -165,7 +165,8 @@ function New1on1Support() {
     dispatch({ type: 'START_SUMMARY_GENERATION' });
     try {
         const formattedTranscript = state.transcript
-            .map(item => `話者${item.speakerTag}: ${item.transcript}\n`)
+            .map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}
+`)
             .join('');
         const data = await generateSummary(state.currentConversationId, formattedTranscript);
         dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data });

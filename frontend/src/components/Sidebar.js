@@ -9,8 +9,7 @@ import {
   BookOpenIcon,
   ChartBarIcon,
   AcademicCapIcon,
-  Cog6ToothIcon,
-  MicrophoneIcon
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 
 function Sidebar() {

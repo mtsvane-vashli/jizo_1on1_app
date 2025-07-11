@@ -94,6 +94,8 @@ function setupTranscriptionStream(onTranscription) {
       phrases: [],
       boost: 20 // 認識されやすさの重み付け (オプション)
     }],
+    enableSpeakerDiarization: true, // 話者分離を有効にする
+    diarizationSpeakerCount: 2, // 話者の数を指定（例: 2人）
   };
 
   const recognizeStream = speechClient
@@ -108,11 +110,20 @@ function setupTranscriptionStream(onTranscription) {
       console.error('Speech-to-Text API Error:', err);
     })
     .on('data', (data) => {
-      if (data.results[0] && data.results[0].isFinal && data.results[0].alternatives[0]) {
-        const transcript = data.results[0].alternatives[0].transcript;
+      if (data.results[0] && data.results[0].alternatives[0]) {
+        const result = data.results[0];
+        const transcript = result.alternatives[0].transcript;
+        
+        let speakerTag = null;
+        if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
+          // 最初の単語の話者タグを使用
+          speakerTag = result.alternatives[0].words[0].speakerTag;
+        }
+
         if (transcript) {
           onTranscription({
-            transcript: transcript.trim()
+            transcript: transcript.trim(),
+            speakerTag: speakerTag // 話者タグを追加
           });
         }
       }
