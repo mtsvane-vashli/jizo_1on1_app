@@ -89,7 +89,11 @@ function setupTranscriptionStream(onTranscription) {
     sampleRateHertz: 48000, // 一般的なマイクのサンプルレート
     languageCode: 'ja-JP',  // 日本語
     enableAutomaticPunctuation: true,
-    model: 'telephony'
+    model: 'latest_long',
+    speechContexts: [{
+      phrases: [],
+      boost: 20 // 認識されやすさの重み付け (オプション)
+    }],
   };
 
   const recognizeStream = speechClient
