@@ -43,16 +43,28 @@ function Sidebar() {
         <ul className={styles.navList}>
           {navItems.map((item) => (
             <li key={item.name} className={styles.navItem}>
-              <NavLink
-                to={item.path}
-                end //  '/' が他のパスにマッチしないようにする
-                className={({ isActive }) =>
-                  `${styles.navLink} ${isActive ? styles.active : ''}`
-                }
-              >
-                <span className={styles.icon}>{item.icon}</span>
-                {item.name}
-              </NavLink>
+              {item.name === '新規1on1サポート' ? (
+                <a
+                  href={item.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.navLink}
+                >
+                  <span className={styles.icon}>{item.icon}</span>
+                  {item.name}
+                </a>
+              ) : (
+                <NavLink
+                  to={item.path}
+                  end //  '/' が他のパスにマッチしないようにする
+                  className={({ isActive }) =>
+                    `${styles.navLink} ${isActive ? styles.active : ''}`
+                  }
+                >
+                  <span className={styles.icon}>{item.icon}</span>
+                  {item.name}
+                </NavLink>
+              )}
             </li>
           ))}
         </ul>
