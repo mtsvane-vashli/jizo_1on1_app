@@ -19,6 +19,7 @@ function Dashboard() {
   const [keywordsData, setKeywordsData] = useState({ labels: [], datasets: [] });
   const [sentimentChartData, setSentimentChartData] = useState({ labels: [], datasets: [] });
   const [employees, setEmployees] = useState([]); // 部下リストの状態
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(''); // 選択された部下のID
   const [newEmployeeName, setNewEmployeeName] = useState(''); // 新しい部下の名前
   const [newEmployeeEmail, setNewEmployeeEmail] = useState(''); // 新しい部下のメールアドレス
   const [isLoading, setIsLoading] = useState(true);
@@ -42,13 +43,15 @@ function Dashboard() {
       return;
     }
 
-    const fetchDashboardData = async () => {
+    fetchEmployees(); // 部下リストは認証後に一度取得
+
+    const fetchDashboardData = async (employeeId) => {
       setIsLoading(true);
       setError(null);
       try {
         const [keywords, sentiments] = await Promise.all([
-          getDashboardKeywords(),
-          getDashboardSentiments(),
+          getDashboardKeywords(employeeId),
+          getDashboardSentiments(employeeId),
         ]);
 
         if (Array.isArray(keywords)) {
@@ -74,7 +77,6 @@ function Dashboard() {
             ],
           });
         }
-        fetchEmployees(); // ダッシュボードデータ取得後に部下リストも取得
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError(`データの取得に失敗しました: ${err.message}`);
@@ -82,8 +84,8 @@ function Dashboard() {
         setIsLoading(false);
       }
     };
-    fetchDashboardData();
-  }, [isAuthenticated, authLoading]);
+    fetchDashboardData(selectedEmployeeId);
+  }, [isAuthenticated, authLoading, selectedEmployeeId]);
 
   const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: false } }, scales: { x: { title: { display: true, text: '頻度' }, beginAtZero: true }, y: { ticks: { autoSkip: false } } }, indexAxis: 'y' };
   const sentimentOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: false } }, scales: { x: { title: { display: true, text: '日付' } }, y: { title: { display: true, text: 'スコア' }, min: 0, max: 1 } } };
@@ -132,6 +134,23 @@ function Dashboard() {
       <p className={layoutStyles.screenDescription}>1on1全体の傾向を可視化します。</p>
 
       {error && <p className={styles.error}>{error}</p>}
+
+      <div className={styles.employeeSelectContainer}>
+        <label htmlFor="employee-select" className={styles.selectLabel}>部下を選択:</label>
+        <select
+          id="employee-select"
+          className={styles.employeeSelect}
+          value={selectedEmployeeId}
+          onChange={(e) => setSelectedEmployeeId(e.target.value)}
+        >
+          <option value="">すべての部下</option>
+          {employees.map((employee) => (
+            <option key={employee.id} value={employee.id}>
+              {employee.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className={styles.grid}>
         <div className={styles.card}>

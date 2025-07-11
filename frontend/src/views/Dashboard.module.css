@@ -134,3 +134,33 @@
 .addButton:hover {
     background-color: var(--color-primary-dark);
 }
+
+.employeeSelectContainer {
+  margin-bottom: var(--space-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.selectLabel {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.employeeSelect {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+  min-width: 200px;
+}
+
+.employeeSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+}

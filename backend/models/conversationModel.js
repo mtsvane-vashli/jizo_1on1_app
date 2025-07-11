@@ -1,4 +1,4 @@
-// backend/models/conversationModel.js (修正後)
+// backend/models/conversationModel.js
 
 const pool = require('../database');
 
@@ -202,21 +202,36 @@ const saveSentiment = async (conversationId, sentimentResult) => {
 /**
  * ダッシュボード用キーワードデータを取得する (役割に応じて結果が変わる)
  * @param {object} user
+ * @param {string} [employeeId] - フィルタリングする部下のID (オプション)
  */
-const getDashboardKeywords = async (user) => {
+const getDashboardKeywords = async (user, employeeId) => {
     let sql = `
         SELECT k.keyword, COUNT(k.keyword)::int as frequency
         FROM keywords k
         JOIN conversations c ON k.conversation_id = c.id `;
     let params = [];
 
+    let whereClauses = [];
+
     if (user.role === 'admin') {
-        sql += `WHERE c.organization_id = $1 GROUP BY k.keyword ORDER BY frequency DESC LIMIT 10`;
+        whereClauses.push(`c.organization_id = $` + (params.length + 1));
         params.push(user.organizationId);
     } else {
-        sql += `WHERE c.user_id = $1 GROUP BY k.keyword ORDER BY frequency DESC LIMIT 10`;
+        whereClauses.push(`c.user_id = $` + (params.length + 1));
         params.push(user.id);
     }
+
+    if (employeeId) {
+        whereClauses.push(`c.employee_id = $` + (params.length + 1));
+        params.push(employeeId);
+    }
+
+    if (whereClauses.length > 0) {
+        sql += `WHERE ` + whereClauses.join(' AND ');
+    }
+
+    sql += ` GROUP BY k.keyword ORDER BY frequency DESC LIMIT 10`;
+
     const { rows } = await pool.query(sql, params);
     return rows;
 };
@@ -224,21 +239,36 @@ const getDashboardKeywords = async (user) => {
 /**
  * ダッシュボード用感情データを取得する (役割に応じて結果が変わる)
  * @param {object} user
+ * @param {string} [employeeId] - フィルタリングする部下のID (オプション)
  */
-const getDashboardSentiments = async (user) => {
+const getDashboardSentiments = async (user, employeeId) => {
     let sql = `
         SELECT s.overall_sentiment, s.positive_score, s.negative_score, s.neutral_score, c.timestamp AS conversation_timestamp
         FROM sentiments s
         JOIN conversations c ON s.conversation_id = c.id `;
     let params = [];
-    
+
+    let whereClauses = [];
+
     if (user.role === 'admin') {
-        sql += `WHERE c.organization_id = $1 ORDER BY c.timestamp ASC LIMIT 20`;
+        whereClauses.push(`c.organization_id = $` + (params.length + 1));
         params.push(user.organizationId);
     } else {
-        sql += `WHERE c.user_id = $1 ORDER BY c.timestamp ASC LIMIT 20`;
+        whereClauses.push(`c.user_id = $` + (params.length + 1));
         params.push(user.id);
     }
+
+    if (employeeId) {
+        whereClauses.push(`c.employee_id = $` + (params.length + 1));
+        params.push(employeeId);
+    }
+
+    if (whereClauses.length > 0) {
+        sql += `WHERE ` + whereClauses.join(' AND ');
+    }
+    
+    sql += ` ORDER BY c.timestamp ASC LIMIT 20`;
+    
     const { rows } = await pool.query(sql, params);
     return rows;
 };
