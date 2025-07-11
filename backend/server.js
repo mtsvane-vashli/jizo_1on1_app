@@ -44,32 +44,50 @@ app.use('/api', chatRoutes);
 app.use('/api', dashboardRoutes);
 
 
-// ★ WebSocketの接続処理
+// WebSocketの接続処理
 io.on('connection', (socket) => {
-  console.log('a user connected:', socket.id);
+    console.log('A user connected:', socket.id);
+    let recognizeStream = null;
 
-  // ★ 各クライアント専用の文字起こしストリームをセットアップ
-  const recognizeStream = setupTranscriptionStream((transcript) => {
-    // 文字起こし結果が得られたら、該当クライアントに送信
-    socket.emit('transcript_data', transcript);
-  });
+    socket.on('start_transcription', () => {
+        console.log('Starting transcription for:', socket.id);
+        if (recognizeStream) {
+            recognizeStream.destroy();
+        }
+        
+        recognizeStream = setupTranscriptionStream((transcript) => {
+            socket.emit('transcript_data', transcript);
+        });
+        // エラーハンドリングを追加
+        recognizeStream.on('error', (err) => {
+            console.error('Speech-to-Text API Error:', err);
+            // エラーをクライアントに通知することも可能
+            // socket.emit('transcription_error', err.message);
+        });
+    });
 
-  // フロントエンドから 'audio_stream' イベントで音声データが送られてきた時の処理
-  socket.on('audio_stream', (audioData) => {
-    // Google Cloudのストリームに音声データを書き込む
-    if (recognizeStream) {
-      recognizeStream.write(audioData);
-    }
-  });
+    socket.on('audio_stream', (audioData) => {
+        // ストリームが有効な場合のみ書き込む
+        if (recognizeStream && !recognizeStream.destroyed) {
+            recognizeStream.write(audioData);
+        }
+    });
 
-  // 接続が切れた時の処理
-  socket.on('disconnect', () => {
-    console.log('user disconnected:', socket.id);
-    // ★ ストリームを終了させる
-    if (recognizeStream) {
-      recognizeStream.destroy();
-    }
-  });
+    socket.on('end_transcription', () => {
+        console.log('Ending transcription for:', socket.id);
+        if (recognizeStream) {
+            recognizeStream.destroy();
+            recognizeStream = null;
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        if (recognizeStream) {
+            recognizeStream.destroy();
+            recognizeStream = null;
+        }
+    });
 });
 
 

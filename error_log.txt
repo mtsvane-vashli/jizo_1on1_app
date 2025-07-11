@@ -1,0 +1,420 @@
+Speech-to-Text API Error: ApiError: Exceeded maximum allowed stream duration of 305 seconds.
+    at new ApiError (C:\Users\kousu\jizo_1on1_app\backend\node_modules\@google-cloud\common\build\src\util.js:78:15)     
+    at PassThrough.transform [as _transform] (C:\Users\kousu\jizo_1on1_app\backend\node_modules\@google-cloud\speech\build\src\helpers.js:101:34)
+    at Transform._write (node:internal/streams/transform:171:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at StreamProxy.ondata (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_readable.js:629:20)
+    at StreamProxy.emit (node:events:518:28)
+    at addChunk (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_readable.js:279:12)       
+    at readableAddChunk (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_readable.js:262:11) {
+  code: 11,
+  errors: undefined,
+  response: undefined
+}
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Speech-to-Text API Error: NodeError: Cannot call write after a stream was destroyed
+    at doWrite (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:390:38)        
+    at writeOrBuffer (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:381:5)   
+    at Writable.write (C:\Users\kousu\jizo_1on1_app\backend\node_modules\readable-stream\lib\_stream_writable.js:302:11) 
+    at Socket.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\server.js:61:23)
+    at Socket.emit (node:events:518:28)
+    at Socket.emitUntyped (C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\typed-events.js:69:22)       
+    at C:\Users\kousu\jizo_1on1_app\backend\node_modules\socket.io\dist\socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_qu
