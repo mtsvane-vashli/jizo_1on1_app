@@ -43,7 +43,7 @@ function AppContent() {
 
   return (
     <div className={styles.app}>
-      <Sidebar />
+      {window.location.pathname !== '/new-1on1-session' && <Sidebar />}
       <main className={styles.contentArea}>
         <div className={styles.contentCard}>
           <Routes>
@@ -67,6 +67,7 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/new-1on1-session" element={<New1on1Support />} />
         <Route path="/*" element={<ProtectedRoute><AppContent /></ProtectedRoute>} />
       </Routes>
     </AuthProvider>

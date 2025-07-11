@@ -44,7 +44,7 @@ function Sidebar() {
             <li key={item.name} className={styles.navItem}>
               {item.name === '新規1on1サポート' ? (
                 <a
-                  href={item.path}
+                  href="/new-1on1-session"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.navLink}
