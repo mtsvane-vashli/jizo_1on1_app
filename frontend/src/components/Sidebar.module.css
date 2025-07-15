@@ -1,55 +1,100 @@
-/* frontend/src/components/Sidebar.module.css */
-.container {
-  width: 16rem;
+/* src/components/Sidebar.module.css */
+.sidebar {
+  width: 250px;
   background-color: var(--color-bg-sidebar);
-  color: var(--color-text-light);
+  color: var(--color-text-sidebar);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   height: 100vh;
   position: sticky;
   top: 0;
-  flex-shrink: 0;
-  box-shadow: var(--shadow-sidebar);
+  box-shadow: var(--shadow-lg);
+  transition: width 0.3s ease;
+  z-index: 100;
 }
 
-.header {
-  padding: var(--space-lg);
-  border-bottom: 1px solid var(--color-border-sidebar);
-  text-align: center;
+.sidebar.collapsed {
+  width: 100px;
 }
-
-.header h1 {
-  font-size: 1.6rem;
-  font-weight: 600;
+.sidebar.collapsed .navText {
+  opacity: 0;
+  visibility: hidden;
+  width: 0;
+  margin-left: -10px;
+}
+.sidebar.collapsed .logo h3 {
+  opacity: 0;
+  visibility: hidden;
+  width: 0;
+  transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
+}
+.sidebar.collapsed .logo span {
+  opacity: 1;
+  visibility: visible;
+  width: auto;
+  transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
+}
+.logo h3 {
+  font-family: var(--font-family-heading);
+  font-size: 1.4rem;
+  font-weight: 700;
   color: var(--color-text-light);
   margin: 0;
+  transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
+}
+.logo span {
+  font-family: var(--font-family-heading);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  opacity: 0;
+  visibility: hidden;
+  width: 0;
+  transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
+}
+
+.hidden {
+  opacity: 0;
+  visibility: hidden;
+  width: 0;
+}
+
+.logo {
+  padding: var(--space-lg) 0;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-sidebar);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* はみ出しを隠す */
 }
 
 .nav {
-  flex-grow: 1;
-  margin-top: var(--space-lg);
-  padding: 0 var(--space-lg);
-}
-
-.navList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.navItem {
-  margin-bottom: var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md) 0;
 }
 
 .navLink {
   display: flex;
   align-items: center;
   padding: var(--space-md);
-  border-radius: var(--radius-md);
-  transition: var(--transition-fast);
-  text-decoration: none;
   color: var(--color-text-sidebar);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
   font-size: 0.95rem;
+  font-weight: 500;
+  width: 100%;
+  border-left: 4px solid transparent;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.navText {
+  margin-left: var(--space-md);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .navLink:hover {
@@ -60,74 +105,31 @@
 .navLink.active {
   background-color: var(--color-bg-sidebar-active);
   color: var(--color-text-light);
-  font-weight: 600;
+  border-left-color: var(--color-accent);
 }
 
-.icon {
-  margin-right: var(--space-md);
-  width: 1.25rem;
-  height: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.navLink svg {
+  margin-right: 0;
+  font-size: 1.4rem;
   flex-shrink: 0;
 }
 
-.icon svg {
-  width: 100%;
-  height: 100%;
-  stroke: currentColor;
-}
-
-.userInfo {
-  padding: var(--space-lg);
+.sidebarFooter {
+  padding: var(--space-md) 0;
   border-top: 1px solid var(--color-border-sidebar);
-}
-
-.userInfoFlex {
   display: flex;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-
-.userAvatar {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--radius-full);
-  margin-right: var(--space-md);
-  overflow: hidden;
-  background-color: var(--color-bg-sidebar-hover);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.userName {
-  font-size: 0.9rem;
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.userId {
-  font-size: 0.75rem;
-  color: var(--color-text-sidebar);
+  flex-direction: column;
 }
 
 .logoutButton {
-  width: 100%;
-  background-color: var(--color-danger);
-  color: var(--color-text-light);
-  font-weight: 500;
-  padding: 0.6rem 1rem;
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s ease-in-out;
-  font-size: 0.9rem;
-  border: none;
-  cursor: pointer;
+  color: var(--color-text-sidebar);
+}
+.logoutButton:hover {
+  background-color: var(--color-bg-sidebar-hover);
+  color: #fca5a5;
 }
 
-.logoutButton:hover {
-  background-color: var(--color-danger-hover);
+/* ★ ThemeToggleButton用のスタイルを追加 */
+.themeToggleContainer > button {
+    flex-shrink: 0; /* ボタンが縮まないようにする */
 }

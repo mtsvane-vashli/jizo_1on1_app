@@ -1,17 +1,40 @@
 // frontend/src/views/New1on1Support.js
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEmployees, getConversationById, getMessagesByConversationId, sendMessage, generateSummary } from '../services';
+// ★修正点: 未使用の 'getMessagesByConversationId' を削除
+import { getEmployees, createConversation, getConversationById, sendMessage, generateSummary } from '../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import layoutStyles from '../App.module.css';
 import styles from './New1on1Support.module.css';
 import RealTimeTranscription from './RealTimeTranscription';
 
-// Reducerのための初期状態
+// --- 定数定義 ---
+const THEMES = [
+  { id: 1, text: '日々の業務やタスクの進め方について' },
+  { id: 2, text: 'コンディションや心身の健康について' },
+  { id: 3, text: '職場や周囲の人との関わりについて' },
+  { id: 4, text: '将来のキャリアパスや成長について' },
+  { id: 5, text: 'スキルアップや学びについて' },
+  { id: 6, text: 'プライベートな出来事や関心事について' },
+  { id: 7, text: '組織や会社全体に関することについて' },
+  { id: 8, text: 'その他、自由に話したいこと（前回の宿題等）' },
+];
+
+const INTERACTIONS = [
+  { id: 1, text: 'ただただ、じっくり話を聞いてほしい' },
+  { id: 2, text: '考えを深めるための壁打ち相手になってほしい' },
+  { id: 3, text: '具体的な助言やヒントが欲しい' },
+  { id: 4, text: '多様な視点や考え方を聞いてみたい' },
+  { id: 5, text: '状況や結果を共有・報告したい' },
+  { id: 6, text: 'その他' },
+];
+
+
+// --- Reducer ---
 const initialState = {
-  appState: 'initial', // 'initial', 'employee_selection', 'theme_selection', 'engagement_selection', 'on_demand'
+  appState: 'initial', // 'initial', 'loading', 'employee_selection', 'session_ready', 'theme_selection', 'interaction_selection', 'support_started'
   isLoading: false,
   isGeneratingSummary: false,
   error: null,
@@ -19,63 +42,104 @@ const initialState = {
   employees: [],
   currentConversationId: null,
   currentEmployee: null,
+  selectedTheme: null,
+  selectedInteraction: null,
   currentSummary: '',
   currentNextActions: '',
-  isRecording: false,
+  isRecording: true,
   transcript: [],
 };
 
-// 状態遷移を管理するReducer関数
 function chatReducer(state, action) {
   switch (action.type) {
     case 'START_LOADING':
       return { ...state, isLoading: true, error: null };
+    case 'STOP_LOADING':
+      return { ...state, isLoading: false };
+    case 'SET_ERROR':
+      return { ...state, isLoading: false, isGeneratingSummary: false, error: action.payload };
+    
+    // 部下選択画面のフロー
     case 'FETCH_EMPLOYEES_SUCCESS':
       return { ...state, isLoading: false, employees: action.payload, appState: 'employee_selection' };
-    case 'SELECT_EMPLOYEE':
-      return { ...state, currentEmployee: action.payload, chatHistory: [], currentConversationId: null, currentSummary: '', currentNextActions: '', transcript: [] };
-    case 'START_CONVERSATION_SUCCESS':
-      return { ...state, isLoading: false, chatHistory: [action.payload], appState: 'theme_selection' };
-    case 'LOAD_PAST_CONVERSATION_SUCCESS':
-      const { messages, details } = action.payload;
+
+    // セッション画面のフロー
+    case 'SESSION_INIT_SUCCESS':
+      return { 
+        ...state, 
+        isLoading: false, 
+        appState: 'session_ready',
+        currentConversationId: action.payload.conversationId,
+        currentEmployee: action.payload.employee,
+      };
+    case 'START_CONVERSATION_FLOW':
+      return {
+        ...state,
+        isLoading: true,
+        chatHistory: [...state.chatHistory, { sender: 'system', text: '「始める」' }]
+      };
+    case 'RECEIVE_THEME_PROMPT':
       return {
         ...state,
         isLoading: false,
-        appState: 'on_demand',
-        chatHistory: messages,
-        currentConversationId: details.id,
-        currentSummary: details.summary || '',
-        currentNextActions: details.next_actions || '',
-        currentEmployee: { id: details.employee_id, name: details.employee_name }
+        appState: 'theme_selection',
+        chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }]
       };
+    case 'SELECT_THEME':
+      return {
+        ...state,
+        isLoading: true,
+        selectedTheme: action.payload,
+        chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload.text }]
+      };
+    case 'RECEIVE_INTERACTION_PROMPT':
+      return {
+        ...state,
+        isLoading: false,
+        appState: 'interaction_selection',
+        chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }]
+      };
+    case 'SELECT_INTERACTION':
+        return {
+          ...state,
+          isLoading: true,
+          selectedInteraction: action.payload,
+          chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload.text }]
+        };
+    case 'RECEIVE_SUPPORT_START_PROMPT':
+      return {
+        ...state,
+        isLoading: false,
+        appState: 'support_started',
+        chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }]
+      };
+    
+    // 汎用チャット処理
     case 'SEND_MESSAGE':
-      return { ...state, isLoading: true, chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload }] };
-    case 'RECEIVE_REPLY':
-      const { reply, conversationId } = action.payload;
-      let nextAppState = state.appState;
-      if (state.appState === 'theme_selection') nextAppState = 'engagement_selection';
-      else if (state.appState === 'engagement_selection') nextAppState = 'on_demand';
-      return {
-        ...state,
-        isLoading: false,
-        chatHistory: [...state.chatHistory, { sender: 'ai', text: reply }],
-        currentConversationId: conversationId || state.currentConversationId,
-        appState: nextAppState
+      return { 
+        ...state, 
+        isLoading: true, 
+        chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload }] 
       };
+    case 'RECEIVE_REPLY':
+      return { 
+        ...state, 
+        isLoading: false, 
+        chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }] 
+      };
+
+    // 要約機能
     case 'START_SUMMARY_GENERATION':
       return { ...state, isGeneratingSummary: true };
     case 'SUMMARY_GENERATION_SUCCESS':
       return { ...state, isGeneratingSummary: false, currentSummary: action.payload.summary, currentNextActions: action.payload.nextActions };
-    case 'ERROR':
-      return { ...state, isLoading: false, isGeneratingSummary: false, error: action.payload };
-    case 'START_RECORDING':
-      return { ...state, isRecording: true, transcript: [] };
-    case 'STOP_RECORDING':
-      return { ...state, isRecording: false };
+
+    // 文字起こし機能
+    case 'TOGGLE_RECORDING':
+      return { ...state, isRecording: !state.isRecording };
     case 'UPDATE_TRANSCRIPT':
-        return { ...state, transcript: [...state.transcript, action.payload] };
-    case 'RESET':
-        return { ...initialState, appState: 'employee_selection', employees: state.employees };
+      return { ...state, transcript: [...state.transcript, action.payload] };
+
     default:
       return state;
   }
@@ -88,200 +152,264 @@ function New1on1Support() {
   const messagesEndRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  // スクロール処理
+  const isSessionView = location.pathname === '/session';
+
+  // メッセージ履歴の末尾に自動スクロール
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.chatHistory]);
 
-  // 初期化ロジック (URLクエリまたは新規開始)
+  // バックエンドにメッセージを送信する共通関数
+  const sendMessageToApi = useCallback(async (textToSend) => {
+    if (!state.currentConversationId) return;
+    try {
+      const data = await sendMessage({
+        message: textToSend,
+        conversationId: state.currentConversationId,
+      });
+      return data.reply;
+    } catch (err) {
+      dispatch({ type: 'SET_ERROR', payload: err.message });
+      throw err;
+    }
+  }, [state.currentConversationId]);
+
+  // --- 初期化 & 自動開始ロジック ---
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
 
-    const queryParams = new URLSearchParams(location.search);
-    const convId = queryParams.get('conversationId');
-
-    if (convId && convId !== state.currentConversationId) {
-      dispatch({ type: 'START_LOADING' });
-      Promise.all([
-          getConversationById(convId),
-          getMessagesByConversationId(convId)
-      ]).then(([details, messages]) => {
-          dispatch({ type: 'LOAD_PAST_CONVERSATION_SUCCESS', payload: { details, messages }});
-      }).catch(err => dispatch({ type: 'ERROR', payload: err.message }));
-    } else if (!convId && state.appState === 'initial') {
+    // --- セッション画面の初期化 ---
+    if (isSessionView && state.appState === 'initial') {
+      const convId = searchParams.get('conversationId');
+      if (convId) {
+        dispatch({ type: 'START_LOADING' });
+        getConversationById(convId)
+          .then(details => {
+            dispatch({ 
+              type: 'SESSION_INIT_SUCCESS', 
+              payload: { 
+                conversationId: details.id,
+                employee: { id: details.employee_id, name: details.employee_name }
+              } 
+            });
+          })
+          .catch(err => {
+            dispatch({ type: 'SET_ERROR', payload: `セッションの読み込みに失敗しました: ${err.message}` });
+          });
+      }
+    } 
+    // --- 部下選択画面の初期化 ---
+    else if (!isSessionView && state.appState === 'initial') {
       dispatch({ type: 'START_LOADING' });
       getEmployees()
         .then(data => {
-            if(data.length === 0) {
-                alert('部下が登録されていません。ダッシュボード画面で登録してください。');
-                navigate('/dashboard');
-            } else {
-                dispatch({ type: 'FETCH_EMPLOYEES_SUCCESS', payload: data });
-            }
+          if (data.length === 0) {
+            alert('部下が登録されていません。設定画面で登録してください。');
+            navigate('/app/settings');
+          } else {
+            dispatch({ type: 'FETCH_EMPLOYEES_SUCCESS', payload: data });
+          }
         })
-        .catch(err => dispatch({ type: 'ERROR', payload: err.message }));
+        .catch(err => dispatch({ type: 'SET_ERROR', payload: err.message }));
     }
-  }, [location.search, state.currentConversationId, state.appState, isAuthenticated, authLoading, navigate]);
+  }, [state.appState, isSessionView, searchParams, isAuthenticated, authLoading, navigate]);
 
-  const handleEmployeeSelect = useCallback((employee) => {
-    dispatch({ type: 'SELECT_EMPLOYEE', payload: employee });
+  // --- セッション準備完了後に自動で会話を開始 ---
+  useEffect(() => {
+    if (state.appState === 'session_ready') {
+      const startFlow = async () => {
+        dispatch({ type: 'START_CONVERSATION_FLOW' });
+        const reply = await sendMessageToApi('始める');
+        if (reply) {
+          dispatch({ type: 'RECEIVE_THEME_PROMPT', payload: reply });
+        }
+      };
+      startFlow();
+    }
+  }, [state.appState, sendMessageToApi]);
+
+  // --- イベントハンドラ ---
+
+  // 部下選択時の処理
+  const handleEmployeeSelect = useCallback(async (employee) => {
     dispatch({ type: 'START_LOADING' });
-    sendMessage({ message: '__START__' })
-      .then(data => {
-          dispatch({ type: 'START_CONVERSATION_SUCCESS', payload: { sender: 'ai', text: data.reply } });
-          dispatch({ type: 'START_RECORDING' });
-      })
-      .catch(err => dispatch({ type: 'ERROR', payload: err.message }));
-  }, []);
-
-  const handleSendMessage = useCallback(async (text) => {
-    if (!text.trim()) return;
-    setMessage(''); // 入力欄をクリア
-    dispatch({ type: 'SEND_MESSAGE', payload: text });
     try {
-        const data = await sendMessage({
-            message: text,
-            conversationId: state.currentConversationId,
-            appState: state.appState,
-            employeeId: state.currentEmployee ? state.currentEmployee.id : null,
-            chatHistory: state.chatHistory,
-            transcript: state.transcript
-        });
-        dispatch({ type: 'RECEIVE_REPLY', payload: data });
+      const newConversationResponse = await createConversation({ employeeId: employee.id });
+      const conversationId = newConversationResponse?.conversation?.id;
+      if (conversationId) {
+        window.open(`/session?conversationId=${conversationId}`, '_blank', 'noopener,noreferrer');
+      } else {
+        throw new Error("サーバーから会話IDが返されませんでした。");
+      }
+      dispatch({ type: 'STOP_LOADING' });
     } catch (err) {
-        dispatch({ type: 'ERROR', payload: err.message });
+      dispatch({ type: 'SET_ERROR', payload: err.message });
     }
-  }, [state.appState, state.currentConversationId, state.currentEmployee, state.chatHistory, state.transcript]);
+  }, []);
+  
+  // テーマ選択の処理
+  const handleThemeSelect = useCallback(async (theme) => {
+    dispatch({ type: 'SELECT_THEME', payload: theme });
+    const reply = await sendMessageToApi(theme.text);
+    if (reply) {
+      dispatch({ type: 'RECEIVE_INTERACTION_PROMPT', payload: reply });
+    }
+  }, [sendMessageToApi]);
 
-  const handleFixedFlowSelect = useCallback((text) => {
-    handleSendMessage(text);
-  }, [handleSendMessage]);
+  // 関わり方選択の処理
+  const handleInteractionSelect = useCallback(async (interaction) => {
+    dispatch({ type: 'SELECT_INTERACTION', payload: interaction });
+    const reply = await sendMessageToApi(interaction.text);
+    if(reply) {
+      dispatch({ type: 'RECEIVE_SUPPORT_START_PROMPT', payload: reply });
+    }
+  }, [sendMessageToApi]);
 
+  // 自由入力メッセージ送信の処理
+  const handleSendFreeMessage = useCallback(async () => {
+    if (!message.trim() || !state.currentConversationId) return;
+    const textToSend = message;
+    setMessage('');
+    dispatch({ type: 'SEND_MESSAGE', payload: textToSend });
+    const reply = await sendMessageToApi(textToSend);
+    if (reply) {
+      dispatch({ type: 'RECEIVE_REPLY', payload: reply });
+    }
+  }, [message, state.currentConversationId, sendMessageToApi]);
+
+  // 要約生成の処理
   const handleGenerateSummary = useCallback(async () => {
     if (!state.currentConversationId) return;
-    dispatch({ type: 'STOP_RECORDING' });
     dispatch({ type: 'START_SUMMARY_GENERATION' });
     try {
-        const formattedTranscript = state.transcript
-            .map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}
-`)
-            .join('');
-        const data = await generateSummary(state.currentConversationId, formattedTranscript);
-        dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data });
+      const formattedTranscript = state.transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
+      const data = await generateSummary(state.currentConversationId, formattedTranscript);
+      dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data });
     } catch (err) {
-        dispatch({ type: 'ERROR', payload: err.message });
+      dispatch({ type: 'SET_ERROR', payload: err.message });
     }
   }, [state.currentConversationId, state.transcript]);
 
+  // 文字起こし関連の処理
   const handleTranscriptUpdate = useCallback((newTranscript) => {
     dispatch({ type: 'UPDATE_TRANSCRIPT', payload: newTranscript });
   }, []);
 
-  const renderInputArea = () => {
-      const themes = ["日々の業務やタスクの進め方について", "コンディションや心身の健康について", "職場や周囲の人との関わりについて", "将来のキャリアパスや成長について", "スキルアップや学びについて", "プライベートな出来事や関心事について", "組織や会社全体に関することについて", "その他、自由に話したいこと(前回の宿題等)"];
-      const engagementTypes = ["ただただ、じっくり話を聞いてほしい", "考えを深めるための壁打ち相手になってほしい", "具体的な助言やヒントが欲しい", "多様な視点や考え方を聞いてみたい", "状況や結果を共有・報告したい", "その他"];
-
-      switch (state.appState) {
-          case 'employee_selection':
-              return (
-                  <div className={`${styles.inputArea} ${styles.fixedFlow}`}>
-                    <p className={styles.promptText}>会話を開始する部下を選んでください。</p>
-                    <div className={`${styles.buttonGroup} ${styles.employeeSelectionGroup}`}>
-                      {state.employees.map(emp => <button key={emp.id} onClick={() => handleEmployeeSelect(emp)} className={styles.employeeOptionButton}>{emp.name}</button>)}
-                    </div>
-                  </div>
-              );
-          case 'theme_selection':
-          case 'engagement_selection':
-              const options = state.appState === 'theme_selection' ? themes : engagementTypes;
-              return (
-                  <div className={`${styles.inputArea} ${styles.fixedFlow}`}>
-                      <p className={styles.promptText}>{state.appState === 'theme_selection' ? '【お話ししたいテーマ】' : '【期待する関わり方】'}</p>
-                      <div className={styles.buttonGroup}>
-                          {options.map((opt, i) => <button key={i} onClick={() => handleFixedFlowSelect(opt)} disabled={state.isLoading} className={styles.optionButton}>{i + 1}. {opt}</button>)}
-                      </div>
-                      <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)} placeholder="その他のテーマを自由に入力..." className={styles.normalInput} />
-                      <button onClick={() => handleSendMessage(message)} disabled={state.isLoading || !message.trim()} className={styles.fixedFlowSendButton}>送信</button>
-                  </div>
-              );
-          case 'on_demand':
-              return (
-                  <div className={styles.inputArea}>
-                      <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)} placeholder="メッセージを入力..." className={styles.normalInput} />
-                      <button onClick={() => handleSendMessage(message)} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>送信</button>
-                  </div>
-              );
-          default: return null;
-      }
+  const handleToggleRecording = () => {
+    dispatch({ type: 'TOGGLE_RECORDING' });
   };
 
-  if (authLoading) return <div className={layoutStyles.loadingScreen}><p>認証情報を確認中...</p></div>;
-  if (state.appState === 'initial' && state.isLoading) return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>;
+  // --- レンダリング ---
 
-  return (
-    <div className={layoutStyles.viewContainer}>
-      <h2 className={layoutStyles.screenHeader}>新規1on1サポート</h2>
-      <p className={layoutStyles.screenDescription}>
-        {state.appState === 'employee_selection' ? '会話を開始する部下を選択してください。' : state.currentEmployee ? `${state.currentEmployee.name}さんとの1on1セッションです。` : 'こんにちは。'}
-      </p>
+  if (authLoading || (state.appState === 'initial' && state.isLoading)) {
+    return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>;
+  }
 
-      <div className={styles.mainContent}>
+  // --- セッション画面のレンダリング ---
+  if (isSessionView) {
+    if (state.appState === 'loading' || (state.appState === 'initial' && state.isLoading) || state.appState === 'session_ready') {
+        return <div className={styles.sessionLoadingScreen}><p>セッションを準備中です...</p></div>;
+    }
+    return (
+      <div className={styles.sessionViewContainer}>
         <div className={styles.leftPanel}>
-          <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId || state.appState !== 'on_demand'} className={styles.summaryButton}>
+          <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId} className={styles.summaryButton}>
             {state.isGeneratingSummary ? '要約を生成中...' : '会話を要約しネクストアクションを提案'}
           </button>
-
+          
           {(state.currentSummary || state.currentNextActions) && (
             <div className={styles.summaryArea}>
               {state.currentSummary && (
                 <>
                   <h3 className={styles.summaryHeader}>会話の要約</h3>
-                  <div
-                    className={styles.summaryText}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }}
-                  />
+                  <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} />
                 </>
               )}
               {state.currentNextActions && (
                 <>
                   <h3 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h3>
-                  <div
-                    className={`${styles.summaryText} ${styles.summaryList}`}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }}
-                  />
+                  <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} />
                 </>
               )}
             </div>
           )}
 
-          {state.error && <p className={styles.error}>{state.error}</p>}
-
           <div className={styles.chatContainer}>
-            {state.appState !== 'employee_selection' && (
-                <div className={styles.chatWindow}>
-                  {state.chatHistory.map((chat, index) => (
-                    <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
-                      <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
-                      <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div>
-                    </div>
+            <div className={styles.chatWindow}>
+              {state.chatHistory.map((chat, index) => (
+                // システムメッセージは非表示
+                chat.sender !== 'system' && (
+                  <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
+                    <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AI'}:</strong>
+                    <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div>
+                  </div>
+                )
+              ))}
+
+              {/* 選択肢ボタンの表示 */}
+              {state.appState === 'theme_selection' && !state.isLoading && (
+                <div className={styles.optionButtonContainer}>
+                  {THEMES.map(theme => (
+                    <button key={theme.id} onClick={() => handleThemeSelect(theme)} className={styles.optionButton}>
+                      {theme.text}
+                    </button>
                   ))}
-                  {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>返信を生成中...</p></div>}
-                  <div ref={messagesEndRef} />
                 </div>
+              )}
+              {state.appState === 'interaction_selection' && !state.isLoading && (
+                <div className={styles.optionButtonContainer}>
+                  {INTERACTIONS.map(interaction => (
+                    <button key={interaction.id} onClick={() => handleInteractionSelect(interaction)} className={styles.optionButton}>
+                      {interaction.text}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>AIが応答を生成中...</p></div>}
+              <div ref={messagesEndRef} />
+            </div>
+            
+            {/* 入力エリアの表示制御 */}
+            {state.appState === 'support_started' && (
+              <div className={styles.inputArea}>
+                  <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendFreeMessage()} placeholder="部下から言われたことなどを入力..." className={styles.normalInput} />
+                  <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>送信</button>
+              </div>
             )}
-            {renderInputArea()}
           </div>
         </div>
         <div className={styles.rightPanel}>
-          <RealTimeTranscription 
+          <RealTimeTranscription
             isRecording={state.isRecording}
+            onToggleRecording={handleToggleRecording}
             transcript={state.transcript}
             onTranscriptUpdate={handleTranscriptUpdate}
-            employeeName={state.currentEmployee ? state.currentEmployee.name : ''}
+            employeeName={state.currentEmployee?.name || '...'}
           />
         </div>
+      </div>
+    );
+  }
+
+  // --- 部下選択画面のレンダリング ---
+  return (
+    <div className={layoutStyles.viewContainer}>
+      <h2 className={layoutStyles.screenHeader}>新規1on1サポート</h2>
+      <p className={layoutStyles.screenDescription}>
+        会話を開始する部下を選択してください。新しいタブでセッションが開始されます。
+      </p>
+      {state.error && <p className={styles.error}>{state.error}</p>}
+      <div className={styles.employeeSelectionContainer}>
+        {state.isLoading && state.appState === 'employee_selection' && <p>読み込み中...</p>}
+        {state.appState === 'employee_selection' && (
+          <div className={styles.employeeSelectionGroup}>
+            {state.employees.map(emp => <button key={emp.id} onClick={() => handleEmployeeSelect(emp)} disabled={state.isLoading} className={styles.employeeOptionButton}>{emp.name}</button>)}
+          </div>
+        )}
       </div>
     </div>
   );

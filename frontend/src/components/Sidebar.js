@@ -1,86 +1,61 @@
-// frontend/src/components/Sidebar.js
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { NavLink } from 'react-router-dom';
 import styles from './Sidebar.module.css';
+import { FiGrid, FiFileText, FiMessageSquare, FiBook, FiSettings, FiLogOut } from 'react-icons/fi';
+import ThemeToggleButton from './ThemeToggleButton'; // ★ 1. インポート
 
-import {
-  CalendarIcon,
-  BookOpenIcon,
-  ChartBarIcon,
-  AcademicCapIcon,
-  Cog6ToothIcon
-} from '@heroicons/react/24/outline';
+// ★ 2. propsに theme と toggleTheme を追加
+function Sidebar({ isCollapsed, setCollapsed, onLogoutClick, onGoHomeClick, theme, toggleTheme }) {
 
-function Sidebar() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
-  const navItems = [
-    { name: '新規1on1サポート', path: '/', icon: <CalendarIcon /> },
-    { name: '過去のセッションログ', path: '/logs', icon: <BookOpenIcon /> },
-    { name: '分析ダッシュボード', path: '/dashboard', icon: <ChartBarIcon /> },
-    
-    { name: '学習リソース', path: '/resources', icon: <AcademicCapIcon /> },
-    { name: '設定', path: '/settings', icon: <Cog6ToothIcon /> },
-  ];
-
-  const avatarInitial = user ? user.username.charAt(0).toUpperCase() : '?';
+  const handleMouseEnter = () => setCollapsed(false);
+  const handleMouseLeave = () => setCollapsed(true);
 
   return (
-    <aside className={styles.container}>
-      <div className={styles.header}>
-        <h1>おたすけ地蔵くん</h1>
-      </div>
-
-      <nav className={styles.nav}>
-        <ul className={styles.navList}>
-          {navItems.map((item) => (
-            <li key={item.name} className={styles.navItem}>
-              {item.name === '新規1on1サポート' ? (
-                <a
-                  href="/new-1on1-session"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.navLink}
-                >
-                  <span className={styles.icon}>{item.icon}</span>
-                  {item.name}
-                </a>
-              ) : (
-                <NavLink
-                  to={item.path}
-                  end //  '/' が他のパスにマッチしないようにする
-                  className={({ isActive }) =>
-                    `${styles.navLink} ${isActive ? styles.active : ''}`
-                  }
-                >
-                  <span className={styles.icon}>{item.icon}</span>
-                  {item.name}
-                </NavLink>
-              )}
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      <div className={styles.userInfo}>
-        <div className={styles.userInfoFlex}>
-          <div className={styles.userAvatar}>
-            {avatarInitial}
-          </div>
-          <div>
-            <p className={styles.userName}>{user ? user.username : 'ゲスト'}</p>
-            <p className={styles.userId}>{user ? `ID: ${user.id}` : 'ID: ---'}</p>
-          </div>
+    <aside 
+      className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div>
+        <div className={styles.logo}>
+          <h3 className={isCollapsed ? styles.hidden : ''}>地蔵1on1</h3>
+          <span className={isCollapsed ? '' : styles.hidden}>J</span>
         </div>
-        <button onClick={handleLogout} className={styles.logoutButton}>
-          ログアウト
+        <nav className={styles.nav}>
+          <NavLink to="/app/new-1on1" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}>
+            <FiMessageSquare />
+            <span className={styles.navText}>新規1on1支援</span>
+          </NavLink>
+          <NavLink to="/app/logs" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}>
+            <FiFileText />
+            <span className={styles.navText}>セッションログ</span>
+          </NavLink>
+          <NavLink to="/app/dashboard" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}>
+            <FiGrid />
+            <span className={styles.navText}>ダッシュボード</span>
+          </NavLink>
+          <NavLink to="/app/resources" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}>
+            <FiBook />
+            <span className={styles.navText}>学習リソース</span>
+          </NavLink>
+        </nav>
+      </div>
+      <div className={styles.sidebarFooter}>
+        
+        <NavLink to="/app/settings" className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}>
+          <FiSettings />
+          <span className={styles.navText}>設定</span>
+        </NavLink>
+        
+        {/* ★ 3. テーマ切り替えボタンを設置 */}
+        <div className={`${styles.navLink} ${styles.themeToggleContainer}`}>
+            <ThemeToggleButton theme={theme} toggleTheme={toggleTheme} />
+            <span className={styles.navText}>テーマ切替</span>
+        </div>
+
+        <button onClick={onLogoutClick} className={`${styles.navLink} ${styles.logoutButton}`}>
+          <FiLogOut />
+          <span className={styles.navText}>ログアウト</span>
         </button>
       </div>
     </aside>

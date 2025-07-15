@@ -8,6 +8,13 @@
   padding: var(--space-lg);
 }
 
+.cardWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
 .card {
   background-color: var(--color-bg-card);
   padding: var(--space-2xl);
@@ -18,10 +25,22 @@
   text-align: center;
 }
 
-.header {
-  font-size: 2rem;
-  font-weight: 600;
+.logoContainer {
   margin-bottom: var(--space-xl);
+}
+
+.logoText {
+  font-family: var(--font-family-heading);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  display: block;
+  margin-bottom: var(--space-sm);
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 
@@ -33,6 +52,7 @@
 .inputGroup {
   margin-bottom: var(--space-lg);
   text-align: left;
+  position: relative;
 }
 
 .label {
@@ -53,6 +73,7 @@
   color: var(--color-text-dark);
   transition: var(--transition-fast);
   outline: none;
+  background-color: var(--color-bg-input);
 }
 
 .input:focus {
@@ -60,7 +81,55 @@
   box-shadow: 0 0 0 1px var(--color-primary);
 }
 
-.button {
+.passwordWrapper {
+  position: relative;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: var(--space-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: var(--space-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+  font-size: 0.85rem;
+}
+
+.rememberMe {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+}
+
+.forgotPasswordLink {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.forgotPasswordLink:hover {
+  text-decoration: underline;
+}
+
+.loginButton {
   background-color: var(--color-primary);
   color: var(--color-text-light);
   font-weight: bold;
@@ -69,33 +138,34 @@
   transition: var(--transition-fast);
   border: none;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 1rem;
   width: 100%;
   margin-top: var(--space-lg);
 }
 
-.button:hover {
+.loginButton:hover {
   background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
-.button:disabled {
+.loginButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.linkText {
-  font-size: 0.85rem;
+.footerLink {
+  font-size: 0.9rem;
   color: var(--color-text-secondary);
   margin-top: var(--space-xl);
 }
 
-.link {
+.footerLink a {
   color: var(--color-primary);
   text-decoration: none;
   font-weight: 600;
 }
 
-.link:hover {
+.footerLink a:hover {
   text-decoration: underline;
 }
 
@@ -104,6 +174,32 @@
   text-align: center;
   font-size: 0.9rem;
   margin-bottom: var(--space-md);
+}
+
+.homeLinkContainer {
+  margin-top: var(--space-lg);
+  text-align: center;
+}
+
+.homeLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+}
+
+.homeLink:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.homeLink svg {
+  font-size: 1.1rem;
 }
 
 .successMessage {

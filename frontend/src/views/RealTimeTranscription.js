@@ -1,23 +1,50 @@
 // frontend/src/views/RealTimeTranscription.js
-import React, { useRef, useEffect, useCallback } from 'react';
+
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { io } from 'socket.io-client';
 import styles from './RealTimeTranscription.module.css';
 
-const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, employeeName }) => {
+// --- SVG Icons ---
+const MicIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+);
+
+const MicOffIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" x2="22" y1="2" y2="22"></line><path d="M18.5 10.5c0 1.9-1 3.6-2.5 4.5"></path><path d="M12.5 18.5a7 7 0 0 0 7-7"></path><path d="M5 10v2a7 7 0 0 0 7 7"></path><path d="M5 5a3 3 0 0 0-3 3v2"></path><path d="M12 2a3 3 0 0 0-3 3v7"></path></svg>
+);
+
+const AlertCircleIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+);
+// --- End of SVG Icons ---
+
+const RealTimeTranscription = ({ isRecording, onToggleRecording, transcript, onTranscriptUpdate, employeeName }) => {
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const socketRef = useRef(null);
   const streamRestartIntervalRef = useRef(null);
+  const transcriptEndRef = useRef(null);
 
-  // Socket.IOの初期化とイベントリスナーの設定
+  const [status, setStatus] = useState('idle');
+  const [error, setError] = useState('');
+
+  // ★修正: onToggleRecording を useRef でラップし、useCallback内から常に最新の関数を参照できるようにする
+  const onToggleRecordingRef = useRef(onToggleRecording);
+  useEffect(() => {
+    onToggleRecordingRef.current = onToggleRecording;
+  }, [onToggleRecording]);
+
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript]);
+
   useEffect(() => {
     socketRef.current = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000');
-
-    socketRef.current.on('transcript_data', (data) => {
-      onTranscriptUpdate(data);
+    socketRef.current.on('transcript_data', onTranscriptUpdate);
+    socketRef.current.on('connect_error', (err) => {
+      setError(`サーバーへの接続に失敗しました: ${err.message}`);
+      setStatus('error');
     });
-
-    // コンポーネントのアンマウント時にソケットを切断
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -25,38 +52,31 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
     };
   }, [onTranscriptUpdate]);
 
-  // 録音停止処理
+  // ★修正: useCallbackの依存配列を空にし、UIの再レンダリングによる関数の再生成を防ぐ
   const stopRecording = useCallback(() => {
-    // ストリーム再起動のインターバルをクリア
     if (streamRestartIntervalRef.current) {
       clearInterval(streamRestartIntervalRef.current);
       streamRestartIntervalRef.current = null;
     }
-
-    // MediaRecorderを停止
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-
-    // オーディオトラックを停止
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => track.stop());
       audioStreamRef.current = null;
     }
-
-    // サーバーに転写終了を通知
     if (socketRef.current && socketRef.current.connected) {
-        socketRef.current.emit('end_transcription');
+      socketRef.current.emit('end_transcription');
     }
+    setStatus('idle');
   }, []);
 
-  // 録音開始処理
+  // ★修正: useCallbackの依存配列を空にし、UIの再レンダリングによる関数の再生成を防ぐ
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: true, echoCancellation: true } });
       audioStreamRef.current = stream;
 
-      // サーバーに転写開始を通知
       if (socketRef.current) {
         socketRef.current.emit('start_transcription');
       }
@@ -69,67 +89,81 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
           socketRef.current.emit('audio_stream', event.data);
         }
       };
+      
+      recorder.onstart = () => {
+        setStatus('recording');
+        setError('');
+      };
+      
+      recorder.onerror = (event) => {
+        setStatus('error');
+        setError(`録音中にエラーが発生しました: ${event.error.message}`);
+        onToggleRecordingRef.current(); // エラー時に録音を停止
+      };
 
-      recorder.start(1000); // 1秒ごとにデータを送信
+      recorder.start(1000);
 
-    } catch (error) {
-      console.error('マイクへのアクセスに失敗しました:', error);
-      alert('マイクへのアクセス許可が必要です。ブラウザの設定を確認してください。');
-      // isRecordingをfalseに更新するなどのエラー処理が必要になる可能性
+    } catch (err) {
+      console.error('マイクへのアクセスに失敗しました:', err);
+      setError('マイクへのアクセス許可が必要です。ブラウザの設定を確認してください。');
+      setStatus('error');
+      onToggleRecordingRef.current(); // エラー時に録音を停止
     }
-  }, []);
+  }, []); // 依存配列を空に
 
-
-  // isRecordingの状態に応じて録音を開始・停止
+  // ★修正: useEffectの依存配列をisRecordingのみにし、ロジックの実行をisRecordingの変更時のみに限定
   useEffect(() => {
+    const restartStream = () => {
+      stopRecording();
+      setTimeout(startRecording, 500);
+    };
+
     if (isRecording) {
-        const restartStream = async () => {
-            // 1. 現在のストリームを停止・終了
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                mediaRecorderRef.current.stop(); // ondataavailableは呼ばれなくなる
-            }
-            if (audioStreamRef.current) {
-                audioStreamRef.current.getTracks().forEach(track => track.stop());
-            }
-            if (socketRef.current && socketRef.current.connected) {
-                socketRef.current.emit('end_transcription');
-            }
-
-            // 2. 少し待ってから新しいストリームを開始
-            setTimeout(async () => {
-                await startRecording();
-            }, 500); // サーバー側がストリームを閉じるのを待つ
-        };
-
-        startRecording();
-        // 240秒ごとにストリームを再起動
-        streamRestartIntervalRef.current = setInterval(restartStream, 240000);
-
+      startRecording();
+      streamRestartIntervalRef.current = setInterval(restartStream, 240000);
     } else {
       stopRecording();
     }
 
-    // クリーンアップ関数
     return () => {
       stopRecording();
     };
-  }, [isRecording, startRecording, stopRecording]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRecording]);
+
+  const getStatusIndicator = () => {
+    if (status === 'error') {
+      return <div className={`${styles.statusIndicator} ${styles.error}`}><AlertCircleIcon /> {error}</div>;
+    }
+    if (status === 'recording') {
+      return <div className={`${styles.statusIndicator} ${styles.recognizing}`}><MicIcon /> 音声認識中...</div>;
+    }
+    return <div className={`${styles.statusIndicator} ${styles.idle}`}><MicOffIcon /> マイク入力待機中...</div>;
+  };
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h2>リアルタイム文字起こし</h2>
-        <p>{employeeName ? `${employeeName}さんとの会話` : '会話を開始すると文字起こしが始まります'}</p>
-      </header>
+    <div className={styles.transcriptionContainer}>
+      <div className={styles.header}>
+        <h3 className={styles.title}>リアルタイム文字起こし ({employeeName}さん)</h3>
+        <button onClick={onToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`}>
+          {isRecording ? <MicOffIcon /> : <MicIcon />}
+          {isRecording ? '録音停止' : '録音開始'}
+        </button>
+      </div>
+      
+      {getStatusIndicator()}
 
-      <div className={styles.transcriptionArea}>
-        {transcript.length === 0 && !isRecording && <div className={styles.placeholder}>録音は停止中です。</div>}
-        {transcript.length === 0 && isRecording && <div className={styles.placeholder}>録音中...</div>}
+      <div className={styles.transcriptDisplay}>
+        {transcript.length === 0 && status !== 'error' && (
+          <p className={styles.noTranscript}>録音を開始すると、ここに会話が文字起こしされます。</p>
+        )}
         {transcript.map((item, index) => (
-          <p key={index} className={styles.transcriptLine}>
-            <span>{item.speakerTag ? `話者${item.speakerTag}: ` : ''}{item.transcript}</span>
-          </p>
+          <div key={index} className={styles.transcriptItem}>
+            <span className={styles.speakerTag}>{item.speakerTag ? `話者${item.speakerTag}:` : '不明:'}</span>
+            <p className={styles.transcriptText}>{item.transcript}</p>
+          </div>
         ))}
+        <div ref={transcriptEndRef} />
       </div>
     </div>
   );
