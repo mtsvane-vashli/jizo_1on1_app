@@ -7,33 +7,24 @@
 
 .contentArea {
   flex-grow: 1;
-  padding: var(--space-xl);
+  padding: var(--space-lg);
+  /* ★ スクロール領域を内側に限定 */
+  overflow-y: auto; /* Changed from hidden to auto */
 }
 
 .contentCard {
   background-color: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
   padding: var(--space-xl);
-  min-height: calc(100vh - (var(--space-xl) * 2));
+  box-shadow: var(--shadow-lg);
+  height: 100%;
+  overflow-y: auto; /* Add scroll for content overflow */
 }
 
-.viewContainer {
-  /* このコンテナ自体にスタイルは不要な場合が多い */
-  /* 必要であれば padding などを設定 */
-}
-
-.screenHeader {
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: var(--space-md);
-  color: var(--color-text-primary);
-}
-
-.screenDescription {
-  color: var(--color-text-secondary);
-  font-size: 0.95rem;
-  margin-bottom: var(--space-xl);
+.sessionView {
+  padding: var(--space-xl);
+  background-color: var(--color-bg-app);
+  height: 100vh;
 }
 
 .loadingScreen {
