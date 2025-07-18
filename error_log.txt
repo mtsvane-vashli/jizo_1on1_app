@@ -1,35 +1,5 @@
-ちゃんと。
-
-ちゃんと録。
-
-ちゃんと録音。
-
-ちゃんと録音でき。
-
-ちゃんと録音できて。
-
-ちゃんと録音できてない？
-
-ちゃんと録音できてない可能？
-
-ちゃんと録音できてない可能性？
-
-ちゃんと録音できてない可能性が。
-
-ちゃんと録音できてない可能性が。
-
-ちゃんと録音できてない可能性が高い。
-
-ちゃんと録音できてない可能性が高いで。
-
-ちゃんと録音できてない可能性が高い
-
-ちゃんと録音できてない可能性が高い。では
-
-ちゃんと録音できてない可能性が高い。では
-
-ちゃんと録音できてない可能性が高い。では 高い高い
-
-ちゃんと録音できてない可能性が高い。では 高い高い
-
-ちゃんと録音できてない可能性が高い。では 高い高い めっちゃ高い。
+Access to fetch at 'https://jizo-1on1-backend.onrender.com/api/login' from origin 'https://jizo-1on1.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+jizo-1on1-backend.onrender.com/api/login:1   Failed to load resource: net::ERR_FAILED
+apiClient.js:38  API Client Error: Failed to fetch
+wt @ apiClient.js:38
+AuthContext.js:40  Login error: Failed to fetch

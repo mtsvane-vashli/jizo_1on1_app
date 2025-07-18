@@ -13,9 +13,29 @@ const server = http.createServer(app);
 const { setupTranscriptionStream } = require('./services/aiService');
 
 // 本番環境用のCORS設定
+const whitelist = [
+  'http://localhost:3000',
+  'https://jizo-1on1.vercel.app',
+];
+// 環境変数で指定されたフロントエンドURLも許可リストに追加
+if (process.env.FRONTEND_URL) {
+  // 同じURLが複数登録されるのを防ぐ
+  if (!whitelist.includes(process.env.FRONTEND_URL)) {
+    whitelist.push(process.env.FRONTEND_URL);
+  }
+}
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  optionsSuccessStatus: 200
+  origin: (origin, callback) => {
+    // originがないリクエスト(curlなど)も許可する
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200,
+  credentials: true // Cookieなどの認証情報をやり取りするために必要
 };
 
 // ★ Socket.ioサーバーを作成し、CORS設定を適用
