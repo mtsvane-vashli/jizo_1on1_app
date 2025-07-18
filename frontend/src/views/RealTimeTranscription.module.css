@@ -155,3 +155,7 @@
   font-weight: 600;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
+
+.interim {
+  color: #9ca3af; /* or any other color for interim text */
+}

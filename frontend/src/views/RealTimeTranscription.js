@@ -1,9 +1,10 @@
 // frontend/src/views/RealTimeTranscription.js
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import styles from './RealTimeTranscription.module.css';
 
 const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, employeeName }) => {
+  const [interimTranscript, setInterimTranscript] = useState('');
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const socketRef = useRef(null);
@@ -14,7 +15,12 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
     socketRef.current = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000');
 
     socketRef.current.on('transcript_data', (data) => {
-      onTranscriptUpdate(data);
+      if (data.isFinal) {
+        onTranscriptUpdate(data);
+        setInterimTranscript('');
+      } else {
+        setInterimTranscript(data.transcript);
+      }
     });
 
     // コンポーネントのアンマウント時にソケットを切断
@@ -124,12 +130,17 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
 
       <div className={styles.transcriptionArea}>
         {transcript.length === 0 && !isRecording && <div className={styles.placeholder}>録音は停止中です。</div>}
-        {transcript.length === 0 && isRecording && <div className={styles.placeholder}>録音中...</div>}
+        {transcript.length === 0 && isRecording && !interimTranscript && <div className={styles.placeholder}>録音中...</div>}
         {transcript.map((item, index) => (
           <p key={index} className={styles.transcriptLine}>
             <span>{item.speakerTag ? `話者${item.speakerTag}: ` : ''}{item.transcript}</span>
           </p>
         ))}
+        {interimTranscript && (
+          <p className={`${styles.transcriptLine} ${styles.interim}`}>
+            <span>{interimTranscript}</span>
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,35 @@
-whereClauses.push(`c.organization_id = // backend/models/conversationModel.js (修正後)
+ちゃんと。
 
-SyntaxError: missing ) after argument list
-    at wrapSafe (node:internal/modules/cjs/loader:1662:18)
-    at Module._compile (node:internal/modules/cjs/loader:1704:20)
-    at Object..js (node:internal/modules/cjs/loader:1895:10)
-    at Module.load (node:internal/modules/cjs/loader:1465:32)
-    at Function._load (node:internal/modules/cjs/loader:1282:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
-    at Module.require (node:internal/modules/cjs/loader:1487:12)
-    at require (node:internal/modules/helpers:135:16)
-    at Object.<anonymous> (C:\Users\kousu\jizo_1on1_app\backend\controllers\conversationController.js:3:27)
+ちゃんと録。
 
-Node.js v22.16.0
+ちゃんと録音。
+
+ちゃんと録音でき。
+
+ちゃんと録音できて。
+
+ちゃんと録音できてない？
+
+ちゃんと録音できてない可能？
+
+ちゃんと録音できてない可能性？
+
+ちゃんと録音できてない可能性が。
+
+ちゃんと録音できてない可能性が。
+
+ちゃんと録音できてない可能性が高い。
+
+ちゃんと録音できてない可能性が高いで。
+
+ちゃんと録音できてない可能性が高い
+
+ちゃんと録音できてない可能性が高い。では
+
+ちゃんと録音できてない可能性が高い。では
+
+ちゃんと録音できてない可能性が高い。では 高い高い
+
+ちゃんと録音できてない可能性が高い。では 高い高い
+
+ちゃんと録音できてない可能性が高い。では 高い高い めっちゃ高い。

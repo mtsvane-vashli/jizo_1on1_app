@@ -123,7 +123,8 @@ function setupTranscriptionStream(onTranscription) {
         if (transcript) {
           onTranscription({
             transcript: transcript.trim(),
-            speakerTag: speakerTag // 話者タグを追加
+            speakerTag: speakerTag, // 話者タグを追加
+            isFinal: result.isFinal
           });
         }
       }
