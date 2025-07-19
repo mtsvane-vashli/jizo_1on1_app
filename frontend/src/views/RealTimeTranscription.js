@@ -3,23 +3,32 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import styles from './RealTimeTranscription.module.css';
 
-const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, employeeName }) => {
+// ★修正点: onToggleRecording を props として受け取る
+const RealTimeTranscription = ({ isRecording, onToggleRecording, transcript, onTranscriptUpdate, employeeName }) => {
   const [interimTranscript, setInterimTranscript] = useState('');
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const socketRef = useRef(null);
   const streamRestartIntervalRef = useRef(null);
+  const lastSpeakerTag = useRef(null);
 
   // Socket.IOの初期化とイベントリスナーの設定
   useEffect(() => {
-    socketRef.current = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000');
+    // 環境変数からバックエンドのURLを取得、なければデフォルト値を使用
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    socketRef.current = io(backendUrl);
 
+    // サーバーから文字起こしデータを受信
     socketRef.current.on('transcript_data', (data) => {
       if (data.isFinal) {
-        onTranscriptUpdate(data);
-        setInterimTranscript('');
+        // 確定した文字起こしを親コンポーネントに渡す
+        onTranscriptUpdate(data); 
+        setInterimTranscript(''); // 中間結果をクリア
+        lastSpeakerTag.current = data.speakerTag;
       } else {
-        setInterimTranscript(data.transcript);
+        // 中間結果を画面に表示
+        const speakerPrefix = data.speakerTag ? `話者${data.speakerTag}: ` : '';
+        setInterimTranscript(speakerPrefix + data.transcript);
       }
     });
 
@@ -31,26 +40,19 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
     };
   }, [onTranscriptUpdate]);
 
-  // 録音停止処理
+  // 録音停止処理の共通化
   const stopRecording = useCallback(() => {
-    // ストリーム再起動のインターバルをクリア
     if (streamRestartIntervalRef.current) {
       clearInterval(streamRestartIntervalRef.current);
       streamRestartIntervalRef.current = null;
     }
-
-    // MediaRecorderを停止
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-
-    // オーディオトラックを停止
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => track.stop());
       audioStreamRef.current = null;
     }
-
-    // サーバーに転写終了を通知
     if (socketRef.current && socketRef.current.connected) {
         socketRef.current.emit('end_transcription');
     }
@@ -59,12 +61,17 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
   // 録音開始処理
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: true, echoCancellation: true } });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          noiseSuppression: true, 
+          echoCancellation: true 
+        } 
+      });
       audioStreamRef.current = stream;
 
-      // サーバーに転写開始を通知
       if (socketRef.current) {
-        socketRef.current.emit('start_transcription');
+        // 最後に認識された話者タグをサーバーに送信
+        socketRef.current.emit('start_transcription', { lastSpeakerTag: lastSpeakerTag.current });
       }
 
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -75,42 +82,33 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
           socketRef.current.emit('audio_stream', event.data);
         }
       };
-
-      recorder.start(1000); // 1秒ごとにデータを送信
+      
+      // 1秒ごとにデータを送信
+      recorder.start(1000); 
 
     } catch (error) {
       console.error('マイクへのアクセスに失敗しました:', error);
       alert('マイクへのアクセス許可が必要です。ブラウザの設定を確認してください。');
-      // isRecordingをfalseに更新するなどのエラー処理が必要になる可能性
+      if (isRecording) {
+        onToggleRecording(); // エラー時に録音状態を親コンポーネントに反映
+      }
     }
-  }, []);
+  }, [isRecording, onToggleRecording]);
 
 
   // isRecordingの状態に応じて録音を開始・停止
   useEffect(() => {
     if (isRecording) {
+        // ストリームを定期的に再起動する関数
         const restartStream = async () => {
-            // 1. 現在のストリームを停止・終了
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                mediaRecorderRef.current.stop(); // ondataavailableは呼ばれなくなる
-            }
-            if (audioStreamRef.current) {
-                audioStreamRef.current.getTracks().forEach(track => track.stop());
-            }
-            if (socketRef.current && socketRef.current.connected) {
-                socketRef.current.emit('end_transcription');
-            }
-
-            // 2. 少し待ってから新しいストリームを開始
-            setTimeout(async () => {
-                await startRecording();
-            }, 500); // サーバー側がストリームを閉じるのを待つ
+            stopRecording();
+            // 少し待ってから新しいストリームを開始 (サーバー側の準備を待つ)
+            setTimeout(() => startRecording(), 500);
         };
 
         startRecording();
-        // 240秒ごとにストリームを再起動
+        // 4分 (240000ミリ秒) ごとにストリームを再起動
         streamRestartIntervalRef.current = setInterval(restartStream, 240000);
-
     } else {
       stopRecording();
     }
@@ -122,24 +120,41 @@ const RealTimeTranscription = ({ isRecording, transcript, onTranscriptUpdate, em
   }, [isRecording, startRecording, stopRecording]);
 
   return (
-    <div className={styles.container}>
+    // ★修正点: CSSクラス名を .module.css ファイルと一致させる
+    <div className={styles.transcriptionContainer}>
       <header className={styles.header}>
-        <h2>リアルタイム文字起こし</h2>
-        <p>{employeeName ? `${employeeName}さんとの会話` : '会話を開始すると文字起こしが始まります'}</p>
+        <div>
+          <h2 className={styles.title}>リアルタイム文字起こし</h2>
+          <p className={styles.conversationPartner}>{employeeName ? `${employeeName}さんとの会話` : '会話'}</p>
+        </div>
+        {/* ★修正点: 録音開始・停止ボタンを追加 */}
+        <button 
+          onClick={onToggleRecording} 
+          className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`}
+        >
+          {isRecording ? '■ 録音停止' : '● 録音開始'}
+        </button>
       </header>
-
-      <div className={styles.transcriptionArea}>
-        {transcript.length === 0 && !isRecording && <div className={styles.placeholder}>録音は停止中です。</div>}
-        {transcript.length === 0 && isRecording && !interimTranscript && <div className={styles.placeholder}>録音中...</div>}
-        {transcript.map((item, index) => (
-          <p key={index} className={styles.transcriptLine}>
-            <span>{item.speakerTag ? `話者${item.speakerTag}: ` : ''}{item.transcript}</span>
+      
+      {/* ★修正点: 文字起こし表示エリアのクラス名と構造を修正 */}
+      <div className={styles.transcriptDisplay}>
+        {transcript.length === 0 && !interimTranscript && (
+          <p className={styles.noTranscript}>
+            {isRecording ? '会話を始めるとここに文字起こしが表示されます...' : '「録音開始」ボタンを押して会話を始めてください。'}
           </p>
+        )}
+        {transcript.map((item, index) => (
+          <div key={index} className={styles.transcriptItem}>
+            <p className={styles.transcriptText}>
+              {item.speakerTag && <span className={styles.speakerTag}>{`話者${item.speakerTag}: `}</span>}
+              {item.transcript}
+            </p>
+          </div>
         ))}
         {interimTranscript && (
-          <p className={`${styles.transcriptLine} ${styles.interim}`}>
-            <span>{interimTranscript}</span>
-          </p>
+          <div className={`${styles.transcriptItem} ${styles.interim}`}>
+             <p className={styles.transcriptText}>{interimTranscript}</p>
+          </div>
         )}
       </div>
     </div>

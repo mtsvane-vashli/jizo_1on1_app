@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const data = await loginUser(username, password);
             localStorage.setItem('jwtToken', data.token);
-            setToken(data.token); // ★ トークンを更新することで、useEffectが走り、userが設定される
+            setToken(data.token);
             return { success: true };
         } catch (error) {
             console.error('Login error:', error.message);

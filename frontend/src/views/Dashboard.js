@@ -1,5 +1,5 @@
 // frontend/src/views/Dashboard.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -22,36 +22,47 @@ function Dashboard() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(''); // 選択された部下のID
   const [newEmployeeName, setNewEmployeeName] = useState(''); // 新しい部下の名前
   const [newEmployeeEmail, setNewEmployeeEmail] = useState(''); // 新しい部下のメールアドレス
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true); // ダッシュボードデータ用ローディング
+  const [isEmployeesLoading, setIsEmployeesLoading] = useState(true); // 部下リスト用ローディング
   const [error, setError] = useState(null);
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  // 部下リストの取得
-  const fetchEmployees = async () => {
-    try {
-      const data = await getEmployees();
-      setEmployees(data);
-    } catch (err) {
-      console.error('Error fetching employees:', err);
-      setError(`部下データの取得に失敗しました: ${err.message}`);
-    }
-  };
-
+  // 部下リストの取得 (初回ロード時のみ)
   useEffect(() => {
     if (authLoading || !isAuthenticated) {
-      setIsLoading(false);
+      setIsEmployeesLoading(false);
       return;
     }
 
-    fetchEmployees(); // 部下リストは認証後に一度取得
+    const fetchEmployees = async () => {
+      setIsEmployeesLoading(true);
+      try {
+        const data = await getEmployees();
+        setEmployees(data);
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+        setError(`部下データの取得に失敗しました: ${err.message}`);
+      } finally {
+        setIsEmployeesLoading(false);
+      }
+    };
+    fetchEmployees();
+  }, [isAuthenticated, authLoading]);
 
-    const fetchDashboardData = async (employeeId) => {
-      setIsLoading(true);
+  // ダッシュボードデータの取得 (選択された部下が変わるたびに)
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) {
+      setIsDashboardLoading(false);
+      return;
+    }
+
+    const fetchDashboardData = async () => {
+      setIsDashboardLoading(true);
       setError(null);
       try {
         const [keywords, sentiments] = await Promise.all([
-          getDashboardKeywords(employeeId),
-          getDashboardSentiments(employeeId),
+          getDashboardKeywords(selectedEmployeeId),
+          getDashboardSentiments(selectedEmployeeId),
         ]);
 
         if (Array.isArray(keywords)) {
@@ -81,48 +92,75 @@ function Dashboard() {
         console.error('Error fetching dashboard data:', err);
         setError(`データの取得に失敗しました: ${err.message}`);
       } finally {
-        setIsLoading(false);
+        setIsDashboardLoading(false);
       }
     };
-    fetchDashboardData(selectedEmployeeId);
+    fetchDashboardData();
   }, [isAuthenticated, authLoading, selectedEmployeeId]);
 
-  const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: false } }, scales: { x: { title: { display: true, text: '頻度' }, beginAtZero: true }, y: { ticks: { autoSkip: false } } }, indexAxis: 'y' };
-  const sentimentOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: false } }, scales: { x: { title: { display: true, text: '日付' } }, y: { title: { display: true, text: 'スコア' }, min: 0, max: 1 } } };
+  // Chart.js options のメモ化
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: false }
+    },
+    scales: {
+      x: { title: { display: true, text: '頻度' }, beginAtZero: true },
+      y: { ticks: { autoSkip: false } }
+    },
+    indexAxis: 'y'
+  }), []);
+
+  const sentimentOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: false }
+    },
+    scales: {
+      x: { title: { display: true, text: '日付' } },
+      y: { title: { display: true, text: 'スコア' }, min: 0, max: 1 }
+    }
+  }), []);
 
   // 新しい部下を追加するハンドラ
-  const handleAddEmployee = async () => {
+  const handleAddEmployee = useCallback(async () => {
     if (!newEmployeeName.trim()) {
-      alert('部下の名前は必須です。');
+      setError('部下の名前は必須です。');
       return;
     }
     try {
       await createEmployee({ name: newEmployeeName, email: newEmployeeEmail });
       setNewEmployeeName('');
       setNewEmployeeEmail('');
-      fetchEmployees(); // リストを更新
-      alert('部下を追加しました。');
+      // 部下リストを再取得
+      const data = await getEmployees();
+      setEmployees(data);
+      setError(null); // 成功したらエラーをクリア
     } catch (err) {
       console.error('Error adding employee:', err);
       setError(`部下の追加に失敗しました: ${err.message}`);
-      alert(`部下の追加に失敗しました: ${err.message}`);
     }
-  };
+  }, [newEmployeeName, newEmployeeEmail]);
 
   // 部下を削除するハンドラ
-  const handleDeleteEmployee = async (id, name) => {
+  const handleDeleteEmployee = useCallback(async (id, name) => {
     if (window.confirm(`${name} を削除してもよろしいですか？`)) {
       try {
         await deleteEmployee(id);
-        fetchEmployees(); // リストを更新
-        alert('部下を削除しました。');
+        // 部下リストを再取得
+        const data = await getEmployees();
+        setEmployees(data);
+        setError(null); // 成功したらエラーをクリア
       } catch (err) {
         console.error('Error deleting employee:', err);
         setError(`部下の削除に失敗しました: ${err.message}`);
-        alert(`部下の削除に失敗しました: ${err.message}`);
       }
     }
-  };
+  }, []);
 
   if (authLoading) {
     return <div className={layoutStyles.viewContainer}><p>認証情報を確認中...</p></div>;
@@ -156,19 +194,19 @@ function Dashboard() {
         <div className={styles.card}>
           <h3 className={styles.cardHeader}>会話トピックの傾向</h3>
           <p className={styles.cardDescription}>
-            {isLoading ? 'キーワードデータを読み込み中...' : '上位のキーワードとその頻度を表示'}
+            {isDashboardLoading ? 'キーワードデータを読み込み中...' : '上位のキーワードとその頻度を表示'}
           </p>
           <div className={styles.chartContainer}>
-            {isLoading ? <p className={styles.loadingText}>ローディング中...</p> : keywordsData.labels.length > 0 ? <Bar data={keywordsData} options={options} /> : <p className={styles.loadingText}>表示できるデータがありません。</p>}
+            {isDashboardLoading ? <p className={styles.loadingText}>ローディング中...</p> : keywordsData.labels.length > 0 ? <Bar data={keywordsData} options={options} /> : <p className={styles.loadingText}>表示できるデータがありません。</p>}
           </div>
         </div>
         <div className={styles.card}>
           <h3 className={styles.cardHeader}>感情の推移</h3>
           <p className={styles.cardDescription}>
-            {isLoading ? '感情データを読み込み中...' : 'ポジティブ/ネガティブ/ニュートラルの推移グラフ'}
+            {isDashboardLoading ? '感情データを読み込み中...' : 'ポジティブ/ネガティブ/ニュートラルの推移グラフ'}
           </p>
           <div className={styles.chartContainer}>
-            {isLoading ? <p className={styles.loadingText}>ローディング中...</p> : sentimentChartData.labels.length > 0 ? <Line data={sentimentChartData} options={sentimentOptions} /> : <p className={styles.loadingText}>表示できるデータがありません。</p>}
+            {isDashboardLoading ? <p className={styles.loadingText}>ローディング中...</p> : sentimentChartData.labels.length > 0 ? <Line data={sentimentChartData} options={sentimentOptions} /> : <p className={styles.loadingText}>表示できるデータがありません。</p>}
           </div>
         </div>
         <div className={styles.card}>
@@ -183,7 +221,7 @@ function Dashboard() {
         <h3 className={styles.cardHeader}>部下管理</h3>
         <p className={styles.cardDescription}>登録済みの部下を管理します。</p>
         <div className={styles.employeeList}>
-          {isLoading ? (
+          {isEmployeesLoading ? (
             <p className={styles.loadingText}>部下データを読み込み中...</p>
           ) : employees.length > 0 ? (
             <ul>

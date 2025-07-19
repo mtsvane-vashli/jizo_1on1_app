@@ -1,0 +1,99 @@
+/* src/components/Modal.module.css */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalCard {
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 450px;
+  overflow: hidden;
+  animation: scaleUp 0.25s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modalTitle {
+  font-family: var(--font-family-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.closeButton {
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  transition: var(--transition-fast);
+}
+.closeButton:hover {
+  color: var(--color-text-dark);
+  transform: rotate(90deg);
+}
+
+.modalBody {
+  padding: var(--space-lg);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background-color: var(--color-bg-app);
+}
+
+.cancelButton, .confirmButton {
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: var(--transition-fast);
+}
+
+.cancelButton {
+  background-color: #fff;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+.cancelButton:hover {
+  background-color: var(--color-bg-disabled);
+}
+
+.confirmButton {
+  background-color: var(--color-danger);
+  color: var(--color-text-light);
+}
+.confirmButton:hover {
+  background-color: var(--color-danger-hover);
+}

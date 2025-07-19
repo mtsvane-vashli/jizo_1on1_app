@@ -1,37 +1,137 @@
 /* frontend/src/views/LearningResources.module.css */
-.card {
-  background-color: var(--color-bg-card);
-  padding: var(--space-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+
+.accordion {
+  width: 100%;
+  max-width: 900px; /* コンテンツの最大幅を設定 */
+  margin: 2rem auto; /* 中央寄せ */
 }
 
-.card + .card {
-    margin-top: var(--space-xl);
+.accordionItem {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  overflow: hidden; /* 角丸を維持するため */
 }
 
-.card h3 {
-  font-size: 1.25rem;
+.accordionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  margin-bottom: var(--space-lg);
-  color: var(--color-text-primary);
+  color: #333;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
 }
 
-.card ul {
-  list-style-type: disc;
-  padding-left: 1.25rem; /* pl-5 */
+.accordionTitle:hover {
+  background-color: #f8f9fa;
 }
 
-.card li {
-  color: var(--color-text-dark);
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-.card li + li {
-    margin-top: var(--space-sm);
+.accordionIcon {
+  transition: transform 0.3s ease-in-out;
+  flex-shrink: 0;
+  margin-left: 1rem;
 }
 
-.card li strong {
-    font-weight: 600;
-    color: var(--color-text-primary);
+.accordionIcon.open {
+  transform: rotate(180deg);
+}
+
+.accordionContent {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+  background-color: #fff;
+}
+
+.accordionContent.open {
+  max-height: 5000px; /* 十分な高さを設定 */
+  padding-bottom: 1.5rem;
+}
+
+.accordionContentInner {
+  padding: 0 1.5rem;
+  line-height: 1.8;
+  color: #454545;
+}
+
+.accordionContentInner h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+  color: #0056b3;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 0.5rem;
+}
+.accordionContentInner h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  color: #333;
+  border-left: 4px solid #007bff;
+  padding-left: 0.75rem;
+}
+
+.accordionContentInner ul,
+.accordionContentInner ol {
+  padding-left: 2rem;
+}
+
+.accordionContentInner li {
+  margin-bottom: 0.75rem;
+}
+
+.accordionContentInner dl {
+  margin-top: 1rem;
+}
+
+.accordionContentInner dt {
+  font-weight: bold;
+  margin-top: 1.25rem;
+  color: #007bff;
+}
+
+.accordionContentInner dd {
+  margin-left: 0;
+  padding-left: 1rem;
+  border-left: 2px solid #e0e0e0;
+  margin-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+
+/* テーブルのスタイル */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.table th,
+.table td {
+  border: 1px solid #ddd;
+  padding: 12px 15px;
+  text-align: left;
+}
+
+.table th {
+  background-color: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.table tbody tr:nth-of-type(even) {
+  background-color: #f8f9fa;
+}
+
+.table tbody tr:hover {
+  background-color: #e9ecef;
 }
