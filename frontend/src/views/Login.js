@@ -83,9 +83,7 @@ export default function Login({ theme, toggleTheme }) {
                 <input id="remember-me" name="remember-me" type="checkbox" className={styles.checkbox} />
                 <label htmlFor="remember-me" className={styles.label}>ログイン状態を保持する</label>
               </div>
-              <div>
-                <Link to="/forgot-password" className={styles.forgotPasswordLink}>パスワードをお忘れですか？</Link>
-              </div>
+              {/* ★★★ 修正点: パスワードを忘れた方へのリンクを削除 ★★★ */}
             </div>
 
             <div>
@@ -93,10 +91,7 @@ export default function Login({ theme, toggleTheme }) {
             </div>
           </form>
 
-          <p className={styles.footerLink}>
-            アカウントをお持ちでないですか？
-            <Link to="/register"> 新規登録はこちら</Link>
-          </p>
+          {/* ★★★ 修正点: 新規登録へのリンクを削除 ★★★ */}
         </div>
         <div className={styles.homeLinkContainer}>
             <Link to="/" className={styles.homeLink}>
