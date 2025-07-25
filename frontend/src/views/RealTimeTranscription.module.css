@@ -1,16 +1,15 @@
 /* frontend/src/views/RealTimeTranscription.module.css */
 
-/* ★修正点: 全体的なレイアウトと整合性を修正 */
-
 .transcriptionContainer {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #ffffff;
+  /* ★ 修正: CSS変数を使用 */
+  background-color: var(--color-bg-card);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border: 1px solid #e0e0e0;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 }
 
 .header {
@@ -19,20 +18,23 @@
   align-items: center;
   margin-bottom: 1.5rem;
   flex-shrink: 0;
-  border-bottom: 1px solid #f0f0f0;
+  /* ★ 修正: CSS変数を使用 */
+  border-bottom: 1px solid var(--color-border);
   padding-bottom: 1rem;
 }
 
 .title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #333;
+  /* ★ 修正: CSS変数を使用 */
+  color: var(--color-text-dark);
   margin: 0 0 0.25rem 0;
 }
 
 .conversationPartner {
   margin: 0;
-  color: #6c757d;
+  /* ★ 修正: CSS変数を使用 */
+  color: var(--color-text-secondary);
   font-size: 0.9rem;
 }
 
@@ -47,14 +49,16 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
-  background-color: #28a745;
-  color: white;
+  /* ★ 修正: CSS変数を使用 */
+  background-color: var(--color-accent);
+  color: var(--color-text-light);
   min-width: 110px;
   justify-content: center;
 }
 
 .recordButton.recording {
-  background-color: #dc3545;
+  /* ★ 修正: CSS変数を使用 */
+  background-color: var(--color-danger);
 }
 
 .recordButton:hover {
@@ -63,14 +67,16 @@
 
 .transcriptDisplay {
   flex-grow: 1;
-  background-color: #f8f9fa;
+  /* ★ 修正: CSS変数を使用 */
+  background-color: var(--color-bg-app);
   border-radius: 8px;
   padding: 1rem 1.5rem;
   overflow-y: auto;
 }
 
 .noTranscript {
-  color: #6c757d;
+  /* ★ 修正: CSS変数を使用 */
+  color: var(--color-text-secondary);
   text-align: center;
   margin-top: 2rem;
   font-style: italic;
@@ -88,19 +94,21 @@
 
 .speakerTag {
   font-weight: 700;
-  color: #0056b3;
+  /* ★ 修正: CSS変数を使用 */
+  color: var(--color-primary);
   margin-right: 0.5rem;
 }
 
 .transcriptText {
   margin: 0;
-  color: #212529;
-  white-space: pre-wrap; /* 改行を反映させる */
+  /* ★ 修正: CSS変数を使用 */
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  /* 改行を反映させる */
 }
 
 .interim .transcriptText {
-  color: #6c757d;
+  /* ★ 修正: CSS変数を使用 */
+  color: var(--color-text-secondary);
   font-style: italic;
 }
-
-/* 元のファイルにあったが未使用だったクラスは削除 */

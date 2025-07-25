@@ -1,16 +1,180 @@
-/* frontend/src/views/SessionLog.module.css */
+/* frontend/src/views/SessionLog.module.css (改修後) */
 
-.container {
+/* ★★★ 新規追加: 2カラムレイアウト ★★★ */
+.logViewContainer {
+  display: flex;
+  gap: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.leftPanel {
+  flex: 0 0 350px;
+  /* 左パネルの幅を固定 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.rightPanel {
+  flex: 1;
+  /* 右パネルは残りの幅をすべて使用 */
+  min-width: 0;
+  /* flexアイテムの縮小問題を回避 */
+}
+
+/* ★★★ 新規追加: 部下選択UI (Dashboard.module.cssから引用・調整) ★★★ */
+.employeeSelectContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background-color: var(--color-bg-card);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.selectLabel {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.employeeSelect {
   width: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.employeeSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+
+/* ★★★ カレンダーコンテナ (既存) ★★★ */
+.calendarContainer {
+  background-color: var(--color-bg-card);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* react-calendarのスタイル上書き (変更なし) */
+.calendarContainer :global .react-calendar {
+  width: 100%;
+  border: none;
+  font-family: var(--font-family-sans);
+  background-color: transparent;
+}
+
+.calendarContainer :global .react-calendar__navigation button {
+  color: var(--color-primary);
+  min-width: 44px;
+  background: none;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.calendarContainer :global .react-calendar__navigation button:hover,
+.calendarContainer :global .react-calendar__navigation button:focus {
+  background-color: var(--color-bg-hover);
+}
+
+.calendarContainer :global .react-calendar__month-view__weekdays__weekday {
+  text-align: center;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: var(--space-sm);
+}
+
+.calendarContainer :global .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+.calendarContainer :global .react-calendar__tile {
+  background: none;
+  border: none;
+  text-align: center;
+  padding: var(--space-sm);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  position: relative;
+  height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendarContainer :global .react-calendar__tile:disabled {
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+}
+
+.calendarContainer :global .react-calendar__tile:enabled:hover,
+.calendarContainer :global .react-calendar__tile:enabled:focus {
+  background-color: var(--color-bg-hover);
+}
+
+.calendarContainer :global .react-calendar__tile--now {
+  background: var(--color-bg-hover);
+  font-weight: bold;
+}
+
+.calendarContainer :global .react-calendar__tile--active {
+  background: var(--color-primary);
+  color: var(--color-text-light);
+}
+
+.calendarContainer :global .react-calendar__tile--active:enabled:hover,
+.calendarContainer :global .react-calendar__tile--active:enabled:focus {
+  background: var(--color-primary-hover);
+}
+
+.dot {
+  height: 6px;
+  width: 6px;
+  background-color: var(--color-accent);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.calendarContainer :global .react-calendar__tile--active .dot {
+  background-color: var(--color-text-light);
+}
+
+
+/* ★★★ ログリスト (既存の.containerを.logListContainerに変更) ★★★ */
+.logListContainer {
+  width: 100%;
+  height: 100%;
+  /* 高さをパネルに合わせる */
   background-color: var(--color-bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   overflow: hidden;
-  margin-top: var(--space-xl);
+  display: flex;
+  /* メッセージ表示のため */
+  flex-direction: column;
+  /* メッセージ表示のため */
 }
 
 .list {
-    /* ulタグに適用 */
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  /* リスト部分のみスクロール */
+  flex-grow: 1;
 }
 
 .item {
@@ -19,6 +183,7 @@
   align-items: center;
   justify-content: space-between;
 }
+
 .item:last-child {
   border-bottom: none;
 }
@@ -37,7 +202,7 @@
 }
 
 .button:hover {
-  background-color: #f9fafb; /* gray-50 */
+  background-color: var(--color-bg-hover);
 }
 
 .dateTheme {
@@ -60,8 +225,9 @@
 
 .lineClamp2 {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -82,17 +248,15 @@
   background-color: var(--color-danger-hover);
 }
 
-.deleteButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.error,
+.emptyMessage {
+  color: var(--color-text-secondary);
+  padding: var(--space-lg);
+  text-align: center;
+  margin: auto;
+  /* 中央寄せ */
 }
 
 .error {
-    color: var(--color-danger);
-    padding: var(--space-lg);
-}
-
-.emptyMessage {
-    padding: var(--space-lg);
-    color: var(--color-text-secondary);
+  color: var(--color-danger);
 }

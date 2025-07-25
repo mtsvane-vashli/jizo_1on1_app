@@ -1,14 +1,18 @@
 // frontend/src/App.js
 import React, { useState, useEffect } from 'react';
+// ★ 修正: 不要なuseParamsを削除
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Modal from './components/Modal.js';
 import appStyles from './App.module.css';
+import { FiMenu } from 'react-icons/fi'; // ハンバーガーメニュー用アイコン
 
-// Views
+// Components & Views
+import ThemeToggleButton from './components/ThemeToggleButton';
 import Home from './views/Home.js';
 import New1on1Support from './views/New1on1Support.js';
 import SessionLog from './views/SessionLog.js';
+import TranscriptViewer from './views/TranscriptViewer.js';
 import Dashboard from './views/Dashboard.js';
 import LearningResources from './views/LearningResources.js';
 import Settings from './views/Settings.js';
@@ -20,42 +24,15 @@ import ProtectedRoute from './components/ProtectedRoute.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 
 // サイドバーとメインコンテンツを持つレイアウト
-function AppLayout({ theme, toggleTheme }) {
+function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
   const { loading, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(true);
-
-  const [modalState, setModalState] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
+  const [modalState, setModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
   const closeModal = () => setModalState({ ...modalState, isOpen: false });
-
-  const showLogoutModal = () => {
-    setModalState({
-      isOpen: true,
-      title: 'ログアウト',
-      message: '本当にログアウトしますか？',
-      onConfirm: async () => {
-        try {
-          await logout();
-          navigate('/login');
-        } catch (error) { console.error('Logout failed', error); }
-      }
-    });
-  };
-
-  const showGoHomeModal = () => {
-    setModalState({
-      isOpen: true,
-      title: 'ホームページへ移動',
-      message: '入力中の内容は保存されませんが、ホームページに戻りますか？',
-      onConfirm: () => navigate('/')
-    });
-  };
+  const showLogoutModal = () => { setModalState({ isOpen: true, title: 'ログアウト', message: '本当にログアウトしますか？', onConfirm: async () => { try { await logout(); navigate('/login'); } catch (error) { console.error('Logout failed', error); } } }); };
+  const showGoHomeModal = () => { setModalState({ isOpen: true, title: 'ホームページへ移動', message: '入力中の内容は保存されませんが、ホームページに戻りますか？', onConfirm: () => navigate('/') }); };
 
   if (loading) {
     return <div className={appStyles.loadingScreen}><p>認証情報を確認中...</p></div>;
@@ -64,22 +41,31 @@ function AppLayout({ theme, toggleTheme }) {
   return (
     <>
       <div className={appStyles.app}>
-        <Sidebar 
-          isCollapsed={isSidebarCollapsed} 
-          setCollapsed={setSidebarCollapsed} 
+        <Sidebar
+          isCollapsed={isSidebarCollapsed && !isMobile}
+          setCollapsed={setSidebarCollapsed}
           onLogoutClick={showLogoutModal}
           onGoHomeClick={showGoHomeModal}
-          theme={theme}
-          toggleTheme={toggleTheme}
+          isMobile={isMobile}
+          isSidebarOpen={isSidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
-        
-        <main className={`${appStyles.contentArea} ${isSidebarCollapsed ? '' : appStyles.sidebarOpen}`}>
+        <main className={`${appStyles.contentArea} ${(isSidebarCollapsed && !isMobile) ? '' : appStyles.sidebarOpen}`}>
+          {/* ★★★ モバイル用のヘッダーとハンバーガーメニュー ★★★ */}
+          {isMobile && (
+            <div className={appStyles.mobileHeader}>
+              <button onClick={() => setSidebarOpen(true)} className={appStyles.hamburgerButton}>
+                <FiMenu />
+              </button>
+              <span className={appStyles.mobileTitle}>地蔵1on1</span>
+            </div>
+          )}
           <div className={appStyles.contentCard}>
             <Routes>
-              {/* /appにアクセスした場合は/app/new-1on1にリダイレクト */}
               <Route index element={<Navigate to="new-1on1" replace />} />
               <Route path="new-1on1" element={<New1on1Support />} />
               <Route path="logs" element={<SessionLog />} />
+              <Route path="log/transcript/:id" element={<TranscriptViewer />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="resources" element={<LearningResources />} />
               <Route path="settings" element={<Settings />} />
@@ -87,13 +73,7 @@ function AppLayout({ theme, toggleTheme }) {
           </div>
         </main>
       </div>
-
-      <Modal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        onConfirm={modalState.onConfirm}
-        title={modalState.title}
-      >
+      <Modal isOpen={modalState.isOpen} onClose={closeModal} onConfirm={modalState.onConfirm} title={modalState.title}>
         <p>{modalState.message}</p>
       </Modal>
     </>
@@ -103,10 +83,18 @@ function AppLayout({ theme, toggleTheme }) {
 // アプリケーション全体のルーティング
 function App() {
   const [theme, setTheme] = useState('light');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
     setTheme(savedTheme);
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -121,34 +109,25 @@ function App() {
 
   return (
     <AuthProvider>
-      <Routes>
-        {/* 公開ルート */}
-        <Route path="/" element={<Home theme={theme} toggleTheme={toggleTheme} />} />
-        <Route path="/login" element={<Login theme={theme} toggleTheme={toggleTheme} />} />
-        <Route path="/register" element={<Register theme={theme} toggleTheme={toggleTheme} />} />
-        
-        {/* 保護されたメインアプリケーションのルート (サイドバーあり) */}
-        <Route
-          path="/app/*"
-          element={
-            <ProtectedRoute>
-              <AppLayout theme={theme} toggleTheme={toggleTheme} />
-            </ProtectedRoute>
-          }
+      <div className={appStyles.appContainer}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/app/*" element={<ProtectedRoute><AppLayout isMobile={isMobile} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} /></ProtectedRoute>} />
+          <Route path="/session" element={<ProtectedRoute><New1on1Support /></ProtectedRoute>} />
+        </Routes>
+
+        <ThemeToggleButton
+          theme={theme}
+          toggleTheme={toggleTheme}
+          className={appStyles.themeToggleGlobal}
         />
-        
-        {/* ★★★ 1on1セッション専用のルートを追加 (サイドバーなし) ★★★ */}
-        <Route 
-          path="/session"
-          element={
-            <ProtectedRoute>
-              <New1on1Support />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      </div>
     </AuthProvider>
   );
 }
+
+// ★★★ 修正点: 重複していたダミーコンポーネントを削除 ★★★
 
 export default App;

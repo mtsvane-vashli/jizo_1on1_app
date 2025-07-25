@@ -1,16 +1,12 @@
 // frontend/src/services/apiClient.js
 
+import { getToken } from './tokenService'; // ★ 修正: tokenServiceから関数をインポート
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
-/**
- * 汎用的なAPIリクエスト関数
- * @param {string} endpoint - /api/ 以下のエンドポイントパス (例: '/conversations')
- * @param {object} options - fetch API のオプション (method, bodyなど)
- * @returns {Promise<any>} APIからのレスポンスデータ
- * @throws {Error} APIエラーまたはネットワークエラー
- */
 const apiClient = async (endpoint, options = {}) => {
-    const token = localStorage.getItem('jwtToken');
+    const token = getToken(); // ★ 修正: localStorageから直接取得するのをやめ、専用関数を使用
+
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -26,17 +22,23 @@ const apiClient = async (endpoint, options = {}) => {
             headers,
         });
 
-        const data = await response.json();
+        if (response.status === 204) {
+            return Promise.resolve();
+        }
+
+        const responseText = await response.text();
+        const data = responseText ? JSON.parse(responseText) : {};
 
         if (!response.ok) {
-            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            const errorMessage = data.message || data.error || `HTTPエラーが発生しました (ステータス: ${response.status})`;
+            throw new Error(errorMessage);
         }
 
         return data;
 
     } catch (error) {
-        console.error(`API Client Error: ${error.message}`);
-        throw error; // エラーを呼び出し元に再度スローする
+        console.error(`API Client Error: ${error.name}: ${error.message}`);
+        throw error;
     }
 };
 

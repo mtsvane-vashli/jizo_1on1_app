@@ -1,0 +1,264 @@
+/* frontend/src/views/TranscriptViewer.module.css */
+
+/* Base styles for the viewer */
+.viewerContainer {
+    padding: var(--space-xl);
+    background-color: transparent;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.backButton {
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.backButton:hover {
+    background-color: var(--color-primary);
+    color: var(--color-text-light);
+}
+
+.metaInfo {
+    background-color: var(--color-bg-card);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.metaInfo p {
+    margin: 0 0 var(--space-sm) 0;
+    color: var(--color-text-secondary);
+}
+
+.metaInfo p:last-child {
+    margin-bottom: 0;
+}
+
+.metaInfo p strong {
+    color: var(--color-text-primary);
+    margin-right: var(--space-sm);
+}
+
+/* メインセクションブロックに影を追加 */
+.section {
+    background-color: var(--color-bg-card);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-xl);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.section:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/*
+  すべてのセクションタイトルに共通のスタイル。
+  折りたたみ可能にする場合は、この要素に .collapsible クラスも追加してください。
+  (例: <h3 className={`${styles.sectionTitle} ${styles.collapsible}`}>)
+*/
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-lg) 0;
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--color-primary);
+}
+
+
+.cardDescription {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-top: 0;
+    margin-bottom: var(--space-lg);
+}
+
+/* Transcript specific styles */
+.transcriptContainer {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: var(--space-xs);
+}
+
+/* 各会話ブロックのスタイルをシンプルに */
+.transcriptItem {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+    align-items: flex-start;
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.transcriptItem:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.speakerTag {
+    font-weight: 600;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    padding-top: 0.25rem;
+    white-space: nowrap;
+}
+
+.transcriptText {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    line-height: 1.6;
+}
+
+.transcriptText:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.noTranscript {
+    color: var(--color-text-secondary);
+}
+
+/* Editing styles */
+.editingContainer {
+    flex-grow: 1;
+}
+
+.editingTextarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.saveButton,
+.cancelButton {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    border: 1px solid;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.saveButton {
+    background-color: var(--color-primary);
+    color: var(--color-text-light);
+    border-color: var(--color-primary);
+}
+
+.saveButton:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+}
+
+.cancelButton {
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+}
+
+.cancelButton:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-text-secondary);
+}
+
+
+/* Summary and Next Actions */
+.contentBlock {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background-color: var(--color-bg-secondary);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* --- ★★★ ここから改修 ★★★ --- */
+
+/*
+  折りたたみ可能なタイトルに適用するスタイル。
+  このクラスを持つ要素は、直接の子要素として「タイトルのテキスト」と
+  「.toggleIcon クラスを持つ矢印アイコン」を持つ必要があります。
+  display: flex でこれらを両端に配置します。
+*/
+.collapsible {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+/*
+  折りたたみ状態を示す矢印アイコン。
+  .collapsible 要素の中に配置してください。
+  (例: <span className={`${styles.toggleIcon} ${isClosed ? styles.closed : ''}`}>▼</span>)
+*/
+.toggleIcon {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    /* transformプロパティ（回転）の変化を0.3秒かけてアニメーションさせます */
+    transition: transform 0.3s ease-in-out;
+}
+
+/*
+  閉じている状態（.closedクラスが付与された時）はアイコンを回転させます。
+  React の state に応じてこのクラスを付け外ししてください。
+*/
+.toggleIcon.closed {
+    transform: rotate(-90deg);
+    /* 例: ▼ が ◀ になります */
+}
+
+/* 開閉するコンテンツのアニメーション */
+.collapsibleContent {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

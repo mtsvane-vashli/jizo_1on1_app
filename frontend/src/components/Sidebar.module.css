@@ -12,29 +12,35 @@
   box-shadow: var(--shadow-lg);
   transition: width 0.3s ease;
   z-index: 100;
+  flex-shrink: 0;
+  /* ★★★ 修正点: サイドバーが縮まないようにする ★★★ */
 }
 
 .sidebar.collapsed {
   width: 100px;
 }
+
 .sidebar.collapsed .navText {
   opacity: 0;
   visibility: hidden;
   width: 0;
   margin-left: -10px;
 }
+
 .sidebar.collapsed .logo h3 {
   opacity: 0;
   visibility: hidden;
   width: 0;
   transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
 }
+
 .sidebar.collapsed .logo span {
   opacity: 1;
   visibility: visible;
   width: auto;
   transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
 }
+
 .logo h3 {
   font-family: var(--font-family-heading);
   font-size: 1.4rem;
@@ -43,6 +49,7 @@
   margin: 0;
   transition: opacity 0.3s ease, visibility 0.3s ease, width 0.3s ease;
 }
+
 .logo span {
   font-family: var(--font-family-heading);
   font-size: 1.8rem;
@@ -68,7 +75,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden; /* はみ出しを隠す */
+  overflow: hidden;
 }
 
 .nav {
@@ -124,12 +131,50 @@
 .logoutButton {
   color: var(--color-text-sidebar);
 }
+
 .logoutButton:hover {
   background-color: var(--color-bg-sidebar-hover);
   color: #fca5a5;
 }
 
-/* ★ ThemeToggleButton用のスタイルを追加 */
-.themeToggleContainer > button {
-    flex-shrink: 0; /* ボタンが縮まないようにする */
+/* ★★★ 新規追加: レスポンシブ対応スタイル ★★★ */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 150;
+  /* サイドバーより手前、モーダルより奥 */
+}
+
+@media (max-width: 768px) {
+  .sidebar.mobile {
+    position: fixed;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    width: 280px;
+    /* モバイルでは幅を固定 */
+  }
+
+  .sidebar.mobile.open {
+    transform: translateX(0);
+  }
+
+  /* モバイル時はcollapsedを無効化し、常にテキストを表示 */
+  .sidebar.mobile.collapsed {
+    width: 280px;
+  }
+
+  .sidebar.mobile .navText {
+    opacity: 1;
+    visibility: visible;
+    width: auto;
+    margin-left: var(--space-md);
+  }
 }

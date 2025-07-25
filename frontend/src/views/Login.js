@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Auth.module.css';
-import ThemeToggleButton from '../components/ThemeToggleButton';
+// ★ 修正: ThemeToggleButtonのインポートを削除
 import { FiHome } from 'react-icons/fi';
 
 const EyeIcon = () => (
@@ -18,8 +18,8 @@ const EyeSlashedIcon = () => (
   </svg>
 );
 
-
-export default function Login({ theme, toggleTheme }) {
+// ★ 修正: propsから theme と toggleTheme を削除
+export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -45,15 +45,10 @@ export default function Login({ theme, toggleTheme }) {
 
   return (
     <div className={styles.container}>
-        <ThemeToggleButton
-            theme={theme}
-            toggleTheme={toggleTheme}
-            style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}
-        />
+      {/* ★★★ 修正点: テーマ切り替えボタンの記述を完全に削除 ★★★ */}
       <div className={styles.cardWrapper}>
         <div className={styles.card}>
           <div className={styles.logoContainer}>
-            {/* ★★★ 修正点: <text>タグを<span>に変更 ★★★ */}
             <span className={styles.logoText}>
               地蔵1on1
             </span>
@@ -77,13 +72,12 @@ export default function Login({ theme, toggleTheme }) {
                 </button>
               </div>
             </div>
-            
+
             <div className={styles.options}>
               <div className={styles.rememberMe}>
                 <input id="remember-me" name="remember-me" type="checkbox" className={styles.checkbox} />
                 <label htmlFor="remember-me" className={styles.label}>ログイン状態を保持する</label>
               </div>
-              {/* ★★★ 修正点: パスワードを忘れた方へのリンクを削除 ★★★ */}
             </div>
 
             <div>
@@ -91,13 +85,12 @@ export default function Login({ theme, toggleTheme }) {
             </div>
           </form>
 
-          {/* ★★★ 修正点: 新規登録へのリンクを削除 ★★★ */}
         </div>
         <div className={styles.homeLinkContainer}>
-            <Link to="/" className={styles.homeLink}>
-                <FiHome />
-                <span>ホームページに戻る</span>
-            </Link>
+          <Link to="/" className={styles.homeLink}>
+            <FiHome />
+            <span>ホームページに戻る</span>
+          </Link>
         </div>
       </div>
     </div>

@@ -20,4 +20,11 @@ router.delete('/conversations/:id', authenticateToken, conversationController.de
 // 文字起こし結果から新しい会話として保存
 router.post('/conversations', authenticateToken, conversationController.saveTranscript);
 
+
+// ★★★ ここに追記 ★★★
+// 特定の会話を更新 (文字起こしの編集保存用)
+router.put('/conversations/:id', authenticateToken, conversationController.updateConversation);
+// ★★★ 追記ここまで ★★★
+
+
 module.exports = router;

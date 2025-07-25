@@ -1,5 +1,11 @@
 /* src/App.module.css */
 
+/* ★★★ 新規追加: アプリケーション全体のコンテナ ★★★ */
+.appContainer {
+  position: relative;
+  min-height: 100vh;
+}
+
 .app {
   display: flex;
   min-height: 100vh;
@@ -8,8 +14,7 @@
 .contentArea {
   flex-grow: 1;
   padding: var(--space-lg);
-  /* ★ スクロール領域を内側に限定 */
-  overflow-y: auto; /* Changed from hidden to auto */
+  overflow-y: auto;
 }
 
 .contentCard {
@@ -18,7 +23,7 @@
   padding: var(--space-xl);
   box-shadow: var(--shadow-lg);
   height: 100%;
-  overflow-y: auto; /* Add scroll for content overflow */
+  overflow-y: auto;
 }
 
 .sessionView {
@@ -35,4 +40,12 @@
   background-color: var(--color-bg-app);
   font-size: 1.2rem;
   color: var(--color-text-primary);
+}
+
+/* ★★★ 新規追加: グローバルテーマボタンのスタイル ★★★ */
+.themeToggleGlobal {
+  position: fixed; /* 画面に固定 */
+  bottom: 1.5rem;  /* 右下からの距離 */
+  right: 1.5rem;   /* 右下からの距離 */
+  z-index: 1000;   /* 他の要素より手前に表示 */
 }
