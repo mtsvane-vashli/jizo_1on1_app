@@ -1,6 +1,5 @@
 /* frontend/src/views/TranscriptViewer.module.css */
 
-/* Base styles for the viewer */
 .viewerContainer {
     padding: var(--space-xl);
     background-color: transparent;
@@ -59,7 +58,6 @@
     margin-right: var(--space-sm);
 }
 
-/* メインセクションブロックに影を追加 */
 .section {
     background-color: var(--color-bg-card);
     padding: var(--space-lg);
@@ -73,11 +71,6 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-/*
-  すべてのセクションタイトルに共通のスタイル。
-  折りたたみ可能にする場合は、この要素に .collapsible クラスも追加してください。
-  (例: <h3 className={`${styles.sectionTitle} ${styles.collapsible}`}>)
-*/
 .sectionTitle {
     font-size: 1.25rem;
     font-weight: 600;
@@ -87,7 +80,6 @@
     border-bottom: 2px solid var(--color-primary);
 }
 
-
 .cardDescription {
     font-size: 0.9rem;
     color: var(--color-text-secondary);
@@ -95,14 +87,12 @@
     margin-bottom: var(--space-lg);
 }
 
-/* Transcript specific styles */
 .transcriptContainer {
     max-height: 60vh;
     overflow-y: auto;
     padding: var(--space-xs);
 }
 
-/* 各会話ブロックのスタイルをシンプルに */
 .transcriptItem {
     display: flex;
     gap: var(--space-md);
@@ -143,7 +133,6 @@
     color: var(--color-text-secondary);
 }
 
-/* Editing styles */
 .editingContainer {
     flex-grow: 1;
 }
@@ -197,8 +186,6 @@
     border-color: var(--color-text-secondary);
 }
 
-
-/* Summary and Next Actions */
 .contentBlock {
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -209,14 +196,6 @@
     line-height: 1.6;
 }
 
-/* --- ★★★ ここから改修 ★★★ --- */
-
-/*
-  折りたたみ可能なタイトルに適用するスタイル。
-  このクラスを持つ要素は、直接の子要素として「タイトルのテキスト」と
-  「.toggleIcon クラスを持つ矢印アイコン」を持つ必要があります。
-  display: flex でこれらを両端に配置します。
-*/
 .collapsible {
     cursor: pointer;
     display: flex;
@@ -225,28 +204,16 @@
     user-select: none;
 }
 
-/*
-  折りたたみ状態を示す矢印アイコン。
-  .collapsible 要素の中に配置してください。
-  (例: <span className={`${styles.toggleIcon} ${isClosed ? styles.closed : ''}`}>▼</span>)
-*/
 .toggleIcon {
     font-size: 1rem;
     color: var(--color-text-secondary);
-    /* transformプロパティ（回転）の変化を0.3秒かけてアニメーションさせます */
     transition: transform 0.3s ease-in-out;
 }
 
-/*
-  閉じている状態（.closedクラスが付与された時）はアイコンを回転させます。
-  React の state に応じてこのクラスを付け外ししてください。
-*/
 .toggleIcon.closed {
     transform: rotate(-90deg);
-    /* 例: ▼ が ◀ になります */
 }
 
-/* 開閉するコンテンツのアニメーション */
 .collapsibleContent {
     animation: fadeIn 0.4s ease-in-out;
 }
@@ -261,4 +228,18 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* New styles for tools container */
+.toolsContainer {
+    display: flex;
+    flex-direction: column;
+    height: 60vh;
+    /* Fixed height for the tools area */
+    min-height: 400px;
+}
+
+.tabContent {
+    flex-grow: 1;
+    overflow: hidden;
 }

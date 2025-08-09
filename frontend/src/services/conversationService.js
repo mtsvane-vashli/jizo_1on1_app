@@ -48,18 +48,25 @@ export const deleteConversationById = (id) => {
   });
 };
 
+
+export const updateConversationTranscript = (conversationId, updatedTranscriptString) => {
+  return apiClient(`/api/conversations/${conversationId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ transcript: updatedTranscriptString }),
+  });
+};
+
 // ★★★ ここから追記 ★★★
 /**
- * 会話の文字起こしを更新する
+ * 会話のデータを更新する (メモ、マインドマップなど)
  * @param {string} conversationId 会話のID
- * @param {string} updatedTranscriptString 更新後の文字起こしテキスト全体
+ * @param {object} dataToUpdate 更新するデータ { memo, mindMapData, transcript }
  * @returns {Promise<any>} 更新結果
  */
-export const updateConversationTranscript = (conversationId, updatedTranscriptString) => {
-  // バックエンドのAPIが `/api/conversations/:id` で会話全体を更新する場合
+export const updateConversation = (conversationId, dataToUpdate) => {
   return apiClient(`/api/conversations/${conversationId}`, {
-    method: 'PUT', // または PATCH
-    body: JSON.stringify({ transcript: updatedTranscriptString }),
+    method: 'PUT',
+    body: JSON.stringify(dataToUpdate),
   });
 };
 // ★★★ ここまで追記 ★★★

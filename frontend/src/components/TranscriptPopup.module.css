@@ -1,0 +1,93 @@
+/* frontend/src/components/TranscriptPopup.module.css */
+.popupContainer {
+    position: fixed;
+    width: 480px;
+    height: 550px;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    resize: both;
+}
+
+.popupHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-bg-app);
+    border-bottom: 1px solid var(--color-border);
+    cursor: move;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.popupTitle {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-text-primary);
+}
+
+.moveIcon {
+    color: var(--color-text-secondary);
+}
+
+.headerButtons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.headerButton {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    display: flex;
+}
+
+.headerButton:hover {
+    color: var(--color-text-dark);
+}
+
+.popupContent {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.noTranscript {
+    color: var(--color-text-secondary);
+    text-align: center;
+    margin-top: 2rem;
+    font-style: italic;
+}
+
+.transcriptItem {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.speakerTag {
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-right: 0.5rem;
+}
+
+.transcriptText {
+    margin: 0;
+    color: var(--color-text-primary);
+    white-space: pre-wrap;
+}
+
+.interim .transcriptText {
+    color: var(--color-text-secondary);
+    opacity: 0.8;
+}

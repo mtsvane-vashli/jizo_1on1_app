@@ -1,25 +1,31 @@
+// frontend/src/views/TranscriptViewer.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getConversationById, updateConversationTranscript } from '../services/conversationService';
-import styles from './TranscriptViewer.module.css'; // CSSモジュールをTranscriptViewerに合わせます
+import styles from './TranscriptViewer.module.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import Memo from '../components/Memo';
+import MindMap from '../components/MindMap';
+import Tabs from '../components/Tabs';
 
-// ユーザー提供のコードベースに合わせ、コンポーネント名を変更
-function TranscriptDetailView() {
+function TranscriptViewer() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [conversation, setConversation] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState('memo');
 
-    // 文字起こし編集機能のためのstate
+    // States for editable fields
+    const [memo, setMemo] = useState('');
+    const [mindMapData, setMindMapData] = useState({ nodes: [], edges: [] });
     const [editingId, setEditingId] = useState(null);
     const [editingText, setEditingText] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
-    // 文字起こしセクションの開閉状態を管理するstate
     const [isTranscriptOpen, setIsTranscriptOpen] = useState(true);
+    const [isToolsOpen, setIsToolsOpen] = useState(true);
 
     useEffect(() => {
         const fetchConversation = async () => {
@@ -27,21 +33,21 @@ function TranscriptDetailView() {
                 setIsLoading(true);
                 const data = await getConversationById(id);
 
-                // 文字起こしデータを扱いやすいオブジェクトの配列に変換
                 if (data && typeof data.transcript === 'string') {
                     data.transcript = data.transcript.split('\n').map((line, index) => {
                         const parts = line.match(/^(話者\d+):(.*)$/);
-                        if (parts) {
-                            return { id: `line-${index}`, speakerTag: parts[1].replace('話者', '').trim(), text: parts[2].trim() };
-                        } else {
-                            return { id: `line-${index}`, speakerTag: null, text: line };
-                        }
+                        return parts
+                            ? { id: `line-${index}`, speakerTag: parts[1].replace('話者', '').trim(), text: parts[2].trim() }
+                            : { id: `line-${index}`, speakerTag: null, text: line };
                     });
                 } else if (data && !Array.isArray(data.transcript)) {
                     data.transcript = [];
                 }
 
                 setConversation(data);
+                setMemo(data.memo || '');
+                setMindMapData(data.mind_map_data || { nodes: [], edges: [] });
+
             } catch (err) {
                 setError('会話データの読み込みに失敗しました。');
                 console.error(err);
@@ -117,13 +123,24 @@ function TranscriptDetailView() {
                 <p><strong>テーマ:</strong> {conversation.theme || '未設定'}</p>
             </div>
 
-            {/* --- 文字起こしセクション --- */}
             <div className={styles.section}>
-                {/* ★★★ 矢印アイコンの配置とアニメーションのためのJSX修正 ★★★ */}
-                <div
-                    className={`${styles.sectionTitle} ${styles.collapsible}`}
-                    onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}
-                >
+                <div className={`${styles.sectionTitle} ${styles.collapsible}`} onClick={() => setIsToolsOpen(!isToolsOpen)}>
+                    <span>メモ & マインドマップ</span>
+                    <span className={`${styles.toggleIcon} ${!isToolsOpen ? styles.closed : ''}`}>▼</span>
+                </div>
+                {isToolsOpen && (
+                    <div className={`${styles.collapsibleContent} ${styles.toolsContainer}`}>
+                        <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
+                        <div className={styles.tabContent}>
+                            {activeTab === 'memo' && <Memo memo={memo} setMemo={() => { }} />}
+                            {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={() => { }} isReadOnly={true} />}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.section}>
+                <div className={`${styles.sectionTitle} ${styles.collapsible}`} onClick={() => setIsTranscriptOpen(!isTranscriptOpen)}>
                     <span>会話の文字起こし</span>
                     <span className={`${styles.toggleIcon} ${!isTranscriptOpen ? styles.closed : ''}`}>▼</span>
                 </div>
@@ -138,55 +155,32 @@ function TranscriptDetailView() {
                                         {item.speakerTag && <span className={styles.speakerTag}>{`話者${item.speakerTag}: `}</span>}
                                         {editingId === item.id ? (
                                             <div className={styles.editingContainer}>
-                                                <textarea
-                                                    value={editingText}
-                                                    onChange={(e) => setEditingText(e.target.value)}
-                                                    className={styles.editingTextarea}
-                                                    rows={3}
-                                                    autoFocus
-                                                />
+                                                <textarea value={editingText} onChange={(e) => setEditingText(e.target.value)} className={styles.editingTextarea} rows={3} autoFocus />
                                                 <div className={styles.buttonGroup}>
-                                                    <button onClick={handleSave} disabled={isSaving} className={styles.saveButton}>
-                                                        {isSaving ? '保存中...' : '保存'}
-                                                    </button>
-                                                    <button onClick={handleEditCancel} className={styles.cancelButton}>
-                                                        キャンセル
-                                                    </button>
+                                                    <button onClick={handleSave} disabled={isSaving} className={styles.saveButton}>{isSaving ? '保存中...' : '保存'}</button>
+                                                    <button onClick={handleEditCancel} className={styles.cancelButton}>キャンセル</button>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <p className={styles.transcriptText} onClick={() => handleEditStart(item)}>
-                                                {item.text}
-                                            </p>
-                                        )}
+                                        ) : (<p className={styles.transcriptText} onClick={() => handleEditStart(item)}>{item.text}</p>)}
                                     </div>
                                 ))
-                            ) : (
-                                <p className={styles.noTranscript}>文字起こしデータはありません。</p>
-                            )}
+                            ) : (<p className={styles.noTranscript}>文字起こしデータはありません。</p>)}
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* --- ★★★ 太字表示のためのJSX修正 ★★★ --- */}
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>要約</h3>
-                <div
-                    className={styles.contentBlock}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }}
-                />
+                <div className={styles.contentBlock} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }} />
             </div>
 
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>ネクストアクション</h3>
-                <div
-                    className={styles.contentBlock}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }}
-                />
+                <div className={styles.contentBlock} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }} />
             </div>
         </div>
     );
 }
 
-export default TranscriptDetailView;
+export default TranscriptViewer;

@@ -2,15 +2,22 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEmployees, sendMessage, generateSummary } from '../services';
+import { getEmployees, sendMessage, generateSummary, updateConversation, getConversationById } from '../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import layoutStyles from '../App.module.css';
 import styles from './New1on1Support.module.css';
-import RealTimeTranscription from './RealTimeTranscription';
-import ThemeToggleButton from '../components/ThemeToggleButton';
+import Tabs from '../components/Tabs';
+import Memo from '../components/Memo';
+import MindMap from '../components/MindMap';
+import TranscriptPopup from '../components/TranscriptPopup';
+import { io } from 'socket.io-client';
+import { FiMic, FiMicOff } from 'react-icons/fi';
 
-// --- 定数定義 (変更なし) ---
+const initialNodes = [
+  { id: '1', type: 'default', data: { label: '中心テーマ' }, position: { x: 250, y: 150 } },
+];
+
 const THEMES = [
   { id: 1, text: '日々の業務やタスクの進め方について' },
   { id: 2, text: 'コンディションや心身の健康について' },
@@ -30,7 +37,6 @@ const INTERACTIONS = [
   { id: 6, text: 'その他' },
 ];
 
-// --- UIコンポーネント (変更なし) ---
 const SelectionList = ({ title, items, onSelect, disabled }) => {
   const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
   return (
@@ -51,8 +57,12 @@ const SelectionList = ({ title, items, onSelect, disabled }) => {
   );
 };
 
-// --- Reducer (変更なし) ---
-const initialState = { appState: 'initial', isLoading: false, isGeneratingSummary: false, error: null, chatHistory: [], employees: [], currentConversationId: null, currentEmployee: null, selectedTheme: null, selectedInteraction: null, currentSummary: '', currentNextActions: '', isRecording: false, transcript: [], isSummaryVisible: false, };
+const initialState = {
+  appState: 'initial', isLoading: false, isGeneratingSummary: false, error: null, chatHistory: [],
+  employees: [], currentConversationId: null, currentEmployee: null, selectedTheme: null,
+  selectedInteraction: null, currentSummary: '', currentNextActions: '', isSummaryVisible: false,
+};
+
 function chatReducer(state, action) {
   switch (action.type) {
     case 'START_LOADING': return { ...state, isLoading: true, error: null };
@@ -71,35 +81,11 @@ function chatReducer(state, action) {
     case 'START_SUMMARY_GENERATION': return { ...state, isGeneratingSummary: true };
     case 'SUMMARY_GENERATION_SUCCESS': return { ...state, isGeneratingSummary: false, currentSummary: action.payload.summary, currentNextActions: action.payload.nextActions, isSummaryVisible: true, };
     case 'TOGGLE_SUMMARY_VISIBILITY': return { ...state, isSummaryVisible: !state.isSummaryVisible };
-    case 'TOGGLE_RECORDING': return { ...state, isRecording: !state.isRecording };
-    case 'UPDATE_TRANSCRIPT': {
-      const newTranscriptData = action.payload;
-      if (!newTranscriptData.isFinal || !newTranscriptData.transcript.trim()) {
-        return state;
-      }
-      const newHistory = [...state.transcript];
-      const lastEntry = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
-      const newText = newTranscriptData.transcript.trim();
-      if (
-        lastEntry &&
-        lastEntry.speakerTag === newTranscriptData.speakerTag &&
-        newText.startsWith(lastEntry.transcript)
-      ) {
-        lastEntry.transcript = newText;
-      } else {
-        newHistory.push({
-          transcript: newText,
-          speakerTag: newTranscriptData.speakerTag
-        });
-      }
-      return { ...state, transcript: newHistory };
-    }
     default: return state;
   }
 }
 
-// ---- コンポーネント本体 ----
-function New1on1Support({ theme, toggleTheme }) {
+function New1on1Support() {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef(null);
@@ -108,23 +94,235 @@ function New1on1Support({ theme, toggleTheme }) {
   const [searchParams] = useSearchParams();
   const { isAuthenticated, loading: authLoading } = useAuth();
 
+  const [activeTab, setActiveTab] = useState('memo');
+  const [memo, setMemo] = useState('');
+  const [mindMapData, setMindMapData] = useState({ nodes: initialNodes, edges: [] });
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState([]);
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [isTranscriptPopupVisible, setIsTranscriptPopupVisible] = useState(false);
+  const [isTranscriptPopupMinimized, setIsTranscriptPopupMinimized] = useState(false);
+
+  const socketRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioStreamRef = useRef(null);
+
   const isSessionView = location.pathname === '/session';
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [state.chatHistory]);
-  const sendMessageToApi = useCallback(async ({ textToSend, appStateOverride }) => { try { const payload = { message: textToSend, conversationId: state.currentConversationId, appState: appStateOverride || state.appState, employeeId: state.currentEmployee?.id, chatHistory: state.chatHistory, transcript: state.transcript, }; const data = await sendMessage(payload); return data; } catch (err) { dispatch({ type: 'SET_ERROR', payload: err.message }); throw err; } }, [state.currentConversationId, state.appState, state.currentEmployee, state.chatHistory, state.transcript]);
-  useEffect(() => { if (authLoading || !isAuthenticated) return; if (isSessionView && state.appState === 'initial') { const employeeId = searchParams.get('employeeId'); const employeeName = searchParams.get('employeeName'); if (employeeId && employeeName) { dispatch({ type: 'SESSION_INIT_SUCCESS', payload: { employee: { id: employeeId, name: employeeName } } }); } else { dispatch({ type: 'SET_ERROR', payload: 'セッション情報が不正です。' }); } } else if (!isSessionView && state.appState === 'initial') { dispatch({ type: 'START_LOADING' }); getEmployees().then(data => { if (data.length === 0) { alert('部下が登録されていません。設定画面で登録してください。'); navigate('/app/settings'); } else { dispatch({ type: 'FETCH_EMPLOYEES_SUCCESS', payload: data }); } }).catch(err => dispatch({ type: 'SET_ERROR', payload: err.message })); } }, [state.appState, isSessionView, searchParams, isAuthenticated, authLoading, navigate]);
-  useEffect(() => { if (state.appState === 'session_ready') { const startFlow = async () => { dispatch({ type: 'START_CONVERSATION_FLOW' }); const data = await sendMessage({ message: '__START__' }); if (data && data.reply) { dispatch({ type: 'RECEIVE_THEME_PROMPT', payload: data.reply }); } }; startFlow(); } }, [state.appState]);
-  const handleEmployeeSelect = useCallback(async (employee) => { window.open(`/session?employeeId=${employee.id}&employeeName=${encodeURIComponent(employee.name)}`, '_blank', 'noopener,noreferrer'); }, []);
-  const handleThemeSelect = useCallback(async (theme) => { dispatch({ type: 'SELECT_THEME', payload: theme }); try { const response = await sendMessageToApi({ textToSend: theme.text, appStateOverride: 'theme_selection' }); if (response && response.reply && response.conversationId) { dispatch({ type: 'RECEIVE_INTERACTION_PROMPT', payload: response }); } else { throw new Error('サーバーから不正な応答がありました。'); } } catch (err) { console.error("テーマ選択時のエラー:", err); } }, [sendMessageToApi]);
-  const handleInteractionSelect = useCallback(async (interaction) => { dispatch({ type: 'SELECT_INTERACTION', payload: interaction }); try { const response = await sendMessageToApi({ textToSend: interaction.text, appStateOverride: 'engagement_selection' }); if (response && response.reply) { dispatch({ type: 'RECEIVE_SUPPORT_START_PROMPT', payload: response.reply }); } } catch (err) { console.error("関わり方選択時のエラー:", err); } }, [sendMessageToApi]);
-  const handleSendFreeMessage = useCallback(async () => { if (!message.trim()) return; const textToSend = message; setMessage(''); dispatch({ type: 'SEND_MESSAGE', payload: textToSend }); try { const response = await sendMessageToApi({ textToSend, appStateOverride: 'support_started' }); if (response && response.reply) { dispatch({ type: 'RECEIVE_REPLY', payload: response.reply }); } } catch (err) { console.error("自由対話メッセージ送信エラー:", err); } }, [message, sendMessageToApi]);
-  const handleGenerateSummary = useCallback(async () => { if (!state.currentConversationId) return; dispatch({ type: 'START_SUMMARY_GENERATION' }); try { const formattedTranscript = state.transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n'); const data = await generateSummary(state.currentConversationId, formattedTranscript); dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data }); } catch (err) { dispatch({ type: 'SET_ERROR', payload: err.message }); } }, [state.currentConversationId, state.transcript]);
-  const handleToggleSummary = () => { dispatch({ type: 'TOGGLE_SUMMARY_VISIBILITY' }); };
-  const handleTranscriptUpdate = useCallback((newTranscript) => { dispatch({ type: 'UPDATE_TRANSCRIPT', payload: newTranscript }); }, []);
-  const handleToggleRecording = () => { dispatch({ type: 'TOGGLE_RECORDING' }); };
 
-  // --- レンダリング ---
-  if (authLoading || (state.appState === 'initial' && state.isLoading)) { return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>; }
+  const handleTranscriptUpdate = useCallback((data) => {
+    if (data.isFinal) {
+      setTranscript(prev => [...prev, { transcript: data.transcript.trim(), speakerTag: data.speakerTag }]);
+      setInterimTranscript('');
+    } else {
+      const speakerPrefix = data.speakerTag ? `話者${data.speakerTag}: ` : '';
+      setInterimTranscript(speakerPrefix + data.transcript);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSessionView) return;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    socketRef.current = io(backendUrl);
+    socketRef.current.on('transcript_data', handleTranscriptUpdate);
+    return () => { socketRef.current?.disconnect(); };
+  }, [isSessionView, handleTranscriptUpdate]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
+    }
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('end_transcription');
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: true, echoCancellation: true } });
+      audioStreamRef.current = stream;
+      socketRef.current.emit('start_transcription');
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && socketRef.current) {
+          socketRef.current.emit('audio_stream', event.data);
+        }
+      };
+      recorder.start(1000);
+    } catch (error) {
+      console.error('Mic access failed:', error);
+      alert('マイクへのアクセス許可が必要です。');
+      setIsRecording(false);
+      setIsTranscriptPopupVisible(false);
+    }
+  }, []);
+
+  const handleToggleRecording = () => {
+    if (isRecording && isTranscriptPopupMinimized) {
+      setIsTranscriptPopupVisible(true);
+      setIsTranscriptPopupMinimized(false);
+      return;
+    }
+    const nextState = !isRecording;
+    setIsRecording(nextState);
+    if (nextState) {
+      setIsTranscriptPopupVisible(true);
+      setIsTranscriptPopupMinimized(false);
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  };
+
+  const handleClosePopup = () => {
+    setIsTranscriptPopupVisible(false);
+    if (isRecording) {
+      stopRecording();
+      setIsRecording(false);
+    }
+  };
+
+  const handleMinimizePopup = () => {
+    setIsTranscriptPopupVisible(false);
+    setIsTranscriptPopupMinimized(true);
+  };
+
+  const handleSaveTools = useCallback(async () => {
+    if (!state.currentConversationId) return;
+    try {
+      const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
+      await updateConversation(state.currentConversationId, {
+        memo,
+        mindMapData,
+        transcript: formattedTranscript
+      });
+    } catch (err) {
+      console.error("Failed to save tools data", err);
+      alert("メモとマインドマップの保存に失敗しました。");
+    }
+  }, [state.currentConversationId, memo, mindMapData, transcript]);
+
+  const sendMessageToApi = useCallback(async ({ textToSend, appStateOverride }) => {
+    const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
+    try {
+      const payload = { message: textToSend, conversationId: state.currentConversationId, appState: appStateOverride || state.appState, employeeId: state.currentEmployee?.id, chatHistory: state.chatHistory, transcript: formattedTranscript, };
+      const data = await sendMessage(payload);
+      return data;
+    } catch (err) {
+      dispatch({ type: 'SET_ERROR', payload: err.message });
+      throw err;
+    }
+  }, [state.currentConversationId, state.appState, state.currentEmployee, state.chatHistory, transcript]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    if (isSessionView && state.appState === 'initial') {
+      const employeeId = searchParams.get('employeeId');
+      const employeeName = searchParams.get('employeeName');
+      if (employeeId && employeeName) {
+        dispatch({ type: 'SESSION_INIT_SUCCESS', payload: { employee: { id: employeeId, name: employeeName } } });
+      } else {
+        dispatch({ type: 'SET_ERROR', payload: 'セッション情報が不正です。' });
+      }
+    } else if (!isSessionView && state.appState === 'initial') {
+      dispatch({ type: 'START_LOADING' });
+      getEmployees().then(data => {
+        if (data.length === 0) {
+          alert('部下が登録されていません。設定画面で登録してください。');
+          navigate('/app/settings');
+        } else {
+          dispatch({ type: 'FETCH_EMPLOYEES_SUCCESS', payload: data });
+        }
+      }).catch(err => dispatch({ type: 'SET_ERROR', payload: err.message }));
+    }
+  }, [state.appState, isSessionView, searchParams, isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    if (state.appState === 'session_ready') {
+      const startFlow = async () => {
+        dispatch({ type: 'START_CONVERSATION_FLOW' });
+        const data = await sendMessage({ message: '__START__' });
+        if (data && data.reply) {
+          dispatch({ type: 'RECEIVE_THEME_PROMPT', payload: data.reply });
+        }
+      };
+      startFlow();
+    }
+  }, [state.appState]);
+
+  const handleEmployeeSelect = useCallback(async (employee) => {
+    window.open(`/session?employeeId=${employee.id}&employeeName=${encodeURIComponent(employee.name)}`, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const handleThemeSelect = useCallback(async (theme) => {
+    dispatch({ type: 'SELECT_THEME', payload: theme });
+    try {
+      const response = await sendMessageToApi({ textToSend: theme.text, appStateOverride: 'theme_selection' });
+      if (response && response.reply && response.conversationId) {
+        dispatch({ type: 'RECEIVE_INTERACTION_PROMPT', payload: response });
+        const convData = await getConversationById(response.conversationId);
+        if (convData.memo) setMemo(convData.memo);
+        if (convData.mind_map_data) setMindMapData(convData.mind_map_data);
+      } else {
+        throw new Error('サーバーから不正な応答がありました。');
+      }
+    } catch (err) {
+      console.error("テーマ選択時のエラー:", err);
+    }
+  }, [sendMessageToApi]);
+
+  const handleInteractionSelect = useCallback(async (interaction) => {
+    dispatch({ type: 'SELECT_INTERACTION', payload: interaction });
+    try {
+      const response = await sendMessageToApi({ textToSend: interaction.text, appStateOverride: 'engagement_selection' });
+      if (response && response.reply) {
+        dispatch({ type: 'RECEIVE_SUPPORT_START_PROMPT', payload: response.reply });
+      }
+    } catch (err) {
+      console.error("関わり方選択時のエラー:", err);
+    }
+  }, [sendMessageToApi]);
+
+  const handleSendFreeMessage = useCallback(async () => {
+    if (!message.trim()) return;
+    const textToSend = message;
+    setMessage('');
+    dispatch({ type: 'SEND_MESSAGE', payload: textToSend });
+    try {
+      const response = await sendMessageToApi({ textToSend, appStateOverride: 'support_started' });
+      if (response && response.reply) {
+        dispatch({ type: 'RECEIVE_REPLY', payload: response.reply });
+      }
+    } catch (err) {
+      console.error("自由対話メッセージ送信エラー:", err);
+    }
+  }, [message, sendMessageToApi]);
+
+  const handleGenerateSummary = useCallback(async () => {
+    if (!state.currentConversationId) return;
+    dispatch({ type: 'START_SUMMARY_GENERATION' });
+    try {
+      await handleSaveTools();
+      const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
+      const data = await generateSummary(state.currentConversationId, formattedTranscript);
+      dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data });
+    } catch (err) {
+      dispatch({ type: 'SET_ERROR', payload: err.message });
+    }
+  }, [state.currentConversationId, transcript, handleSaveTools]);
+
+  const handleToggleSummary = () => { dispatch({ type: 'TOGGLE_SUMMARY_VISIBILITY' }); };
+
+  if (authLoading || (state.appState === 'initial' && state.isLoading)) {
+    return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>;
+  }
 
   if (isSessionView) {
     if (state.appState === 'loading' || (state.appState === 'initial' && state.isLoading) || state.appState === 'session_ready') {
@@ -132,16 +330,10 @@ function New1on1Support({ theme, toggleTheme }) {
     }
     return (
       <div className={styles.sessionViewContainer}>
-        <ThemeToggleButton
-          theme={theme}
-          toggleTheme={toggleTheme}
-          className={styles.themeToggle}
-        />
         <div className={styles.leftPanel}>
           <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId} className={styles.summaryButton}>
-            {state.isGeneratingSummary ? '要約を生成中...' : '会話を要約しネクストアクションを提案'}
+            {state.isGeneratingSummary ? '要約を生成中...' : '会話を終了して要約'}
           </button>
-
           <div className={styles.summaryContainer}>
             <div className={styles.summaryToggleHeader} onClick={handleToggleSummary}>
               <h4 className={styles.summaryTitle}>要約とネクストアクション</h4>
@@ -155,14 +347,11 @@ function New1on1Support({ theme, toggleTheme }) {
                       {state.currentSummary && (<> <h5 className={styles.summaryHeader}>会話の要約</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} /> </>)}
                       {state.currentNextActions && (<> <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} /> </>)}
                     </>
-                  ) : (
-                      <p className={styles.noSummaryText}>まだ要約はありません。「会話を要約しネクストアクションを提案」ボタンを押してください。</p>
-                  )}
+                  ) : (<p className={styles.noSummaryText}>まだ要約はありません。</p>)}
                 </div>
               </div>
             )}
           </div>
-
           <div className={styles.chatContainer}>
             <div className={styles.chatWindow}>
               {state.chatHistory.map((chat, index) => (chat.sender !== 'system' && (<div key={index} className={`${styles.message} ${styles[chat.sender]}`}> <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AIアシスタント'}:</strong> <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div> </div>)))}
@@ -174,11 +363,30 @@ function New1on1Support({ theme, toggleTheme }) {
             {state.appState === 'support_started' && (<div className={styles.inputArea}> <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendFreeMessage()} placeholder="部下から言われたことなどを入力..." className={styles.normalInput} /> <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>送信</button> </div>)}
           </div>
         </div>
+
         <div className={styles.rightPanel}>
-          <div className={styles.transcriptionContainer}>
-            <RealTimeTranscription isRecording={state.isRecording} onToggleRecording={handleToggleRecording} transcript={state.transcript} onTranscriptUpdate={handleTranscriptUpdate} employeeName={state.currentEmployee?.name || '...'} />
+          <div className={styles.sessionControls}>
+            <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`}>
+              {isRecording ? <FiMicOff /> : <FiMic />}
+              <span>{isRecording ? (isTranscriptPopupMinimized ? '録音中 (表示)' : '録音停止') : '録音開始'}</span>
+            </button>
+          </div>
+          <div className={styles.workspace}>
+            <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
+            <div className={styles.tabContent}>
+              {activeTab === 'memo' && <Memo memo={memo} setMemo={setMemo} />}
+              {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={setMindMapData} />}
+            </div>
           </div>
         </div>
+
+        <TranscriptPopup
+          isVisible={isTranscriptPopupVisible}
+          onClose={handleClosePopup}
+          onMinimize={handleMinimizePopup}
+          transcript={transcript}
+          interimTranscript={interimTranscript}
+        />
       </div>
     );
   }

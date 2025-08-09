@@ -1,0 +1,37 @@
+/* frontend/src/components/Tabs.module.css */
+.tabsContainer {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-app);
+}
+
+.tabButton {
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    position: relative;
+    transition: color 0.2s ease-in-out;
+}
+
+.tabButton:hover {
+    color: var(--color-text-primary);
+}
+
+.tabButton.active {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.tabButton.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--color-primary);
+}

@@ -1,13 +1,11 @@
 // frontend/src/App.js
 import React, { useState, useEffect } from 'react';
-// ★ 修正: 不要なuseParamsを削除
-import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Modal from './components/Modal.js';
 import appStyles from './App.module.css';
-import { FiMenu } from 'react-icons/fi'; // ハンバーガーメニュー用アイコン
+import { FiMenu } from 'react-icons/fi';
 
-// Components & Views
 import ThemeToggleButton from './components/ThemeToggleButton';
 import Home from './views/Home.js';
 import New1on1Support from './views/New1on1Support.js';
@@ -19,11 +17,9 @@ import Settings from './views/Settings.js';
 import Login from './views/Login.js';
 import Register from './views/Register.js';
 
-// Auth
 import ProtectedRoute from './components/ProtectedRoute.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 
-// サイドバーとメインコンテンツを持つレイアウト
 function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
   const { loading, logout } = useAuth();
   const navigate = useNavigate();
@@ -51,7 +47,6 @@ function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
           onClose={() => setSidebarOpen(false)}
         />
         <main className={`${appStyles.contentArea} ${(isSidebarCollapsed && !isMobile) ? '' : appStyles.sidebarOpen}`}>
-          {/* ★★★ モバイル用のヘッダーとハンバーガーメニュー ★★★ */}
           {isMobile && (
             <div className={appStyles.mobileHeader}>
               <button onClick={() => setSidebarOpen(true)} className={appStyles.hamburgerButton}>
@@ -80,19 +75,16 @@ function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
   );
 }
 
-// アプリケーション全体のルーティング
-function App() {
+function AppRoutes() {
   const [theme, setTheme] = useState('light');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
     setTheme(savedTheme);
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -107,27 +99,36 @@ function App() {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  return (
-    <AuthProvider>
-      <div className={appStyles.appContainer}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/app/*" element={<ProtectedRoute><AppLayout isMobile={isMobile} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} /></ProtectedRoute>} />
-          <Route path="/session" element={<ProtectedRoute><New1on1Support /></ProtectedRoute>} />
-        </Routes>
+  // Don't show global theme toggle on the session page
+  const showGlobalThemeToggle = location.pathname !== '/session';
 
+  return (
+    <div className={appStyles.appContainer}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/app/*" element={<ProtectedRoute><AppLayout isMobile={isMobile} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} /></ProtectedRoute>} />
+        <Route path="/session" element={<ProtectedRoute><New1on1Support theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+      </Routes>
+
+      {showGlobalThemeToggle && (
         <ThemeToggleButton
           theme={theme}
           toggleTheme={toggleTheme}
           className={appStyles.themeToggleGlobal}
         />
-      </div>
-    </AuthProvider>
+      )}
+    </div>
   );
 }
 
-// ★★★ 修正点: 重複していたダミーコンポーネントを削除 ★★★
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  );
+}
 
 export default App;

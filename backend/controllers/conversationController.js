@@ -2,7 +2,7 @@
 
 const model = require('../models/conversationModel');
 
-// ... (listConversations から saveTranscript までの関数は変更ありません) ...
+// ... (listConversations から saveTranscript までの関数は変更なし) ...
 exports.listConversations = async (req, res) => {
     try {
         const conversations = await model.getAllConversations(req.user);
@@ -63,23 +63,23 @@ exports.saveTranscript = async (req, res) => {
 // ★★★ ここからが修正箇所 ★★★
 exports.updateConversation = async (req, res) => {
     const { id } = req.params;
-    const { transcript } = req.body;
+    // bodyから受け取るデータを拡張
+    const { transcript, memo, mindMapData } = req.body;
     const user = req.user;
 
-    if (typeof transcript === 'undefined') {
-        return res.status(400).json({ error: 'transcript is required.' });
+    // 更新するデータが何もない場合はエラー
+    if (typeof transcript === 'undefined' && typeof memo === 'undefined' && typeof mindMapData === 'undefined') {
+        return res.status(400).json({ error: 'At least one field (transcript, memo, mindMapData) is required.' });
     }
 
     try {
-        // ★ 修正: modelの `updateConversation` 関数を呼び出す
-        const updatedConversation = await model.updateConversation(id, { transcript }, user);
+        const updatedConversation = await model.updateConversation(id, { transcript, memo, mindMapData }, user);
 
         if (!updatedConversation) {
             return res.status(404).json({ error: 'Conversation not found or permission denied.' });
         }
         res.json(updatedConversation);
     } catch (error) {
-        // エラーログはmodel側で出力済み
         res.status(500).json({ error: 'Internal server error while updating conversation.' });
     }
 };

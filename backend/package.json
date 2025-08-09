@@ -4,11 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "db:migrate": "npm run db:migrate:schema && npm run db:migrate:002 && npm run db:migrate:003",
-
+    "db:migrate": "npm run db:migrate:schema && npm run db:migrate:002 && npm run db:migrate:003 && npm run db:migrate:004",
     "db:migrate:schema": "node run-migration.js migrations/schema.sql",
     "db:migrate:002": "node run-migration.js migrations/002_add_user_id_columns.sql",
-    "db:migrate:003": "node run-migration.js migrations/003_add_transcript_column.sql"
+    "db:migrate:003": "node run-migration.js migrations/003_add_transcript_column.sql",
+    "db:migrate:004": "node run-migration.js migrations/004_add_memo_mindmap_columns.sql"
   },
   "keywords": [],
   "author": "",

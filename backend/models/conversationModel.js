@@ -2,7 +2,7 @@
 
 const pool = require('../database');
 
-// ... (getAllConversations から updateConversation までの関数は変更ありません) ...
+// ... getAllConversations から getDashboardSentiments までの関数は変更なし ...
 const getAllConversations = async (user) => {
     let sql = `
         SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
@@ -22,7 +22,7 @@ const getAllConversations = async (user) => {
 };
 const getConversationById = async (id, user) => {
     let sql = `
-        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.employee_id, c.user_id, c.transcript,
+        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.employee_id, c.user_id, c.transcript, c.memo, c.mind_map_data,
                e.name AS employee_name, e.email AS employee_email
         FROM conversations c
         LEFT JOIN employees e ON c.employee_id = e.id
@@ -175,19 +175,35 @@ const getDashboardSentiments = async (user, employeeId) => {
     const { rows } = await pool.query(sql, params);
     return rows;
 };
-const updateConversation = async (id, dataToUpdate, user) => {
-    const { transcript } = dataToUpdate;
 
-    if (typeof transcript === 'undefined') {
-        return getConversationById(id, user);
+// ★★★ ここからが修正箇所 ★★★
+const updateConversation = async (id, dataToUpdate, user) => {
+    const { transcript, memo, mindMapData } = dataToUpdate;
+    const fields = [];
+    const values = [];
+    let query = 'UPDATE conversations SET ';
+
+    if (typeof transcript !== 'undefined') {
+        fields.push(`transcript = $${values.length + 1}`);
+        values.push(transcript);
     }
-    const query = `
-        UPDATE conversations 
-        SET transcript = $1
-        WHERE id = $2 AND user_id = $3
-        RETURNING *
-    `;
-    const values = [transcript, id, user.id];
+    if (typeof memo !== 'undefined') {
+        fields.push(`memo = $${values.length + 1}`);
+        values.push(memo);
+    }
+    if (typeof mindMapData !== 'undefined') {
+        fields.push(`mind_map_data = $${values.length + 1}`);
+        values.push(JSON.stringify(mindMapData)); // JSONBに保存するために文字列化
+    }
+
+    if (fields.length === 0) {
+        return getConversationById(id, user); // 更新対象がない場合は何もしない
+    }
+
+    query += fields.join(', ');
+    query += ` WHERE id = $${values.length + 1} AND user_id = $${values.length + 2} RETURNING *`;
+    values.push(id, user.id);
+
     try {
         const { rows } = await pool.query(query, values);
         return rows[0];
@@ -196,21 +212,9 @@ const updateConversation = async (id, dataToUpdate, user) => {
         throw error;
     }
 };
+// ★★★ 修正ここまで ★★★
 
-// --- ★★★ ここからが修正箇所 ★★★ ---
-
-/**
- * 文字起こしデータを含む、指定されたユーザーの全ての会話を取得する (ダッシュボード分析用)
- * @param {object} user - 認証済みユーザーオブジェクト
- * @param {string} [employeeId] - フィルタリングする部下のID (オプション)
- * @returns {Promise<Array<object>>}
- */
 const getAllConversationsWithTranscripts = async (user, employeeId) => {
-    // 元のクエリ: WHERE organization_id = $1
-    // これだと組織内の全ユーザーの会話が取得されてしまう
-
-    // 修正後のクエリ:
-    // user.roleに応じて、organization_id または user_id でフィルタリングする
     let query = `
         SELECT id, transcript FROM conversations 
     `;

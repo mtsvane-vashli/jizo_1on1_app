@@ -1,11 +1,11 @@
 // frontend/src/views/SessionLog.js (改修後)
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // ★ useCallbackを削除
 import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useAuth } from '../context/AuthContext';
 import { getConversations, deleteConversationById } from '../services/conversationService';
-import { getEmployees } from '../services/employeeService'; // ★ 部下情報を取得するサービスをインポート
+import { getEmployees } from '../services/employeeService';
 import layoutStyles from '../App.module.css';
 import styles from './SessionLog.module.css';
 
@@ -20,22 +20,20 @@ const toDateString = (date) => {
 
 function SessionLog() {
     const [pastConversations, setPastConversations] = useState([]);
-    const [employees, setEmployees] = useState([]); // ★ 新規: 部下リストの状態
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState(''); // ★ 新規: 選択された部下のID
-    const [isLoading, setIsLoading] = useState(true); // ★ 初期値をtrueに変更
+    const [employees, setEmployees] = useState([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const navigate = useNavigate();
     const { isAuthenticated, loading: authLoading } = useAuth();
 
-    // ★ 修正: 会話履歴と部下リストをまとめて取得
     useEffect(() => {
         if (!authLoading && isAuthenticated) {
             const fetchData = async () => {
                 setIsLoading(true);
                 setError(null);
                 try {
-                    // Promise.allで両方のデータを並行して取得
                     const [convData, empData] = await Promise.all([
                         getConversations(),
                         getEmployees()
@@ -69,7 +67,6 @@ function SessionLog() {
         }
         try {
             await deleteConversationById(conversationId);
-            // 削除成功後、リストから該当アイテムを削除して再描画
             setPastConversations(prev => prev.filter(conv => conv.id !== conversationId));
         } catch (err) {
             console.error('Error deleting conversation:', err);
@@ -77,15 +74,13 @@ function SessionLog() {
         }
     };
 
-    // ★ 新規: 選択された部下に基づいて会話をフィルタリング
     const filteredByEmployeeConversations = useMemo(() => {
         if (!selectedEmployeeId) {
-            return pastConversations; // 「すべての部下」が選択されている場合は全件返す
+            return pastConversations;
         }
         return pastConversations.filter(conv => String(conv.employee_id) === String(selectedEmployeeId));
     }, [pastConversations, selectedEmployeeId]);
 
-    // ★ 修正: フィルタリングされた会話リストを元に日付セットを計算
     const conversationDates = useMemo(() => {
         const dates = new Set();
         filteredByEmployeeConversations.forEach(conv => {
@@ -94,7 +89,6 @@ function SessionLog() {
         return dates;
     }, [filteredByEmployeeConversations]);
 
-    // ★ 修正: フィルタリングされた会話リストを元に日付でさらに絞り込み
     const filteredByDateConversations = useMemo(() => {
         if (!selectedDate) return [];
         const targetDateStr = toDateString(selectedDate);
@@ -125,11 +119,8 @@ function SessionLog() {
             <h2 className={layoutStyles.screenHeader}>セッションログ</h2>
             <p className={layoutStyles.screenDescription}>部下と日付を選択して、会話の履歴を確認できます。</p>
 
-            {/* ★★★ ここからレイアウト変更 ★★★ */}
             <div className={styles.logViewContainer}>
-                {/* --- 左パネル --- */}
                 <div className={styles.leftPanel}>
-                    {/* ★ 新規: 部下選択UI */}
                     <div className={styles.employeeSelectContainer}>
                         <label htmlFor="employee-select" className={styles.selectLabel}>部下を選択:</label>
                         <select
@@ -147,7 +138,6 @@ function SessionLog() {
                         </select>
                     </div>
 
-                    {/* カレンダー */}
                     <div className={styles.calendarContainer}>
                         <Calendar
                             onChange={setSelectedDate}
@@ -158,7 +148,6 @@ function SessionLog() {
                     </div>
                 </div>
 
-                {/* --- 右パネル --- */}
                 <div className={styles.rightPanel}>
                     <div className={styles.logListContainer}>
                         {error && <p className={styles.error}>{error}</p>}
