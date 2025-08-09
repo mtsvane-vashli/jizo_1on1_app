@@ -1,7 +1,6 @@
 // frontend/src/views/Dashboard.js
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bar, Line, Doughnut } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ArcElement,
@@ -25,7 +24,6 @@ ChartJS.register(
 );
 
 function Dashboard() {
-  const navigate = useNavigate();
   const [keywordsData, setKeywordsData] = useState({ labels: [], datasets: [] });
   const [sentimentChartData, setSentimentChartData] = useState({ labels: [], datasets: [] });
   const [employees, setEmployees] = useState([]);
@@ -108,8 +106,41 @@ function Dashboard() {
   const barOptions = useMemo(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, indexAxis: 'y' }), []);
   const lineOptions = useMemo(() => ({ responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 1 } } }), []);
 
-  const handleAddEmployee = useCallback(async () => { /* ... 変更なし ... */ }, [newEmployeeName, newEmployeeEmail, fetchEmployees]);
-  const handleDeleteEmployee = useCallback(async (id, name) => { /* ... 変更なし ... */ }, [fetchEmployees]);
+  // 新しい部下を追加するハンドラ
+  const handleAddEmployee = useCallback(async () => {
+    if (!newEmployeeName.trim()) {
+      setError('部下の名前は必須です。');
+      return;
+    }
+    try {
+      await createEmployee({ name: newEmployeeName, email: newEmployeeEmail });
+      setNewEmployeeName('');
+      setNewEmployeeEmail('');
+      // 部下リストを再取得
+      const data = await getEmployees();
+      setEmployees(data);
+      setError(null); // 成功したらエラーをクリア
+    } catch (err) {
+      console.error('Error adding employee:', err);
+      setError(`部下の追加に失敗しました: ${err.message}`);
+    }
+  }, [newEmployeeName, newEmployeeEmail]);
+
+  // 部下を削除するハンドラ
+  const handleDeleteEmployee = useCallback(async (id, name) => {
+    if (window.confirm(`${name} を削除してもよろしいですか？`)) {
+      try {
+        await deleteEmployee(id);
+        // 部下リストを再取得
+        const data = await getEmployees();
+        setEmployees(data);
+        setError(null); // 成功したらエラーをクリア
+      } catch (err) {
+        console.error('Error deleting employee:', err);
+        setError(`部下の削除に失敗しました: ${err.message}`);
+      }
+    }
+  }, []);
 
   if (authLoading) {
     return <div className={layoutStyles.viewContainer}><p>認証情報を確認中...</p></div>;
