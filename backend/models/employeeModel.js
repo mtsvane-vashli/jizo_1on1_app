@@ -1,18 +1,12 @@
-// backend/models/employeeModel.js (修正後)
-
 const pool = require('../database');
 
 /**
  * 新しい部下を登録する
- * @param {object} newEmployee - { name, email }
- * @param {object} user - 作成を実行したユーザー
- * @returns {Promise<number>}
  */
 const createEmployee = async (newEmployee, user) => {
-    // ★ 組織IDと、作成者であるユーザーIDの両方を記録する
-    const sql = 'INSERT INTO employees (name, email, organization_id, user_id) VALUES ($1, $2, $3, $4) RETURNING id';
+    const sql = 'INSERT INTO employees (name, email, organization_id) VALUES ($1, $2, $3) RETURNING id';
     try {
-        const { rows } = await pool.query(sql, [newEmployee.name, newEmployee.email, user.organizationId, user.id]);
+        const { rows } = await pool.query(sql, [newEmployee.name, newEmployee.email, user.organizationId]);
         return rows[0].id;
     } catch (err) {
         if (err.code === '23505') {
@@ -24,21 +18,24 @@ const createEmployee = async (newEmployee, user) => {
 
 /**
  * 部下一覧を取得する (役割に応じて結果が変わる)
- * @param {object} user - ログイン中のユーザー
- * @returns {Promise<Array<object>>}
  */
 const getAllEmployees = async (user) => {
-    let sql = "SELECT id, name, email FROM employees";
+    let sql = `
+        SELECT DISTINCT e.id, e.name, e.email 
+        FROM employees e
+    `;
     let params = [];
 
-    // ★ ユーザーの役割に応じて、実行するクエリを動的に変更
     if (user.role === 'admin') {
         // 管理者なら、組織全体の部下を取得
-        sql += " WHERE organization_id = $1 ORDER BY name ASC";
+        sql += " WHERE e.organization_id = $1 ORDER BY e.name ASC";
         params.push(user.organizationId);
     } else {
-        // 一般ユーザーなら、自分が登録した部下のみ取得
-        sql += " WHERE user_id = $1 ORDER BY name ASC";
+        // ★ 修正: 自分が関わった会話に登場する部下のみを取得
+        sql += `
+            JOIN conversations c ON e.id = c.employee_id
+            WHERE c.user_id = $1 ORDER BY e.name ASC
+        `;
         params.push(user.id);
     }
 
@@ -48,23 +45,20 @@ const getAllEmployees = async (user) => {
 
 /**
  * 部下を削除する
- * @param {number} employeeId - 削除する部下のID
- * @param {object} user - 削除を実行したユーザー
- * @returns {Promise<number>} - 削除された行数
  */
 const deleteEmployeeById = async (employeeId, user) => {
     let sql = "DELETE FROM employees WHERE id = $1";
     let params = [employeeId];
 
-    // ユーザーの役割に応じて、削除条件を動的に変更
     if (user.role === 'admin') {
-        // 管理者なら、組織全体の部下を削除可能
         sql += " AND organization_id = $2";
         params.push(user.organizationId);
     } else {
-        // 一般ユーザーなら、自分が登録した部下のみ削除可能
-        sql += " AND user_id = $2";
-        params.push(user.id);
+        // ★ 修正: 自分が登録した部下、という概念がなくなったため、
+        // 削除権限は管理者に限定するか、別途詳細な権限設計が必要。
+        // ここでは管理者のみが削除できる仕様とします。
+        // 一般ユーザーが削除しようとした場合は0件削除となり、コントローラー側で404扱いになります。
+        return 0;
     }
 
     const { rowCount } = await pool.query(sql, params);

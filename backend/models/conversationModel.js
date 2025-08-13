@@ -1,8 +1,70 @@
-// backend/models/conversationModel.js
-
 const pool = require('../database');
 
-// ... getAllConversations から getDashboardSentiments までの関数は変更なし ...
+/**
+ * メッセージをDBに追加します。
+ * @param {number} conversationId - 会話ID
+ * @param {string} sender - 送信者 ('user', 'employee', 'ai')
+ * @param {string} message - メッセージ本文
+ * @param {Array<string>|null} suggestedQuestions - AIが生成した質問候補
+ * @returns {Promise<number>} 追加されたメッセージのID
+ */
+const addMessage = async (conversationId, sender, message, suggestedQuestions = null) => {
+    const sql = 'INSERT INTO messages (conversation_id, sender, message, suggested_questions) VALUES ($1, $2, $3, $4) RETURNING id';
+    // suggestedQuestionsが配列の場合、JSON文字列に変換して保存
+    const questionsJson = suggestedQuestions ? JSON.stringify(suggestedQuestions) : null;
+    const { rows } = await pool.query(sql, [conversationId, sender, message, questionsJson]);
+    return rows[0].id;
+};
+
+/**
+ * 特定のIDの会話と、関連する全てのメッセージを取得します。
+ * @param {number} id - 会話ID
+ * @param {object} user - 認証済みユーザー情報
+ * @returns {Promise<object|null>} 会話データ、またはnull
+ */
+const getConversationById = async (id, user) => {
+    let convSql = `
+        SELECT c.*, e.name AS employee_name, e.email AS employee_email
+        FROM conversations c
+        LEFT JOIN employees e ON c.employee_id = e.id
+        WHERE c.id = $1 `;
+    let params = [id];
+
+    // ユーザーロールに応じた権限チェック
+    if (user.role === 'admin') {
+        convSql += `AND c.organization_id = $2`;
+        params.push(user.organizationId);
+    } else {
+        convSql += `AND c.user_id = $2`;
+        params.push(user.id);
+    }
+
+    const { rows: convRows } = await pool.query(convSql, params);
+    const conversation = convRows[0];
+
+    if (!conversation) {
+        return null; // 会話が存在しないか、アクセス権がない
+    }
+
+    // 関連するメッセージを取得
+    const msgSql = "SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC";
+    const { rows: messageRows } = await pool.query(msgSql, [id]);
+
+    // DBから取得したデータは既にJSONオブジェクトなのでパースは不要
+    conversation.messages = messageRows;
+
+    return conversation;
+};
+
+const createConversation = async (convData, user) => {
+    const sql = 'INSERT INTO conversations (theme, engagement, employee_id, organization_id, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id';
+    const params = [convData.theme, convData.engagement, convData.employeeId, user.organizationId, user.id];
+    const { rows } = await pool.query(sql, params);
+    return rows[0].id;
+};
+
+// --- 以下、元のファイルにあった他のモデル関数 ---
+
 const getAllConversations = async (user) => {
     let sql = `
         SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
@@ -20,35 +82,16 @@ const getAllConversations = async (user) => {
     const { rows } = await pool.query(sql, params);
     return rows;
 };
-const getConversationById = async (id, user) => {
-    let sql = `
-        SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.employee_id, c.user_id, c.transcript, c.memo, c.mind_map_data,
-               e.name AS employee_name, e.email AS employee_email
-        FROM conversations c
-        LEFT JOIN employees e ON c.employee_id = e.id
-        WHERE c.id = $1 `;
-    let params = [id];
-    if (user.role === 'admin') {
-        sql += `AND c.organization_id = $2`;
-        params.push(user.organizationId);
-    } else {
-        sql += `AND c.user_id = $2`;
-        params.push(user.id);
-    }
-    const { rows } = await pool.query(sql, params);
-    return rows[0];
-};
+
 const getMessagesByConversationId = async (id) => {
-    const sql = "SELECT m.sender, m.text FROM messages m WHERE m.conversation_id = $1 ORDER BY m.id ASC";
+    // 注意: この関数は新しい `messages` テーブルに合わせて修正が必要です。
+    // `text` カラムは `message` に変更されています。
+    const sql = "SELECT m.sender, m.message FROM messages m WHERE m.conversation_id = $1 ORDER BY created_at ASC";
     const { rows } = await pool.query(sql, [id]);
     return rows;
 };
-const createConversation = async (convData, user) => {
-    const sql = 'INSERT INTO conversations (theme, engagement, employee_id, organization_id, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id';
-    const params = [convData.theme, convData.engagement, convData.employeeId, user.organizationId, user.id];
-    const { rows } = await pool.query(sql, params);
-    return rows[0].id;
-};
+
+
 const deleteConversationAndMessages = async (id, user) => {
     let sql = 'DELETE FROM conversations WHERE id = $1 ';
     let params = [id];
@@ -63,6 +106,7 @@ const deleteConversationAndMessages = async (id, user) => {
     const result = await pool.query(sql, params);
     return result.rowCount;
 };
+
 const createConversationFromTranscript = async (transcript, employeeId, user) => {
     const sql = `
         INSERT INTO conversations (transcript, user_id, organization_id, theme, employee_id) 
@@ -73,26 +117,25 @@ const createConversationFromTranscript = async (transcript, employeeId, user) =>
     const { rows } = await pool.query(sql, params);
     return rows[0];
 };
+
 const updateConversationEngagement = async (engagement, conversationId) => {
     const sql = 'UPDATE conversations SET engagement = $1 WHERE id = $2';
     const result = await pool.query(sql, [engagement, conversationId]);
     return result.rowCount;
 };
+
 const updateConversationSummary = async (summary, nextActions, conversationId) => {
     const sql = 'UPDATE conversations SET summary = $1, next_actions = $2 WHERE id = $3';
     const { rows } = await pool.query(sql, [summary, nextActions, conversationId]);
     return rows;
 };
+
 const updateConversationTranscript = async (transcript, conversationId) => {
     const sql = 'UPDATE conversations SET transcript = $1 WHERE id = $2';
     const { rows } = await pool.query(sql, [transcript, conversationId]);
     return rows;
 };
-const addMessage = async (conversationId, sender, text) => {
-    const sql = 'INSERT INTO messages (conversation_id, sender, text) VALUES ($1, $2, $3) RETURNING id';
-    const { rows } = await pool.query(sql, [conversationId, sender, text]);
-    return rows[0].id;
-};
+
 const saveKeywords = async (conversationId, keywords) => {
     const client = await pool.connect();
     try {
@@ -109,6 +152,7 @@ const saveKeywords = async (conversationId, keywords) => {
         client.release();
     }
 };
+
 const saveSentiment = async (conversationId, sentimentResult) => {
     const { overall_sentiment, positive_score, negative_score, neutral_score } = sentimentResult;
     const client = await pool.connect();
@@ -125,6 +169,7 @@ const saveSentiment = async (conversationId, sentimentResult) => {
         client.release();
     }
 };
+
 const getDashboardKeywords = async (user, employeeId) => {
     let sql = `
         SELECT k.keyword, COUNT(k.keyword)::int as frequency
@@ -150,6 +195,7 @@ const getDashboardKeywords = async (user, employeeId) => {
     const { rows } = await pool.query(sql, params);
     return rows;
 };
+
 const getDashboardSentiments = async (user, employeeId) => {
     let sql = `
         SELECT s.overall_sentiment, s.positive_score, s.negative_score, s.neutral_score, c.timestamp AS conversation_timestamp
@@ -176,7 +222,6 @@ const getDashboardSentiments = async (user, employeeId) => {
     return rows;
 };
 
-// ★★★ ここからが修正箇所 ★★★
 const updateConversation = async (id, dataToUpdate, user) => {
     const { transcript, memo, mindMapData } = dataToUpdate;
     const fields = [];
@@ -212,7 +257,6 @@ const updateConversation = async (id, dataToUpdate, user) => {
         throw error;
     }
 };
-// ★★★ 修正ここまで ★★★
 
 const getAllConversationsWithTranscripts = async (user, employeeId) => {
     let query = `

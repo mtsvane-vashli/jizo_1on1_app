@@ -1,4 +1,3 @@
-// frontend/src/App.js
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -18,8 +17,9 @@ import Login from './views/Login.js';
 import Register from './views/Register.js';
 
 import ProtectedRoute from './components/ProtectedRoute.js';
-import { AuthProvider, useAuth } from './context/AuthContext.js';
+import { useAuth } from './context/AuthContext.js';
 
+// AppLayoutコンポーネントは、サイドバーを持つメインのアプリケーション画面を定義します。
 function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
   const { loading, logout } = useAuth();
   const navigate = useNavigate();
@@ -75,60 +75,60 @@ function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
   );
 }
 
+// AppRoutesコンポーネントは、アプリケーション全体の最上位のルーティングを管理します。
 function AppRoutes() {
-  const [theme, setTheme] = useState('light');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    document.body.className = '';
-    document.body.classList.add(`${theme}-mode`);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
-
-  // Don't show global theme toggle on the session page
+  // セッション画面ではグローバルテーマボタンを非表示にする
   const showGlobalThemeToggle = location.pathname !== '/session';
 
   return (
     <div className={appStyles.appContainer}>
       <Routes>
+        {/* 公開ルート */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/app/*" element={<ProtectedRoute><AppLayout isMobile={isMobile} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} /></ProtectedRoute>} />
-        <Route path="/session" element={<ProtectedRoute><New1on1Support theme={theme} toggleTheme={toggleTheme} /></ProtectedRoute>} />
+
+        {/* サイドバー付きの保護されたルート */}
+        <Route
+          path="/app/*"
+          element={
+            <ProtectedRoute>
+              <AppLayout isMobile={isMobile} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ★★★ 修正点: /session へのルートを復活させ、正しくコンポーネントを表示する ★★★ */}
+        <Route
+          path="/session"
+          element={
+            <ProtectedRoute>
+              <New1on1Support />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
 
       {showGlobalThemeToggle && (
-        <ThemeToggleButton
-          theme={theme}
-          toggleTheme={toggleTheme}
-          className={appStyles.themeToggleGlobal}
-        />
+        <ThemeToggleButton className={appStyles.themeToggleGlobal} />
       )}
     </div>
   );
 }
 
+// AppコンポーネントはAppRoutesをレンダリングするだけ
 function App() {
-  return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
-  );
+  return <AppRoutes />;
 }
 
 export default App;

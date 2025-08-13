@@ -1,18 +1,122 @@
-// backend/services/aiService.js
-
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { SpeechClient } = require('@google-cloud/speech');
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const speechClient = new SpeechClient();
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 /**
- * チャット用のプロンプトを生成する
- * @param {string} currentTheme - 現在のテーマ
- * @param {string} currentEngagement - 現在の関わり方
- * @param {string} userMessage - ユーザーの最新メッセージ
- * @param {Array<object>} chatHistory - これまでの会話履歴の配列 // ★ 引数を追加
- * @returns {string} 生成されたプロンプト
+ * AIの応答からJSONオブジェクトを安全に抽出します。
+ * @param {string} text - AIが生成したテキスト。
+ * @returns {object} 抽出されたJSONオブジェクト。
  */
-const getChatPrompt = (currentTheme, currentEngagement, userMessage, chatHistory = [], transcript = '') => { const formattedHistory = chatHistory && chatHistory.length > 1 ? chatHistory.slice(0, -1).map(msg => `${msg.sender === 'user' ? '上司' : 'AI'}: ${msg.text}`).join('\n') : 'まだありません。'; const formattedTranscript = transcript && transcript.length > 0 ? transcript : 'まだありません。'; return `        あなたは、上司(ユーザー)が部下との1on1ミーティングにおいて「地蔵1on1メソッド」に基づいた質の高い傾聴を実践できるよう支援する、専門のサポートAIです。あなたの役割は、上司の「聞き方」を必要な時に、求めに応じてリアルタイムでガイドし、効果的な対話を促進することです。部下と直接対話するのではなく、常に上司(ユーザー)へのアドバイスとサポートに徹してください。        ## 指導の基盤: 地蔵1on1メソッドの核心 (あなたの判断基準)        - 主役は部下: 部下が安心して本音を話せる場を作る。        - 深い傾聴: 言葉の背景にある感情、価値観まで感じ取る。        - 完全な非評価: 「良い/悪い」のレッテルを貼らず、ありのまま受け止める。        - アドバイス原則禁止: 部下の思考停止や主体性の喪失を招く安易なアドバイスはしない。        - 沈黙の尊重: 沈黙は部下が深く考えるための貴重な時間。        ## 現在の1on1の状況        現在のテーマ: ${currentTheme || '未設定'}        現在の関わり方: ${currentEngagement || '未設定'}        ## これまでの1on1の文字起こし        ${formattedTranscript}        ## これまでのAIとの会話履歴        ${formattedHistory}        ## あなたのタスク        上記の全ての情報を踏まえ、上司からの以下の新しいメッセージ（相談）に対して、地蔵1on1メソッドに沿った最も的確なサポート（具体的な応答例や質問の提案など）を、簡潔に提供してください。        上司の新しいメッセージ: "${userMessage}"    `; };
+const parseJsonResponse = (text) => {
+  try {
+    // マークダウンのコードブロック形式 (```json ... ```) からJSON文字列を抽出
+    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch && jsonMatch[1]) {
+      return JSON.parse(jsonMatch[1]);
+    }
+    // コードブロックがない場合、直接パースを試みる
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("AI応答からのJSONパースに失敗しました:", error);
+    // パース失敗時は、フォールバックとしてテキスト部分のみを返す
+    return {
+      response_text: text.replace(/```json\n([\s\S]*?)\n```/, '').trim() || "申し訳ありません、応答を正しく処理できませんでした。",
+      suggested_questions: []
+    };
+  }
+};
 
+/**
+ * 新しい会話の開始時に、AIの導入メッセージと最初の質問候補を生成します。
+ * @param {string} employeeName - 部下の名前。
+ * @param {string} theme - 1on1のテーマ。
+ * @param {string} stance - マネージャーの関わり方。
+ * @returns {Promise<object>} AIの応答テキストと質問候補を含むオブジェクト。
+ */
+const generateInitialMessage = async (employeeName, theme, stance) => {
+  const prompt = `
+あなたは、マネージャーの1on1を支援するAIアシスタントです。
+以下の情報に基づき、1on1の導入メッセージと、最初の質問候補を生成してください。
+
+# 1on1情報
+- 部下の名前: ${employeeName}
+- テーマ: ${theme}
+- 関わり方: ${stance}
+
+# 指示
+- 応答は必ず下記のJSON形式で出力してください。
+- response_textには、マネージャーを励ます導入メッセージと簡単な説明を入れてください。「承知いたしました。選択いただいたテーマと関わり方を念頭に置き、サポートさせていただきます。本日はこのテーマと関わり方で進めてまいります。それでは、1on1を進めてください。私はここで待機しています。サポートが必要になったらいつでも、このチャットに状況や疑問を具体的にお知らせください。」のような形式で記述してください。
+- suggested_questionsには、テーマと関わり方を踏まえた具体的な質問を3つ格納してください。
+- suggested_questionsの最後に「その他（自由に質問する）」という選択肢を必ず加えてください。
+
+# 出力形式 (JSON)
+\`\`\`json
+{
+  "response_text": "string",
+  "suggested_questions": [
+    "string",
+    "string",
+    "string",
+    "その他（自由に質問する）"
+  ]
+}
+\`\`\`
+`;
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return parseJsonResponse(response.text());
+};
+
+/**
+ * 会話の途中で、次の応答と質問候補を生成します。
+ * @param {Array<object>} history - これまでの会話履歴。
+ * @param {string} theme - 1on1のテーマ。
+ * @param {string} stance - マネージャーの関わり方。
+ * @returns {Promise<object>} AIの応答テキストと質問候補を含むオブジェクト。
+ */
+const generateFollowUp = async (history, theme, stance) => {
+  const formattedHistory = history.map(msg => `${msg.sender === 'user' ? 'マネージャー' : '部下'}: ${msg.message}`).join('\n');
+  const prompt = `
+あなたは、マネージャーの1on1を支援するAIアシスタントです。
+以下の会話履歴と1on1情報に基づき、マネージャーへの短いアドバイスと、次の効果的な質問候補を3つ生成してください。
+
+# 1on1情報
+- テーマ: ${theme}
+- 関わり方: ${stance}
+
+# これまでの会話
+${formattedHistory}
+
+# 指示
+- 応答は必ず下記のJSON形式で出力してください。
+- response_textには、部下の最後の発言に対する相槌や、マネージャーへの短いアドバイスを記述してください。
+- suggested_questionsには、会話の流れを汲み取り、部下の内省を促す質問を3つ格納してください。
+- suggested_questionsの最後に「その他（自由に質問する）」という選択肢を必ず加えてください。
+- 質問はオープンクエスチョンにしてください。
+
+# 出力形式 (JSON)
+\`\`\`json
+{
+  "response_text": "string",
+  "suggested_questions": [
+    "string",
+    "string",
+    "string",
+    "その他（自由に質問する）"
+  ]
+}
+\`\`\`
+`;
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return parseJsonResponse(response.text());
+};
+
+
+// --- 以下、元のファイルにあった他のAI関連関数 ---
 
 const getSummaryPrompt = (formattedMessages, transcript) => {
   return `
@@ -63,8 +167,6 @@ ${formattedMessages}
     `;
 };
 
-// ★★★ ここからが追加・修正箇所 ★★★
-
 const getIssuesSummaryPrompt = (transcript, conversationId) => {
   return `あなたは優秀な会話分析コンサルタントです。以下の1on1の文字起こしテキストを分析し、部下が表明している「課題・懸念事項」を最大3つ抽出してください。
 各項目は、「〇〇に関する課題」や「△△についての悩み」といった形式で、25文字以内の簡潔なタイトルに要約してください。
@@ -101,12 +203,8 @@ ${transcript}
 `;
 };
 
-// ★★★ ここまでが追加・修正箇所 ★★★
-
-
 async function generateContent(prompt) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     // AIの応答からJSON部分だけをより確実に抽出する処理
@@ -122,37 +220,28 @@ async function generateContent(prompt) {
   }
 }
 
-// ★ Speech-to-Text APIのクライアントをインポート
-const { SpeechClient } = require('@google-cloud/speech');
-const speechClient = new SpeechClient();
-
-/**
- * リアルタイム文字起こしのためのストリームをセットアップする関数
- * @param {function} onTranscription - 文字起こし結果が得られたときに呼び出されるコールバック関数
- * @returns {object} - startとstopメソッドを持つストリームハンドラオブジェクト
- */
 function setupTranscriptionStream(onTranscription) {
   const requestConfig = {
-    encoding: 'WEBM_OPUS', // MediaRecorderのデフォルトに合わせて調整
-    sampleRateHertz: 48000, // 一般的なマイクのサンプルレート
-    languageCode: 'ja-JP',  // 日本語
+    encoding: 'WEBM_OPUS',
+    sampleRateHertz: 48000,
+    languageCode: 'ja-JP',
     enableAutomaticPunctuation: true,
     model: 'latest_long',
     speechContexts: [{
       phrases: [],
-      boost: 20 // 認識されやすさの重み付け (オプション)
+      boost: 20
     }],
-    enableSpeakerDiarization: true, // 話者分離を有効にする
-    diarizationSpeakerCount: 2, // 話者の数を指定（例: 2人）
+    enableSpeakerDiarization: true,
+    diarizationSpeakerCount: 2,
   };
 
   const recognizeStream = speechClient
     .streamingRecognize({
       config: {
         ...requestConfig,
-        enableAutomaticPunctuation: true, // 自動で句読点を付与
+        enableAutomaticPunctuation: true,
       },
-      interimResults: true, // 翻訳の途中結果を取得する
+      interimResults: true,
     })
     .on('error', (err) => {
       console.error('Speech-to-Text API Error:', err);
@@ -164,14 +253,13 @@ function setupTranscriptionStream(onTranscription) {
 
         let speakerTag = null;
         if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
-          // 最初の単語の話者タグを使用
           speakerTag = result.alternatives[0].words[0].speakerTag;
         }
 
         if (transcript) {
           onTranscription({
             transcript: transcript.trim(),
-            speakerTag: speakerTag, // 話者タグを追加
+            speakerTag: speakerTag,
             isFinal: result.isFinal
           });
         }
@@ -182,14 +270,13 @@ function setupTranscriptionStream(onTranscription) {
 }
 
 module.exports = {
-  getChatPrompt,
+  generateInitialMessage,
+  generateFollowUp,
   getSummaryPrompt,
   getKeywordsPrompt,
   getSentimentPrompt,
-  // ★★★ ここからが追加箇所 ★★★
   getIssuesSummaryPrompt,
   getPositivesSummaryPrompt,
-  // ★★★ ここまでが追加箇所 ★★★
   generateContent,
   setupTranscriptionStream
 };

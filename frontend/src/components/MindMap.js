@@ -1,133 +1,184 @@
-// frontend/src/components/MindMap.js
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import ReactFlow, {
     MiniMap,
     Controls,
     Background,
-    useNodesState,
-    useEdgesState,
     addEdge,
+    applyNodeChanges,
+    applyEdgeChanges,
+    getBezierPath,
+    MarkerType, // ★★★ 矢印の型をインポート ★★★
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import styles from './MindMap.module.css';
-import { FiRotateCcw, FiRotateCw } from 'react-icons/fi';
+import { FiPlus, FiRotateCcw, FiRotateCw, FiMaximize, FiMinimize } from 'react-icons/fi';
+import EditableNode from './EditableNode';
 
-// Custom hook for managing state history (Undo/Redo)
+// パフォーマンス向上のため、コンポーネントの外で定義
+const nodeTypes = { editable: EditableNode };
+let idCounter = 0;
+
+// Undo/Redo（元に戻す/やり直す）のためのカスタムフック
 const useHistory = (initialState) => {
     const [history, setHistory] = useState([initialState]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    const setState = (action, overwrite = false) => {
+    const setState = useCallback((action, overwrite = false) => {
         const newState = typeof action === 'function' ? action(history[currentIndex]) : action;
-        if (overwrite) {
-            const newHistory = [...history];
-            newHistory[currentIndex] = newState;
-            setHistory(newHistory);
-        } else {
-            const newHistory = history.slice(0, currentIndex + 1);
-            setHistory([...newHistory, newState]);
-            setCurrentIndex(newHistory.length);
+        if (!overwrite && JSON.stringify(newState) === JSON.stringify(history[currentIndex])) {
+            return;
         }
-    };
 
-    const undo = () => {
-        if (currentIndex > 0) {
-            setCurrentIndex(currentIndex - 1);
-        }
-    };
+        const newHistory = overwrite ? history.slice(0, currentIndex) : history.slice(0, currentIndex + 1);
+        setHistory([...newHistory, newState]);
+        setCurrentIndex(newHistory.length);
+    }, [currentIndex, history]);
 
-    const redo = () => {
-        if (currentIndex < history.length - 1) {
-            setCurrentIndex(currentIndex + 1);
-        }
-    };
+    const undo = () => currentIndex > 0 && setCurrentIndex(currentIndex - 1);
+    const redo = () => currentIndex < history.length - 1 && setCurrentIndex(currentIndex + 1);
 
-    return [history[currentIndex], setState, undo, redo, currentIndex, history.length - 1];
+    return [history[currentIndex], setState, undo, redo, currentIndex > 0, currentIndex < history.length - 1];
+};
+
+// アニメーション付きの接続線コンポーネント
+const AnimatedConnectionLine = ({ fromX, fromY, toX, toY }) => {
+    const [edgePath] = getBezierPath({ sourceX: fromX, sourceY: fromY, targetX: toX, targetY: toY });
+    return (
+        <g>
+            <path
+                fill="none"
+                stroke="var(--color-text-primary, black)"
+                strokeWidth={2}
+                className={styles.animatedDash}
+                d={edgePath}
+                style={{ strokeDasharray: '5 5' }}
+            />
+        </g>
+    );
 };
 
 
-const initialNodes = [
-    { id: '1', type: 'default', data: { label: '中心テーマ' }, position: { x: 250, y: 150 } },
-];
-const initialEdges = [];
-let id = 2;
-const getId = () => `${id++}`;
+const MindMap = ({ mindMapData, setMindMapData }) => {
+    const mindMapRef = useRef(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
-const MindMap = ({ mindMapData, setMindMapData, isReadOnly = false }) => {
-    const [history, setHistory, undo, redo, currentIndex, historyLength] = useHistory({
-        nodes: mindMapData.nodes && mindMapData.nodes.length > 0 ? mindMapData.nodes : initialNodes,
-        edges: mindMapData.edges || initialEdges
-    });
+    // 内部でUndo/Redoを含む状態管理を行う
+    const [state, setState, undo, redo, canUndo, canRedo] = useHistory({ nodes: [], edges: [] });
+    const { nodes, edges } = state;
+    const isInitialized = useRef(false);
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(history.nodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(history.edges);
-
+    // 親からのデータで初回のみ初期化する
     useEffect(() => {
-        setNodes(history.nodes);
-        setEdges(history.edges);
-    }, [history, setNodes, setEdges]);
-
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            if (JSON.stringify(nodes) !== JSON.stringify(history.nodes) || JSON.stringify(edges) !== JSON.stringify(history.edges)) {
-                const newState = { nodes, edges };
-                setHistory(newState);
-                if (!isReadOnly) {
-                    setMindMapData(newState);
-                }
+        if (mindMapData && !isInitialized.current) {
+            const initialNodes = (mindMapData.nodes || []).map(n => ({ ...n, type: 'editable' }));
+            if (initialNodes.length === 0) {
+                initialNodes.push({ id: '1', type: 'editable', position: { x: 250, y: 150 }, data: { label: '中心トピック' } });
             }
-        }, 300); // Debounce updates
+            // ★★★ 読み込んだエッジにも矢印を追加 ★★★
+            const initialEdges = (mindMapData.edges || []).map(e => ({
+                ...e,
+                markerEnd: { type: MarkerType.ArrowClosed }
+            }));
+            setState({ nodes: initialNodes, edges: initialEdges }, true);
+            isInitialized.current = true;
+        }
+    }, [mindMapData, setState]);
 
-        return () => clearTimeout(handler);
-    }, [nodes, edges, setMindMapData, setHistory, history.nodes, history.edges, isReadOnly]);
+    // 内部状態が変更されたら親コンポーネントに通知する
+    useEffect(() => {
+        if (isInitialized.current) {
+            setMindMapData(state);
+        }
+    }, [state, setMindMapData]);
 
+    const onNodesChange = useCallback((changes) => {
+        setState(current => ({ ...current, nodes: applyNodeChanges(changes, current.nodes) }), true);
+    }, [setState]);
 
-    const onConnect = useCallback(
-        (params) => {
-            if (isReadOnly) return;
-            setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#D946EF' } }, eds))
-        },
-        [setEdges, isReadOnly],
-    );
+    const onEdgesChange = useCallback((changes) => {
+        setState(current => ({ ...current, edges: applyEdgeChanges(changes, current.edges) }), true);
+    }, [setState]);
 
-    const onAddNode = useCallback(() => {
-        if (isReadOnly) return;
-        const newNode = {
-            id: getId(),
-            data: { label: '新しいノード' },
-            position: {
-                x: Math.random() * 400,
-                y: Math.random() * 400,
+    // ★★★ ノード接続時に矢印の情報を追加する ★★★
+    const onConnect = useCallback((connection) => {
+        const edgeWithArrow = {
+            ...connection,
+            markerEnd: {
+                type: MarkerType.ArrowClosed,
             },
         };
-        setNodes((nds) => nds.concat(newNode));
-    }, [setNodes, isReadOnly]);
+        setState(current => ({ ...current, edges: addEdge(edgeWithArrow, current.edges) }));
+    }, [setState]);
+
+    const updateNodeLabel = useCallback((nodeId, newLabel) => {
+        setState(current => ({
+            ...current,
+            nodes: current.nodes.map(node => node.id === nodeId ? { ...node, data: { ...node.data, label: newLabel } } : node)
+        }));
+    }, [setState]);
+
+    const onAddNode = () => {
+        idCounter = nodes.reduce((maxId, node) => {
+            const nodeIdNum = parseInt(String(node.id).split('_').pop(), 10);
+            return isNaN(nodeIdNum) ? maxId : Math.max(maxId, nodeIdNum);
+        }, 0) + 1;
+
+        const newNode = {
+            id: `node_${idCounter}`,
+            type: 'editable',
+            position: { x: Math.random() * 400, y: Math.random() * 400 },
+            data: { label: '新しいノード' },
+        };
+        setState(current => ({ ...current, nodes: [...current.nodes, newNode] }));
+    };
+
+    const handleFullscreen = () => {
+        const elem = mindMapRef.current;
+        if (!document.fullscreenElement) {
+            elem?.requestFullscreen();
+        } else {
+            document.exitFullscreen?.();
+        }
+    };
+
+    useEffect(() => {
+        const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+    }, []);
+
+    const nodesWithCallback = useMemo(() => {
+        return nodes.map(node => ({
+            ...node,
+            data: { ...node.data, updateNodeLabel: updateNodeLabel }
+        }));
+    }, [nodes, updateNodeLabel]);
 
     return (
-        <div className={styles.mindMapContainer}>
+        <div className={`${styles.mindMapContainer} ${isFullscreen ? styles.fullscreen : ''}`} ref={mindMapRef}>
             <ReactFlow
-                nodes={nodes}
+                nodes={nodesWithCallback}
                 edges={edges}
-                onNodesChange={isReadOnly ? undefined : onNodesChange}
-                onEdgesChange={isReadOnly ? undefined : onEdgesChange}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                nodeTypes={nodeTypes}
+                connectionLineComponent={AnimatedConnectionLine}
                 fitView
-                className="mindmap-flow"
-                nodesDraggable={!isReadOnly}
-                nodesConnectable={!isReadOnly}
-                elementsSelectable={!isReadOnly}
+                proOptions={{ hideAttribution: true }}
             >
-                <Controls />
+                <Controls showInteractive={false} />
                 <MiniMap />
                 <Background variant="dots" gap={12} size={1} />
             </ReactFlow>
-            {!isReadOnly && (
-                <div className={styles.controls}>
-                    <button onClick={onAddNode}>ノードを追加</button>
-                    <button onClick={undo} disabled={currentIndex === 0}><FiRotateCcw /> 元に戻す</button>
-                    <button onClick={redo} disabled={currentIndex === historyLength}><FiRotateCw /> やり直す</button>
-                </div>
-            )}
+            <div className={styles.controls}>
+                <button onClick={onAddNode}><FiPlus /></button>
+                <button onClick={undo} disabled={!canUndo}><FiRotateCcw /></button>
+                <button onClick={redo} disabled={!canRedo}><FiRotateCw /></button>
+                <button onClick={handleFullscreen}>
+                    {isFullscreen ? <FiMinimize /> : <FiMaximize />}
+                </button>
+            </div>
         </div>
     );
 };

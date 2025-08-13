@@ -1,14 +1,18 @@
-// frontend/src/context/AuthContext.js (最終修正版)
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { loginUser } from '../services/authService';
+import { getToken, setToken as storeToken, removeToken } from '../services/tokenService';
 
 export const AuthContext = createContext(null);
 
+export const useAuth = () => useContext(AuthContext);
+
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null); // ★ userオブジェクトに {id, username, role, organizationId} が入る
-    const [token, setToken] = useState(localStorage.getItem('jwtToken')); // ★ 初期値をlocalStorageから取得
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(getToken());
     const [loading, setLoading] = useState(true);
+    // ★★★ テーマの状態管理をAuthContextに一元化 ★★★
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
     useEffect(() => {
         if (token) {
@@ -17,23 +21,28 @@ export const AuthProvider = ({ children }) => {
                 if (decodedUser.exp * 1000 > Date.now()) {
                     setUser(decodedUser);
                 } else {
-                    // 有効期限切れ
-                    localStorage.removeItem('jwtToken');
-                    setToken(null);
+                    logout(); // 有効期限切れ
                 }
             } catch (e) {
                 console.error("Failed to decode token", e);
-                localStorage.removeItem('jwtToken');
-                setToken(null);
+                logout();
             }
         }
         setLoading(false);
     }, [token]);
 
+    // ★★★ テーマが変更されたらlocalStorageとbodyのクラスを更新 ★★★
+    useEffect(() => {
+        localStorage.setItem('theme', theme);
+        // 以前のクラスを削除してから新しいクラスを追加
+        document.body.className = '';
+        document.body.classList.add(`${theme}-mode`);
+    }, [theme]);
+
     const login = async (username, password) => {
         try {
             const data = await loginUser(username, password);
-            localStorage.setItem('jwtToken', data.token);
+            storeToken(data.token);
             setToken(data.token);
             return { success: true };
         } catch (error) {
@@ -43,20 +52,31 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        localStorage.removeItem('jwtToken');
+        removeToken();
         setToken(null);
         setUser(null);
     };
 
-    const value = { user, token, loading, isAuthenticated: !!user, login, logout };
+    // ★★★ テーマ切り替え関数 ★★★
+    const toggleTheme = () => {
+        setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+    };
+
+    const value = {
+        user,
+        token,
+        loading,
+        isAuthenticated: !!user,
+        login,
+        logout,
+        // ★★★ コンテキストにテーマと切り替え関数を渡す ★★★
+        theme,
+        toggleTheme
+    };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
-};
-
-export const useAuth = () => {
-    return useContext(AuthContext);
 };

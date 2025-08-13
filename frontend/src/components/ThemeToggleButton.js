@@ -1,19 +1,16 @@
-// frontend/src/components/ThemeToggleButton.js
 import React from 'react';
-// アイコンのインポートパスはプロジェクトに合わせてください
-// import { SunIcon, MoonIcon } from './icons'; 
 import { FiSun, FiMoon } from 'react-icons/fi';
-
+import { useAuth } from '../context/AuthContext'; // ★ useAuthフックをインポート
 
 /**
  * アプリケーションのテーマ（ライト/ダーク）を切り替えるボタンコンポーネント
  * @param {object} props - コンポーネントのプロパティ
- * @param {string} props.theme - 現在のテーマ ('light' or 'dark')
- * @param {function} props.toggleTheme - テーマを切り替える関数
- * @param {string} [props.className] - ★★★ 外部からCSSクラスを受け取るためのプロパティ ★★★
+ * @param {string} [props.className] - 外部からCSSクラスを受け取るためのプロパティ
  */
-function ThemeToggleButton({ theme, toggleTheme, className = '' }) {
-    // ボタンの基本スタイル
+function ThemeToggleButton({ className = '' }) {
+    // ★★★ propsの代わりにuseAuthフックからテーマと関数を取得 ★★★
+    const { theme, toggleTheme } = useAuth();
+
     const buttonStyle = {
         background: 'var(--color-bg-card)',
         border: '1px solid var(--color-border)',
@@ -30,8 +27,7 @@ function ThemeToggleButton({ theme, toggleTheme, className = '' }) {
         transition: 'all 0.2s ease-in-out',
     };
 
-    // ホバーエフェクト用のスタイルを動的に生成
-    // ボタンにユニークなクラス名を付与することで、他のボタンとの競合を防ぎます
+    // インラインスタイルは元のままで動作するため変更なし
     const uniqueClassName = `theme-toggle-button-${Math.random().toString(36).substr(2, 9)}`;
     const hoverStyle = `
         .${uniqueClassName}:hover {
@@ -46,10 +42,9 @@ function ThemeToggleButton({ theme, toggleTheme, className = '' }) {
             <style>{hoverStyle}</style>
             <button
                 onClick={toggleTheme}
-                // ★★★ 外部からのclassNameと内部のクラス名を結合 ★★★
                 className={`${uniqueClassName} ${className}`}
                 style={buttonStyle}
-                aria-label={theme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}
+                aria-label="テーマを切り替える"
             >
                 {theme === 'light' ? <FiMoon /> : <FiSun />}
             </button>

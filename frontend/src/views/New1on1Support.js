@@ -1,8 +1,7 @@
-// frontend/src/views/New1on1Support.js
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEmployees, sendMessage, generateSummary, updateConversation, getConversationById } from '../services';
+import { getEmployees, startConversation, postMessage, generateSummary, updateConversation } from '../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import layoutStyles from '../App.module.css';
@@ -11,13 +10,55 @@ import Tabs from '../components/Tabs';
 import Memo from '../components/Memo';
 import MindMap from '../components/MindMap';
 import TranscriptPopup from '../components/TranscriptPopup';
+import ThemeToggleButton from '../components/ThemeToggleButton';
 import { io } from 'socket.io-client';
-import { FiMic, FiMicOff } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiRefreshCw } from 'react-icons/fi';
 
-const initialNodes = [
-  { id: '1', type: 'default', data: { label: '中心テーマ' }, position: { x: 250, y: 150 } },
-];
+// ★★★ 修正点: ポップアップの文言変更とキーボードイベント処理を追加 ★★★
+const ReplyModal = ({ isOpen, onClose, onSubmit, question, reply, setReply }) => {
+  if (!isOpen) return null;
 
+  const handleKeyDown = (e) => {
+    // Shift + Enterで改行を許可
+    if (e.key === 'Enter' && e.shiftKey) {
+      return;
+    }
+    // Enterキーで送信
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (reply.trim()) {
+        onSubmit();
+      }
+    }
+  };
+
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContent}>
+        <h3 className={styles.modalHeader}>部下の返答を入力</h3>
+        <div className={styles.modalQuestionSection}>
+          {/* 文言を「上司の質問」に変更 */}
+          <p className={styles.modalQuestionLabel}>上司の質問:</p>
+          <p className={styles.modalQuestionText}>{question}</p>
+        </div>
+        <textarea
+          className={styles.modalTextarea}
+          value={reply}
+          onChange={(e) => setReply(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="部下の返答をここに入力してください... (Shift+Enterで改行)"
+          autoFocus
+        />
+        <div className={styles.modalActions}>
+          <button onClick={onClose} className={styles.modalButtonCancel}>キャンセル</button>
+          <button onClick={onSubmit} disabled={!reply.trim()} className={styles.modalButtonSubmit}>送信</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// (以降の定数やコンポーネントは変更なし)
 const THEMES = [
   { id: 1, text: '日々の業務やタスクの進め方について' },
   { id: 2, text: 'コンディションや心身の健康について' },
@@ -35,6 +76,9 @@ const INTERACTIONS = [
   { id: 4, text: '多様な視点や考え方を聞いてみたい' },
   { id: 5, text: '状況や結果を共有・報告したい' },
   { id: 6, text: 'その他' },
+];
+const initialNodes = [
+  { id: '1', type: 'default', data: { label: '中心テーマ' }, position: { x: 250, y: 150 } },
 ];
 
 const SelectionList = ({ title, items, onSelect, disabled }) => {
@@ -69,18 +113,16 @@ function chatReducer(state, action) {
     case 'STOP_LOADING': return { ...state, isLoading: false };
     case 'SET_ERROR': return { ...state, isLoading: false, isGeneratingSummary: false, error: action.payload };
     case 'FETCH_EMPLOYEES_SUCCESS': return { ...state, isLoading: false, employees: action.payload, appState: 'employee_selection' };
-    case 'SESSION_INIT_SUCCESS': return { ...state, isLoading: false, appState: 'session_ready', currentEmployee: action.payload.employee, currentConversationId: null, };
-    case 'START_CONVERSATION_FLOW': return { ...state, isLoading: true };
-    case 'RECEIVE_THEME_PROMPT': return { ...state, isLoading: false, appState: 'theme_selection', chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }] };
-    case 'SELECT_THEME': return { ...state, isLoading: true, selectedTheme: action.payload, chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload.text }] };
-    case 'RECEIVE_INTERACTION_PROMPT': return { ...state, isLoading: false, appState: 'engagement_selection', chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload.reply }], currentConversationId: action.payload.conversationId, };
-    case 'SELECT_INTERACTION': return { ...state, isLoading: true, selectedInteraction: action.payload, chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload.text }] };
-    case 'RECEIVE_SUPPORT_START_PROMPT': return { ...state, isLoading: false, appState: 'support_started', chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }] };
-    case 'SEND_MESSAGE': return { ...state, isLoading: true, chatHistory: [...state.chatHistory, { sender: 'user', text: action.payload }] };
-    case 'RECEIVE_REPLY': return { ...state, isLoading: false, chatHistory: [...state.chatHistory, { sender: 'ai', text: action.payload }] };
+    case 'SESSION_INIT_SUCCESS': return { ...state, isLoading: false, appState: 'theme_selection', currentEmployee: action.payload.employee };
+    case 'SELECT_THEME': return { ...state, selectedTheme: action.payload, chatHistory: [...state.chatHistory, { sender: 'user', message: action.payload.text }], appState: 'interaction_selection' };
+    case 'SELECT_INTERACTION': return { ...state, isLoading: true, selectedInteraction: action.payload, chatHistory: [...state.chatHistory, { sender: 'user', message: action.payload.text }] };
+    case 'START_CONVERSATION_SUCCESS': return { ...state, isLoading: false, appState: 'support_started', currentConversationId: action.payload.conversationId, chatHistory: [...state.chatHistory, action.payload.initialMessage] };
+    case 'ADD_MESSAGES_TO_HISTORY': return { ...state, isLoading: true, chatHistory: [...state.chatHistory, ...action.payload] };
+    case 'RECEIVE_REPLY': return { ...state, isLoading: false, chatHistory: [...state.chatHistory, action.payload] };
     case 'START_SUMMARY_GENERATION': return { ...state, isGeneratingSummary: true };
     case 'SUMMARY_GENERATION_SUCCESS': return { ...state, isGeneratingSummary: false, currentSummary: action.payload.summary, currentNextActions: action.payload.nextActions, isSummaryVisible: true, };
     case 'TOGGLE_SUMMARY_VISIBILITY': return { ...state, isSummaryVisible: !state.isSummaryVisible };
+    case 'RESET_TO_THEME_SELECTION': return { ...state, appState: 'theme_selection', selectedTheme: null, selectedInteraction: null, chatHistory: state.chatHistory.slice(0, 1) };
     default: return state;
   }
 }
@@ -97,7 +139,6 @@ function New1on1Support() {
   const [activeTab, setActiveTab] = useState('memo');
   const [memo, setMemo] = useState('');
   const [mindMapData, setMindMapData] = useState({ nodes: initialNodes, edges: [] });
-
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -107,6 +148,10 @@ function New1on1Support() {
   const socketRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
+
+  const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState('');
+  const [employeeReply, setEmployeeReply] = useState('');
 
   const isSessionView = location.pathname === '/session';
 
@@ -209,18 +254,6 @@ function New1on1Support() {
     }
   }, [state.currentConversationId, memo, mindMapData, transcript]);
 
-  const sendMessageToApi = useCallback(async ({ textToSend, appStateOverride }) => {
-    const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
-    try {
-      const payload = { message: textToSend, conversationId: state.currentConversationId, appState: appStateOverride || state.appState, employeeId: state.currentEmployee?.id, chatHistory: state.chatHistory, transcript: formattedTranscript, };
-      const data = await sendMessage(payload);
-      return data;
-    } catch (err) {
-      dispatch({ type: 'SET_ERROR', payload: err.message });
-      throw err;
-    }
-  }, [state.currentConversationId, state.appState, state.currentEmployee, state.chatHistory, transcript]);
-
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
     if (isSessionView && state.appState === 'initial') {
@@ -244,66 +277,73 @@ function New1on1Support() {
     }
   }, [state.appState, isSessionView, searchParams, isAuthenticated, authLoading, navigate]);
 
-  useEffect(() => {
-    if (state.appState === 'session_ready') {
-      const startFlow = async () => {
-        dispatch({ type: 'START_CONVERSATION_FLOW' });
-        const data = await sendMessage({ message: '__START__' });
-        if (data && data.reply) {
-          dispatch({ type: 'RECEIVE_THEME_PROMPT', payload: data.reply });
-        }
-      };
-      startFlow();
-    }
-  }, [state.appState]);
-
   const handleEmployeeSelect = useCallback(async (employee) => {
     window.open(`/session?employeeId=${employee.id}&employeeName=${encodeURIComponent(employee.name)}`, '_blank', 'noopener,noreferrer');
   }, []);
 
-  const handleThemeSelect = useCallback(async (theme) => {
+  const handleThemeSelect = useCallback((theme) => {
     dispatch({ type: 'SELECT_THEME', payload: theme });
-    try {
-      const response = await sendMessageToApi({ textToSend: theme.text, appStateOverride: 'theme_selection' });
-      if (response && response.reply && response.conversationId) {
-        dispatch({ type: 'RECEIVE_INTERACTION_PROMPT', payload: response });
-        const convData = await getConversationById(response.conversationId);
-        if (convData.memo) setMemo(convData.memo);
-        if (convData.mind_map_data) setMindMapData(convData.mind_map_data);
-      } else {
-        throw new Error('サーバーから不正な応答がありました。');
-      }
-    } catch (err) {
-      console.error("テーマ選択時のエラー:", err);
-    }
-  }, [sendMessageToApi]);
+  }, []);
 
   const handleInteractionSelect = useCallback(async (interaction) => {
     dispatch({ type: 'SELECT_INTERACTION', payload: interaction });
     try {
-      const response = await sendMessageToApi({ textToSend: interaction.text, appStateOverride: 'engagement_selection' });
-      if (response && response.reply) {
-        dispatch({ type: 'RECEIVE_SUPPORT_START_PROMPT', payload: response.reply });
-      }
+      const response = await startConversation({
+        employeeId: state.currentEmployee.id,
+        employeeName: state.currentEmployee.name,
+        theme: state.selectedTheme.text,
+        stance: interaction.text,
+      });
+      dispatch({ type: 'START_CONVERSATION_SUCCESS', payload: response });
     } catch (err) {
-      console.error("関わり方選択時のエラー:", err);
+      dispatch({ type: 'SET_ERROR', payload: err.message });
     }
-  }, [sendMessageToApi]);
+  }, [state.currentEmployee, state.selectedTheme]);
+
+  const handleSuggestionClick = (question) => {
+    if (question === 'その他（自由に質問する）') {
+      setMessage("（部下への質問を自由に入力してください）");
+    } else {
+      setSelectedQuestion(question);
+      setIsReplyModalOpen(true);
+    }
+  };
+
+  const handleSubmitReply = useCallback(async () => {
+    if (!employeeReply.trim() || !selectedQuestion || !state.currentConversationId) return;
+
+    setIsReplyModalOpen(false);
+
+    dispatch({
+      type: 'ADD_MESSAGES_TO_HISTORY', payload: [
+        { sender: 'user', message: selectedQuestion },
+        { sender: 'employee', message: employeeReply }
+      ]
+    });
+
+    try {
+      const response = await postMessage(state.currentConversationId, { sender: 'employee', message: employeeReply });
+      dispatch({ type: 'RECEIVE_REPLY', payload: response });
+    } catch (err) {
+      dispatch({ type: 'SET_ERROR', payload: err.message });
+    } finally {
+      setEmployeeReply('');
+      setSelectedQuestion('');
+    }
+  }, [employeeReply, selectedQuestion, state.currentConversationId]);
 
   const handleSendFreeMessage = useCallback(async () => {
     if (!message.trim()) return;
+    if (!state.currentConversationId) {
+      alert("セッションが開始されていません。テーマと関わり方を選択してください。");
+      return;
+    }
     const textToSend = message;
     setMessage('');
-    dispatch({ type: 'SEND_MESSAGE', payload: textToSend });
-    try {
-      const response = await sendMessageToApi({ textToSend, appStateOverride: 'support_started' });
-      if (response && response.reply) {
-        dispatch({ type: 'RECEIVE_REPLY', payload: response.reply });
-      }
-    } catch (err) {
-      console.error("自由対話メッセージ送信エラー:", err);
-    }
-  }, [message, sendMessageToApi]);
+    dispatch({ type: 'ADD_MESSAGES_TO_HISTORY', payload: [{ sender: 'user', message: textToSend }] });
+    setSelectedQuestion(textToSend);
+    setIsReplyModalOpen(true);
+  }, [message, state.currentConversationId]);
 
   const handleGenerateSummary = useCallback(async () => {
     if (!state.currentConversationId) return;
@@ -320,74 +360,123 @@ function New1on1Support() {
 
   const handleToggleSummary = () => { dispatch({ type: 'TOGGLE_SUMMARY_VISIBILITY' }); };
 
+  // ★★★ 修正点: チャット入力欄のキーボードイベント処理 ★★★
+  const handleFreeMessageKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendFreeMessage();
+    }
+  };
+
   if (authLoading || (state.appState === 'initial' && state.isLoading)) {
     return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>;
   }
 
   if (isSessionView) {
-    if (state.appState === 'loading' || (state.appState === 'initial' && state.isLoading) || state.appState === 'session_ready') {
-      return <div className={styles.sessionLoadingScreen}><p>セッションを準備中です...</p></div>;
-    }
     return (
-      <div className={styles.sessionViewContainer}>
-        <div className={styles.leftPanel}>
-          <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId} className={styles.summaryButton}>
-            {state.isGeneratingSummary ? '要約を生成中...' : '会話を終了して要約'}
-          </button>
-          <div className={styles.summaryContainer}>
-            <div className={styles.summaryToggleHeader} onClick={handleToggleSummary}>
-              <h4 className={styles.summaryTitle}>要約とネクストアクション</h4>
-              <span className={`${styles.summaryToggleIcon} ${!state.isSummaryVisible ? styles.closed : ''}`}>▼</span>
-            </div>
-            {state.isSummaryVisible && (
-              <div className={styles.collapsibleContent}>
-                <div className={styles.summaryArea}>
-                  {(state.currentSummary || state.currentNextActions) ? (
-                    <>
-                      {state.currentSummary && (<> <h5 className={styles.summaryHeader}>会話の要約</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} /> </>)}
-                      {state.currentNextActions && (<> <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} /> </>)}
-                    </>
-                  ) : (<p className={styles.noSummaryText}>まだ要約はありません。</p>)}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className={styles.chatContainer}>
-            <div className={styles.chatWindow}>
-              {state.chatHistory.map((chat, index) => (chat.sender !== 'system' && (<div key={index} className={`${styles.message} ${styles[chat.sender]}`}> <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : 'AIアシスタント'}:</strong> <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.text)) }}></div> </div>)))}
-              {state.appState === 'theme_selection' && !state.isLoading && (<SelectionList title="本日の1on1のテーマをお聞かせください" items={THEMES} onSelect={handleThemeSelect} disabled={state.isLoading} />)}
-              {state.appState === 'engagement_selection' && !state.isLoading && (<SelectionList title="AIにどのような関わり方を期待しますか？" items={INTERACTIONS} onSelect={handleInteractionSelect} disabled={state.isLoading} />)}
-              {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>AIが応答を生成中...</p></div>}
-              <div ref={messagesEndRef} />
-            </div>
-            {state.appState === 'support_started' && (<div className={styles.inputArea}> <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendFreeMessage()} placeholder="部下から言われたことなどを入力..." className={styles.normalInput} /> <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>送信</button> </div>)}
-          </div>
-        </div>
-
-        <div className={styles.rightPanel}>
-          <div className={styles.sessionControls}>
-            <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`}>
-              {isRecording ? <FiMicOff /> : <FiMic />}
-              <span>{isRecording ? (isTranscriptPopupMinimized ? '録音中 (表示)' : '録音停止') : '録音開始'}</span>
-            </button>
-          </div>
-          <div className={styles.workspace}>
-            <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
-            <div className={styles.tabContent}>
-              {activeTab === 'memo' && <Memo memo={memo} setMemo={setMemo} />}
-              {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={setMindMapData} />}
-            </div>
-          </div>
-        </div>
-
-        <TranscriptPopup
-          isVisible={isTranscriptPopupVisible}
-          onClose={handleClosePopup}
-          onMinimize={handleMinimizePopup}
-          transcript={transcript}
-          interimTranscript={interimTranscript}
+      <>
+        <ReplyModal
+          isOpen={isReplyModalOpen}
+          onClose={() => setIsReplyModalOpen(false)}
+          onSubmit={handleSubmitReply}
+          question={selectedQuestion}
+          reply={employeeReply}
+          setReply={setEmployeeReply}
         />
-      </div>
+        <div className={styles.sessionViewContainer}>
+          <div className={styles.leftPanel}>
+            <div className={styles.sessionHeader}>
+              <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId} className={styles.summaryButton}>
+                {state.isGeneratingSummary ? '要約を生成中...' : '会話を終了して要約'}
+              </button>
+              {state.appState === 'support_started' && (
+                <button onClick={() => dispatch({ type: 'RESET_TO_THEME_SELECTION' })} className={styles.changeThemeButton}>
+                  <FiRefreshCw />
+                  <span>テーマを変更</span>
+                </button>
+              )}
+            </div>
+            <div className={styles.summaryContainer}>
+              <div className={styles.summaryToggleHeader} onClick={handleToggleSummary}>
+                <h4 className={styles.summaryTitle}>要約とネクストアクション</h4>
+                <span className={`${styles.summaryToggleIcon} ${!state.isSummaryVisible ? styles.closed : ''}`}>▼</span>
+              </div>
+              {state.isSummaryVisible && (
+                <div className={styles.collapsibleContent}>
+                  <div className={styles.summaryArea}>
+                    {(state.currentSummary || state.currentNextActions) ? (
+                      <>
+                        {state.currentSummary && (<> <h5 className={styles.summaryHeader}>会話の要約</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} /> </>)}
+                        {state.currentNextActions && (<> <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} /> </>)}
+                      </>
+                    ) : (<p className={styles.noSummaryText}>まだ要約はありません。</p>)}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className={styles.chatContainer}>
+              <div className={styles.chatWindow}>
+                {state.chatHistory.map((chat, index) => (
+                  <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
+                    <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : (chat.sender === 'employee' ? state.currentEmployee?.name || '部下' : 'AIアシスタント')}:</strong>
+                    <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.message)) }}></div>
+                    {chat.sender === 'ai' && chat.suggested_questions && (
+                      <div className={styles.suggestions}>
+                        {chat.suggested_questions.map((q, i) => (
+                          <button key={i} onClick={() => handleSuggestionClick(q)} className={styles.suggestionButton}>
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {state.appState === 'theme_selection' && !state.isLoading && (<SelectionList title="本日の1on1のテーマをお聞かせください" items={THEMES} onSelect={handleThemeSelect} disabled={state.isLoading} />)}
+                {state.appState === 'interaction_selection' && !state.isLoading && (<SelectionList title="AIにどのような関わり方を期待しますか？" items={INTERACTIONS} onSelect={handleInteractionSelect} disabled={state.isLoading} />)}
+                {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>AIが応答を生成中...</p></div>}
+                <div ref={messagesEndRef} />
+              </div>
+              {state.appState === 'support_started' && (
+                <div className={styles.inputArea}>
+                  {/* ★★★ 修正点: inputをtextareaに変更し、キーイベントを追加 ★★★ */}
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyDown={handleFreeMessageKeyDown}
+                    placeholder="部下への質問を自由に入力... (Shift+Enterで改行)"
+                    className={styles.normalInput}
+                    rows="1"
+                  />
+                  <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>質問する</button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={styles.rightPanel}>
+            <div className={styles.sessionControls}>
+              <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`}>
+                {isRecording ? <FiMicOff className={styles.micIcon} /> : <FiMic className={styles.micIcon} />}
+                <span>{isRecording ? (isTranscriptPopupMinimized ? '録音中 (表示)' : '録音停止') : '録音開始'}</span>
+              </button>
+            </div>
+            <div className={styles.workspace}>
+              <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
+              <div className={styles.tabContent}>
+                {activeTab === 'memo' && <Memo memo={memo} setMemo={setMemo} />}
+                {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={setMindMapData} />}
+              </div>
+            </div>
+          </div>
+          <TranscriptPopup
+            isVisible={isTranscriptPopupVisible}
+            onClose={handleClosePopup}
+            onMinimize={handleMinimizePopup}
+            transcript={transcript}
+            interimTranscript={interimTranscript}
+          />
+          <ThemeToggleButton className={styles.themeToggle} />
+        </div>
+      </>
     );
   }
 

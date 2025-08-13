@@ -1,8 +1,17 @@
-/* frontend/src/components/MindMap.module.css */
 .mindMapContainer {
     width: 100%;
     height: 100%;
     position: relative;
+    background-color: var(--color-bg-card, #fff);
+}
+
+.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 100;
 }
 
 .controls {
@@ -15,73 +24,34 @@
 }
 
 .controls button {
-    background-color: var(--color-bg-card);
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border);
-    padding: 8px 12px;
-    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    padding: 8px;
+    border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.2s ease;
+    gap: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .controls button:hover {
-    background-color: var(--color-bg-hover);
-    border-color: var(--color-primary);
+    background-color: #f0f0f0;
 }
 
 .controls button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background-color: var(--color-bg-disabled);
 }
 
-
-/* React Flowのスタイル上書き */
-:global(.react-flow__node-default),
-:global(.react-flow__node-input) {
-    background-color: var(--color-bg-app);
-    border-radius: 8px;
-    padding: 10px 15px;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-primary);
-    box-shadow: var(--shadow-md);
+/* ★★★ 点線アニメーション用のスタイル ★★★ */
+@keyframes dash-animation {
+    to {
+        stroke-dashoffset: -20;
+    }
 }
 
-:global(.dark-mode .react-flow__node-default),
-:global(.dark-mode .react-flow__node-input) {
-    background-color: #374151;
-    color: #f3f4f6;
-    border-color: #4b5563;
-}
-
-:global(.react-flow__handle) {
-    background: var(--color-primary) !important;
-    border: 2px solid var(--color-bg-card) !important;
-}
-
-:global(.dark-mode .react-flow__handle) {
-    border-color: #374151 !important;
-}
-
-:global(.react-flow__edge-path) {
-    stroke: var(--color-primary) !important;
-    stroke-width: 2;
-}
-
-:global(.react-flow__controls) {
-    box-shadow: var(--shadow-md);
-}
-
-:global(.react-flow__minimap) {
-    background-color: var(--color-bg-app);
-    border-radius: 8px;
-}
-
-:global(.react-flow__background) {
-    background-color: var(--color-bg-card);
+.animatedDash {
+    stroke-dashoffset: 0;
+    animation: dash-animation 1s linear infinite;
 }

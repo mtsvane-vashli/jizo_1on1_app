@@ -5,7 +5,7 @@ const readline = require('readline');
 const path = require('path');
 
 // .envファイルのパスをプロジェクトルートに修正
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // デバッグ用: DATABASE_URLが正しく読み込まれているか確認
 const dbUrl = process.env.DATABASE_URL;
