@@ -1,28 +1,54 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Home.module.css';
-// ★ 修正: ThemeToggleButtonのインポートを削除
 
-// ★ 修正: propsから theme と toggleTheme を削除
+/**
+ * Home: 演出を強化したトップページ
+ * - スクロールに応じたセクションのフェードイン (IntersectionObserver)
+ * - ヒーローのグラデ&グロー演出、スクロールダウンインジケータ
+ * - サービスカードの3Dチルト・ホバー
+ * - 取引企業マルチロゴのインフィニット・マルチー
+ * - 企画書(Google Slides)の埋め込みは現状を維持
+ */
 function Home() {
+  // スムーズスクロール
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
-    if (section) {
-      const headerOffset = 80;
-      const elementPosition = section.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
-      });
-    }
+    if (!section) return;
+    const headerOffset = 80;
+    const elementPosition = section.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+    window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
   };
 
-  const slidesEmbedUrl = "https://docs.google.com/presentation/d/1-1ogWEprs_wNI0mcxvGjUvORIdZ4OXZSIqajL_t56xI/embed?start=false&loop=false&delayms=3000&rm=minimal";
+  // セクションのリビール
+  const observed = useRef([]);
+  useEffect(() => {
+    const targets = document.querySelectorAll('[data-reveal]');
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add(styles.revealed);
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    targets.forEach((el) => {
+      io.observe(el);
+      observed.current.push(el);
+    });
+    return () => io.disconnect();
+  }, []);
+
+  const slidesEmbedUrl =
+    'https://docs.google.com/presentation/d/1-1ogWEprs_wNI0mcxvGjUvORIdZ4OXZSIqajL_t56xI/embed?start=false&loop=false&delayms=3000&rm=minimal';
 
   return (
     <div className={styles.pageContainer}>
+      {/* Sticky Glass Header */}
       <header className={styles.header}>
         <div className={styles.navContainer}>
           <span className={styles.logo}>Memento</span>
@@ -33,28 +59,50 @@ function Home() {
             <button onClick={() => scrollToSection('clients')} className={styles.navLink}>取引企業</button>
             <button onClick={() => scrollToSection('contact')} className={styles.navLink}>お問い合わせ</button>
             <Link to="/login" className={`${styles.navLink} ${styles.navLinkJizo}`}>地蔵1on1</Link>
-            {/* ★★★ 修正点: テーマ切り替えボタンの記述を完全に削除 ★★★ */}
           </nav>
         </div>
       </header>
 
       <main>
+        {/* HERO */}
         <section id="home" className={styles.hero}>
-          <div className={styles.heroContent}>
-            <h1 className={styles.mainTitle}>人の記憶や想いを大切にし、<br />未来へと繋ぐ。</h1>
-            <p className={styles.subtitle}>株式会社メメントは、人の記憶や想いを大切にし、未来へと繋ぐサービスを展開しています。</p>
+          {/* 背景オーナメント */}
+          <div className={styles.heroBg}>
+            <span className={`${styles.blob} ${styles.blobA}`} aria-hidden="true" />
+            <span className={`${styles.blob} ${styles.blobB}`} aria-hidden="true" />
+            <span className={`${styles.gridGlow}`} aria-hidden="true" />
+          </div>
+
+          <div className={styles.heroContent} data-reveal>
+            <h1 className={styles.mainTitle}>
+              人の記憶や想いを大切にし、<br />未来へと繋ぐ。
+            </h1>
+            <p className={styles.subtitle}>
+              株式会社メメントは、人の記憶や想いを大切にし、未来へと繋ぐサービスを展開しています。
+            </p>
             <Link to="/login" className={styles.ctaButton}>地蔵1on1を始める</Link>
+
+            <button
+              onClick={() => scrollToSection('promotion')}
+              className={styles.scrollDown}
+              aria-label="次のセクションへスクロール"
+            >
+              <span className={styles.scrollDot} />
+            </button>
           </div>
         </section>
 
-        {/* ...以降のコンテンツは変更なし... */}
-
-        <section id="promotion" className={styles.section}>
+        {/* 1on1 推進事業 */}
+        <section id="promotion" className={styles.section} data-reveal>
           <h2 className={styles.sectionTitle}>1on1推進事業</h2>
-          <p className={styles.sectionText}>AIを活用した1on1支援ツール「地蔵1on1」で、効果的な対話を促進し、組織と個人の成長をサポートします。上司と部下の継続的なコミュニケーションを通じて、エンゲージメントと生産性の向上を実現します。</p>
+          <p className={styles.sectionText}>
+            AIを活用した1on1支援ツール「地蔵1on1」で、効果的な対話を促進し、組織と個人の成長をサポートする。
+            上司と部下の継続的なコミュニケーションを通じて、エンゲージメントと生産性の向上を実現する。
+          </p>
         </section>
 
-        <section id="about" className={`${styles.section} ${styles.bgGray}`}>
+        {/* 会社概要 */}
+        <section id="about" className={`${styles.section} ${styles.bgGray}`} data-reveal>
           <h2 className={styles.sectionTitle}>会社概要</h2>
           <div className={styles.aboutGrid}>
             <div>
@@ -72,29 +120,45 @@ function Home() {
           </div>
         </section>
 
-        <section id="services" className={styles.section}>
+        {/* 事業内容 */}
+        <section id="services" className={styles.section} data-reveal>
           <h2 className={styles.sectionTitle}>事業内容</h2>
           <div className={styles.serviceGrid}>
-            <div className={styles.serviceCard}>
+            <div className={`${styles.serviceCard} ${styles.tilt}`}>
               <h3>人材事業</h3>
-              <p>企業向け1on1導入支援、当社オリジナル「地蔵1on1メソッド」、管理職向け研修などを通じて、組織のコミュニケーションを活性化させます。</p>
+              <p>
+                企業向け1on1導入支援、当社オリジナル「地蔵1on1メソッド」、管理職向け研修などを通じて、
+                組織のコミュニケーションを活性化させる。
+              </p>
               <button onClick={() => scrollToSection('presentation')} className={styles.serviceLink}>
                 企画書を見る
               </button>
             </div>
-            <div className={styles.serviceCard}>
+            <div className={`${styles.serviceCard} ${styles.tilt}`}>
               <h3>養鶏事業</h3>
-              <p>福岡県飯塚市にて平飼い養鶏場「あかね農場」を運営。健康で美味しいたまごを生産しています。</p>
-              <a href="https://akanefarm.com/" target="_blank" rel="noopener noreferrer" className={styles.serviceLink}>あかね農場ウェブサイト</a>
+              <p>福岡県飯塚市にて平飼い養鶏場「あかね農場」を運営。健康で美味しいたまごを生産。</p>
+              <a
+                href="https://akanefarm.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.serviceLink}
+              >
+                あかね農場ウェブサイト
+              </a>
             </div>
-            <div className={styles.serviceCard}>
+            <div className={`${styles.serviceCard} ${styles.tilt}`}>
               <h3>人材紹介事業</h3>
-              <p>企業と求職者の最適なマッチングを支援します。(許可No. 40-ユ-301391)</p>
+              <p>企業と求職者の最適なマッチングを支援。(許可No. 40-ユ-301391)</p>
             </div>
           </div>
         </section>
 
-        <section id="presentation" className={`${styles.section} ${styles.bgGray} ${styles.presentationSection}`}>
+        {/* 企画書スライド（白背景固定） */}
+        <section
+          id="presentation"
+          className={`${styles.section} ${styles.bgGray} ${styles.presentationSection}`}
+          data-reveal
+        >
           <h2 className={styles.sectionTitle}>企画書</h2>
           <div className={styles.presentationContainer}>
             <iframe
@@ -102,19 +166,45 @@ function Home() {
               frameBorder="0"
               allowFullScreen={true}
               title="企画書スライド"
-            ></iframe>
+            />
           </div>
         </section>
 
-        <section id="clients" className={styles.section}>
+        {/* 取引企業（マルチー） */}
+        <section id="clients" className={styles.section} data-reveal>
           <h2 className={styles.sectionTitle}>主な取引企業</h2>
-          <p className={styles.sectionText}>日野出株式会社, タンスのゲン株式会社, 第一交通産業グループ, 麻生セメント株式会社, 双日九州株式会社, 自然電力株式会社, 株式会社タカミヤ, 株式会社福住, エフコープ生活協同組合 (順不同)</p>
+          <p className={styles.sectionText}>
+            日野出株式会社, タンスのゲン株式会社, 第一交通産業グループ, 麻生セメント株式会社,
+            双日九州株式会社, 自然電力株式会社, 株式会社タカミヤ, 株式会社福住, エフコープ生活協同組合 (順不同)
+          </p>
+
+          <div className={styles.marqueeWrap} aria-hidden="true">
+            <div className={styles.marqueeTrack}>
+              {[
+                'HINODE', 'TANSUNOGEN', 'DAIICHI-KOTSU', 'ASO CEMENT',
+                'SOJITZ KYUSHU', 'SHIZEN ENERGY', 'TAKAMIYA', 'FUKUZUMI', 'FCOOP'
+              ].map((name, i) => (
+                <span key={`m-${i}`} className={styles.marqueeItem}>{name}</span>
+              ))}
+              {[
+                'HINODE', 'TANSUNOGEN', 'DAIICHI-KOTSU', 'ASO CEMENT',
+                'SOJITZ KYUSHU', 'SHIZEN ENERGY', 'TAKAMIYA', 'FUKUZUMI', 'FCOOP'
+              ].map((name, i) => (
+                <span key={`m2-${i}`} className={styles.marqueeItem}>{name}</span>
+              ))}
+            </div>
+          </div>
         </section>
 
-        <section id="contact" className={`${styles.section} ${styles.bgGray}`}>
+        {/* お問い合わせ */}
+        <section id="contact" className={`${styles.section} ${styles.bgGray}`} data-reveal>
           <h2 className={styles.sectionTitle}>お問い合わせ</h2>
-          <p className={styles.sectionText}>事業に関するご相談、お見積もりのご依頼は、下記よりお気軽にご連絡ください。</p>
-          <a href="mailto:info@memento-inc.net" className={styles.contactButton}>メールで問い合わせる</a>
+          <p className={styles.sectionText}>
+            事業に関するご相談、お見積もりのご依頼は、下記よりお気軽にご連絡ください。
+          </p>
+          <a href="mailto:info@memento-inc.net" className={styles.contactButton}>
+            メールで問い合わせる
+          </a>
         </section>
       </main>
 

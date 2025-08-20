@@ -19,19 +19,41 @@ import Register from './views/Register.js';
 import ProtectedRoute from './components/ProtectedRoute.js';
 import { useAuth } from './context/AuthContext.js';
 
-// AppLayoutコンポーネントは、サイドバーを持つメインのアプリケーション画面を定義します。
+/* サイドバー付きのアプリ画面 */
 function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
   const { loading, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [modalState, setModalState] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+  const [modalState, setModalState] = useState({
+    isOpen: false, title: '', message: '', onConfirm: () => { }
+  });
 
+  // ★ 修正: スプレッド記法の誤りを修正
   const closeModal = () => setModalState({ ...modalState, isOpen: false });
-  const showLogoutModal = () => { setModalState({ isOpen: true, title: 'ログアウト', message: '本当にログアウトしますか？', onConfirm: async () => { try { await logout(); navigate('/login'); } catch (error) { console.error('Logout failed', error); } } }); };
-  const showGoHomeModal = () => { setModalState({ isOpen: true, title: 'ホームページへ移動', message: '入力中の内容は保存されませんが、ホームページに戻りますか？', onConfirm: () => navigate('/') }); };
+  const showLogoutModal = () =>
+    setModalState({
+      isOpen: true,
+      title: 'ログアウト',
+      message: '本当にログアウトしますか？',
+      onConfirm: async () => {
+        try { await logout(); navigate('/login'); }
+        catch (error) { console.error('Logout failed', error); }
+      }
+    });
+  const showGoHomeModal = () =>
+    setModalState({
+      isOpen: true,
+      title: 'ホームページへ移動',
+      message: '入力中の内容は保存されませんが、ホームページに戻りますか？',
+      onConfirm: () => navigate('/')
+    });
 
   if (loading) {
-    return <div className={appStyles.loadingScreen}><p>認証情報を確認中...</p></div>;
+    return (
+      <div className={appStyles.loadingScreen}>
+        <p>認証情報を確認中...</p>
+      </div>
+    );
   }
 
   return (
@@ -46,7 +68,10 @@ function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
           isSidebarOpen={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
-        <main className={`${appStyles.contentArea} ${(isSidebarCollapsed && !isMobile) ? '' : appStyles.sidebarOpen}`}>
+        <main
+          className={`${appStyles.contentArea} ${(isSidebarCollapsed && !isMobile) ? '' : appStyles.sidebarOpen
+            }`}
+        >
           {isMobile && (
             <div className={appStyles.mobileHeader}>
               <button onClick={() => setSidebarOpen(true)} className={appStyles.hamburgerButton}>
@@ -68,17 +93,24 @@ function AppLayout({ isMobile, isSidebarOpen, setSidebarOpen }) {
           </div>
         </main>
       </div>
-      <Modal isOpen={modalState.isOpen} onClose={closeModal} onConfirm={modalState.onConfirm} title={modalState.title}>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+      >
         <p>{modalState.message}</p>
       </Modal>
     </>
   );
 }
 
-// AppRoutesコンポーネントは、アプリケーション全体の最上位のルーティングを管理します。
+/* ルーティング + トップのスクロール進捗バー */
 function AppRoutes() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
@@ -87,11 +119,29 @@ function AppRoutes() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // セッション画面ではグローバルテーマボタンを非表示にする
+  // スクロール進捗（全ページ共通）
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const scrollTop = h.scrollTop || document.body.scrollTop;
+      const scrollHeight = h.scrollHeight - h.clientHeight;
+      const ratio = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+      setProgress(Math.min(100, Math.max(0, ratio)));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [location.pathname]);
+
+  // セッション画面ではグローバルテーマボタンを非表示
   const showGlobalThemeToggle = location.pathname !== '/session';
 
   return (
     <div className={appStyles.appContainer}>
+      <div className={appStyles.progressBar} aria-hidden="true">
+        <div className={appStyles.progress} style={{ width: `${progress}%` }} />
+      </div>
+
       <Routes>
         {/* 公開ルート */}
         <Route path="/" element={<Home />} />
@@ -103,12 +153,16 @@ function AppRoutes() {
           path="/app/*"
           element={
             <ProtectedRoute>
-              <AppLayout isMobile={isMobile} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
+              <AppLayout
+                isMobile={isMobile}
+                isSidebarOpen={isSidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+              />
             </ProtectedRoute>
           }
         />
 
-        {/* ★★★ 修正点: /session へのルートを復活させ、正しくコンポーネントを表示する ★★★ */}
+        {/* /session 単独ルート */}
         <Route
           path="/session"
           element={
@@ -119,16 +173,12 @@ function AppRoutes() {
         />
       </Routes>
 
-      {showGlobalThemeToggle && (
-        <ThemeToggleButton className={appStyles.themeToggleGlobal} />
-      )}
+      {showGlobalThemeToggle && <ThemeToggleButton className={appStyles.themeToggleGlobal} />}
     </div>
   );
 }
 
-// AppコンポーネントはAppRoutesをレンダリングするだけ
 function App() {
   return <AppRoutes />;
 }
-
 export default App;
