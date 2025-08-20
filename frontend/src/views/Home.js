@@ -4,10 +4,11 @@ import { FiArrowRight, FiArrowUpRight } from 'react-icons/fi';
 import styles from './Home.module.css';
 
 /**
- * Home: トップページ
- * - 既存のスクロールリビール演出を維持
- * - 新規: Careers / Message / Vision / Company セクションを追記
- * - 既存: Hero / 1on1推進事業 / 会社概要(サマリ) / 事業内容 / 企画書 / 取引企業 / お問い合わせ
+ * Home: トップページ（コピー統合・重複解消版）
+ * - スクロールリビール演出を維持
+ * - 追加/更新: Careers / Message / Vision / Company の文面を提供コピーに合わせて反映
+ * - 重複解消: 既存の「会社概要（サマリ）」セクションを削除し、Companyに一本化
+ * - 既存維持: Hero / 1on1推進事業 / 事業内容 / 企画書 / 取引企業 / お問い合わせ
  */
 function Home() {
   // スムーズスクロール
@@ -54,7 +55,7 @@ function Home() {
           <nav className={styles.nav}>
             <button onClick={() => scrollToSection('home')} className={styles.navLink}>ホーム</button>
             <button onClick={() => scrollToSection('careers')} className={styles.navLink}>採用</button>
-            <button onClick={() => scrollToSection('about')} className={styles.navLink}>会社概要</button>
+            <button onClick={() => scrollToSection('company')} className={styles.navLink}>会社情報</button>
             <button onClick={() => scrollToSection('services')} className={styles.navLink}>事業内容</button>
             <button onClick={() => scrollToSection('clients')} className={styles.navLink}>取引企業</button>
             <button onClick={() => scrollToSection('contact')} className={styles.navLink}>お問い合わせ</button>
@@ -78,7 +79,7 @@ function Home() {
               人の記憶や想いを大切にし、<br />未来へと繋ぐ。
             </h1>
             <p className={styles.subtitle}>
-              株式会社メメントは、人の記憶や想いを大切にし、未来へと繋ぐサービスを展開するである。
+              株式会社メメントは、人の記憶や想いを大切にし、未来へと繋ぐサービスを展開する。
             </p>
             <Link to="/login" className={styles.ctaButton}>地蔵1on1を始める</Link>
 
@@ -107,11 +108,11 @@ function Home() {
                 <span className={styles.pillMuted}>リモート可</span>
               </div>
               <h3 className={styles.jobTitle}>
-                1on1ミーティング導入支援のベンチャーで、事業の仕組み化のアシスタント募集
+                1on1ミーティング導入支援のベンチャーで、事業の仕組み化のアシスタント募集（業務委託）
               </h3>
               <p className={styles.jobDesc}>
-                1on1導入支援事業のオペレーション構築を、経営直下で推進するポジションである。
-                ドキュメント整備、ワークフロー設計、ナレッジ基盤づくり等を担い、0→1 / 1→10の拡張を加速させるである。
+                1on1導入支援事業のオペレーション構築を、経営直下で推進するポジション。
+                ドキュメント整備、ワークフロー設計、ナレッジ基盤づくり等を担い、0→1 / 1→10の拡張を加速させる。
               </p>
               <div className={styles.jobActions}>
                 <a href="#job-details" className={styles.jobButtonPrimary}>
@@ -160,13 +161,19 @@ function Home() {
 
           <div className={styles.messageBody}>
             <p>
-              メメント・モリという言葉はご存知だろうか。ラテン語で「自分がいつか必ず死ぬことを忘れるな」「人に訪れる死を忘ることなかれ」を意味するである。
+              メメント・モリという言葉はご存知でしょうか？ラテン語で「自分がいつか必ず死ぬことを忘れるな」「人に訪れる死を忘ることなかれ」という意味です。
             </p>
             <p>
-              私はあることがきっかけで生死をさまよった。以降、常に意識しているのは「明日死ぬなら今何をするか」である。人は本当にいつ死ぬか分からない。であれば、毎日を楽しく生きるべきである。
+              私はあることがきっかけで生死をさまよいました。以降、私が常に意識していることは「明日死ぬなら今何をするか」。
             </p>
             <p>
-              私はあなたと一緒に思い出を作り、そして死んでいきたいと思っている。まだ生まれたばかりの会社である。何をするかではなく誰とするか。新しく出会うご縁を楽しみに、今日も一生懸命に生きていくである。
+              人は本当にいつ死ぬか分かりません。だったら毎日楽しく生きていこうと考えています。
+            </p>
+            <p>
+              そして、あなたと一緒に思い出を作り、死んでいきたいと思っています。まだ生まれたばかりの会社です。あなたと作り上げていきたい。
+            </p>
+            <p>
+              何をするかではなく誰とするか。新しく出会うご縁を楽しみに、今日も一生懸命生きていきます。
             </p>
           </div>
         </section>
@@ -182,13 +189,19 @@ function Home() {
           <div className={styles.visionBody}>
             <h3 className={styles.visionSub}>当社の理念「今日を一生懸命生きる」</h3>
             <p>
-              多くの会社が顧客第一を掲げるが、私は違うと考えるである。身の回りの人の心が満たされてこそ、顧客の課題や幸せを真に考えられるのである。
+              普通の会社は恐らく顧客第一という会社が多いと思います。私は違うと考えています。身の回りの人の心が豊かになって初めて、顧客の課題や幸せを考えることができると考えています。
             </p>
             <p>
-              そして「何をするかではなく誰とするか」である。私は100億、1000億を目指す巨大企業ではなく、朝起きて「今日も楽しく生きよう」と思える会社をつくりたい。超優秀な人材が揃った楽しくない組織より、毎日楽しくイキイキしている組織の方が、事業は成功すると確信しているである。
+              そして、「何をするかではなく誰とするか」。私が目指す道は、先程も申し上げた通り100億・1000億という大きな会社ではありません。朝起きて、「よし！今日も楽しく生きよう」と毎日が楽しくなる会社を作りたいと考えています。
             </p>
             <p>
-              商売とは「誰かの課題を解決する＝助ける」ことであり、卵であれ採用であれ形が変わるだけである。極論を言えば、扱う商品そのものより「人」が一番大事である。特殊な技術を除けば、うまくいく人は何をしてもうまくいく。そんな仲間が集まったとき、「これ、面白そうだからやってみよう」と言える会社。それが私の目標であり、ビジョンである。
+              超優秀なメンバーが揃った楽しくない組織よりも、毎日楽しくイキイキとしている組織の方が事業は成功すると確信しています。
+            </p>
+            <p>
+              そもそも商売とは「誰かの課題を解決する＝助ける」ことです。それが卵だったり、採用だったりと形が変わるだけです。極論を言えば、扱う商品なんてどうでも良い。商品を扱っている「人」が一番大事です。
+            </p>
+            <p>
+              私は初めての起業で一番そこを学びました。特殊な技術を除けば、うまくいく人は何をしてもうまくいきます。そんな仲間が集まったとき、「これやったら面白そうじゃない？ちょっとやってみようよ！」と言える会社。それが目標であり、ビジョンです。
             </p>
 
             <div className={styles.fitListWrap}>
@@ -212,14 +225,20 @@ function Home() {
               <h4>会社概要</h4>
               <dl className={styles.kvList}>
                 <div><dt>会社名</dt><dd>株式会社メメント</dd></div>
-                <div><dt>事業内容</dt><dd>
-                  人材サービス事業（1on1ミーティング推進、新卒採用支援、新規事業開発支援）
-                </dd></div>
-                <div><dt>企業WEBサイト</dt><dd>
-                  <a href="https://mementoink.wixsite.com/memento" target="_blank" rel="noopener noreferrer">
-                    https://mementoink.wixsite.com/memento
-                  </a>
-                </dd></div>
+                <div>
+                  <dt>事業内容</dt>
+                  <dd>
+                    人材サービス事業（1on1ミーティング推進事業、新卒採用支援事業、新規事業開発支援事業）
+                  </dd>
+                </div>
+                <div>
+                  <dt>企業WEBサイト</dt>
+                  <dd>
+                    <a href="https://mementoink.wixsite.com/memento" target="_blank" rel="noopener noreferrer">
+                      https://mementoink.wixsite.com/memento
+                    </a>
+                  </dd>
+                </div>
                 <div><dt>企業SNS</dt><dd>—</dd></div>
               </dl>
             </div>
@@ -237,8 +256,7 @@ function Home() {
             <div className={styles.infoCard}>
               <h4>メメント・モリとは</h4>
               <p className={styles.smallNote}>
-                起業の原点は、サラリーマン時代に過労で倒れた経験にある。それ以来のモットーは
-                「明日死ぬなら今何をするか」であり、この思いに賛同する仲間と共に、人生に沿った働き方を提供する企業を目指すである。
+                私が起業した理由は、サラリーマン時代に過労で倒れたことがきっかけでした。それ以降、私のモットーは「明日死ぬなら今何をするか？」です。この思いに賛同してくれる仲間を探し、毎日を一生懸命生きています。自分のため、家族のため、大事な人のため——生き方は様々です。仕事ばかりが人生ではありません。一人ひとりに沿った働き方を提供できる企業になりたいと考えています。
               </p>
             </div>
           </div>
@@ -248,28 +266,9 @@ function Home() {
         <section id="promotion" className={styles.section} data-reveal>
           <h2 className={styles.sectionTitle}>1on1推進事業</h2>
           <p className={styles.sectionText}>
-            AIを活用した1on1支援ツール「地蔵1on1」で、効果的な対話を促進し、組織と個人の成長をサポートするである。
-            上司と部下の継続的なコミュニケーションを通じて、エンゲージメントと生産性の向上を実現するである。
+            AIを活用した1on1支援ツール「地蔵1on1」で、効果的な対話を促進し、組織と個人の成長をサポートする。
+            上司と部下の継続的なコミュニケーションを通じて、エンゲージメントと生産性の向上を実現する。
           </p>
-        </section>
-
-        {/* ====== 会社概要（サマリ：既存） ====== */}
-        <section id="about" className={`${styles.section} ${styles.bgGray}`} data-reveal>
-          <h2 className={styles.sectionTitle}>会社概要</h2>
-          <div className={styles.aboutGrid}>
-            <div>
-              <p><strong>会社名:</strong> 株式会社メメント (Memento Inc.)</p>
-              <p><strong>設立:</strong> 2023年4月</p>
-              <p><strong>代表取締役:</strong> 森 智寛</p>
-              <p><strong>所在地:</strong> 福岡県福岡市西区横浜3丁目6番31 105号</p>
-            </div>
-            <div>
-              <p><strong>ミッション:</strong> 30分で社会を前進させる</p>
-              <p><strong>ビジョン:</strong> 人々がハッとなる瞬間を</p>
-              <p><strong>バリュー:</strong> 幸せのバケツを満たし、分け与える</p>
-              <p><strong>取引銀行:</strong> 福岡県信用組合 周船寺支店、楽天銀行</p>
-            </div>
-          </div>
         </section>
 
         {/* ====== 事業内容（既存） ====== */}
@@ -280,7 +279,7 @@ function Home() {
               <h3>人材事業</h3>
               <p>
                 企業向け1on1導入支援、当社オリジナル「地蔵1on1メソッド」、管理職向け研修などを通じて、
-                組織のコミュニケーションを活性化させるである。
+                組織のコミュニケーションを活性化させる。
               </p>
               <button onClick={() => scrollToSection('presentation')} className={styles.serviceLink}>
                 企画書を見る
@@ -288,7 +287,7 @@ function Home() {
             </div>
             <div className={`${styles.serviceCard} ${styles.tilt}`}>
               <h3>養鶏事業</h3>
-              <p>福岡県飯塚市にて平飼い養鶏場「あかね農場」を運営。健康で美味しいたまごを生産するである。</p>
+              <p>福岡県飯塚市にて平飼い養鶏場「あかね農場」を運営。健康で美味しいたまごを生産する。</p>
               <a
                 href="https://akanefarm.com/"
                 target="_blank"
@@ -300,7 +299,7 @@ function Home() {
             </div>
             <div className={`${styles.serviceCard} ${styles.tilt}`}>
               <h3>人材紹介事業</h3>
-              <p>企業と求職者の最適なマッチングを支援（許可No. 40-ユ-301391）である。</p>
+              <p>企業と求職者の最適なマッチングを支援（許可No. 40-ユ-301391）。</p>
             </div>
           </div>
         </section>
@@ -327,7 +326,7 @@ function Home() {
           <h2 className={styles.sectionTitle}>主な取引企業</h2>
           <p className={styles.sectionText}>
             日野出株式会社, タンスのゲン株式会社, 第一交通産業グループ, 麻生セメント株式会社,
-            双日九州株式会社, 自然電力株式会社, 株式会社タカミヤ, 株式会社福住, エフコープ生活協同組合（順不同）である。
+            双日九州株式会社, 自然電力株式会社, 株式会社タカミヤ, 株式会社福住, エフコープ生活協同組合（順不同）。
           </p>
 
           <div className={styles.marqueeWrap} aria-hidden="true">
@@ -352,7 +351,7 @@ function Home() {
         <section id="contact" className={`${styles.section} ${styles.bgGray}`} data-reveal>
           <h2 className={styles.sectionTitle}>お問い合わせ</h2>
           <p className={styles.sectionText}>
-            事業に関するご相談、お見積もりのご依頼は、下記より気軽に連絡されたいである。
+            事業に関するご相談やお見積もりのご依頼は、下記より気軽にご連絡ください。
           </p>
           <a href="mailto:info@memento-inc.net" className={styles.contactButton}>
             メールで問い合わせる
