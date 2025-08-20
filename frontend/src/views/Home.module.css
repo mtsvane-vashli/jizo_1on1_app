@@ -1,5 +1,3 @@
-/* src/views/Home.module.css */
-
 /* 基本アニメ */
 @keyframes fadeIn {
   from {
@@ -280,7 +278,7 @@
   transform: none !important;
 }
 
-/* ===== グリッド ===== */
+/* ===== グリッド（既存） ===== */
 .aboutGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -293,7 +291,7 @@
   line-height: 1.7;
 }
 
-/* サービスカード */
+/* サービスカード（既存） */
 .serviceGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -348,7 +346,7 @@
   color: var(--color-primary-hover);
 }
 
-/* 3D Tilt (CSSのみの視覚効果) */
+/* 3D Tilt */
 .tilt {
   transform-style: preserve-3d;
 }
@@ -357,7 +355,7 @@
   transform: translateY(-6px) perspective(700px) rotateX(3deg) rotateY(-3deg);
 }
 
-/* お問い合わせボタン */
+/* お問い合わせボタン（既存） */
 .contactButton {
   display: inline-block;
   margin-top: var(--space-xl);
@@ -381,7 +379,7 @@
   color: #000;
 }
 
-/* フッタ */
+/* フッタ（既存） */
 .footer {
   text-align: center;
   padding: var(--space-xl);
@@ -391,7 +389,7 @@
   border-top: 1px solid var(--color-border);
 }
 
-/* 企画書埋め込み（白を維持） */
+/* 企画書埋め込み（既存） */
 .presentationSection {
   max-width: 1200px;
 }
@@ -416,7 +414,7 @@
   border: 0;
 }
 
-/* 取引企業マルチー */
+/* 取引企業マルチー（既存） */
 .marqueeWrap {
   overflow: hidden;
   mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
@@ -448,7 +446,7 @@
   color: var(--color-text-secondary);
 }
 
-/* 小さめ画面調整 */
+/* 小さめ画面調整（既存） */
 @media (max-width: 768px) {
   .navLink {
     padding: var(--space-xs) var(--space-sm);
@@ -457,4 +455,322 @@
   .section {
     padding: var(--space-xl);
   }
+}
+
+/* ============================= */
+/*        新規：Careers          */
+/* ============================= */
+.careersSection {
+  text-align: left;
+}
+
+.careersHeader {
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--color-primary);
+  background: linear-gradient(90deg, rgba(217, 70, 239, .12), rgba(249, 115, 22, .12));
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full);
+}
+
+.careersTitle {
+  font-family: var(--font-family-heading);
+  font-size: clamp(1.8rem, 1.2rem + 2vw, 2.6rem);
+  margin-top: var(--space-sm);
+  color: var(--color-text-dark);
+}
+
+.careersStat {
+  margin-top: var(--space-xs);
+  color: var(--color-text-secondary);
+}
+
+.jobsGrid {
+  margin-top: var(--space-xl);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+.jobCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.jobMeta {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: var(--space-sm);
+}
+
+.pill {
+  display: inline-block;
+  padding: .25rem .6rem;
+  border-radius: var(--radius-full);
+  background: rgba(217, 70, 239, .12);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: .85rem;
+}
+
+.pillMuted {
+  display: inline-block;
+  padding: .25rem .6rem;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: .85rem;
+}
+
+.jobTitle {
+  font-family: var(--font-family-heading);
+  font-size: 1.4rem;
+  margin: .25rem 0 var(--space-sm);
+  color: var(--color-text-dark);
+}
+
+.jobDesc {
+  color: var(--color-text-primary);
+  line-height: 1.8;
+}
+
+.jobActions {
+  margin-top: var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+
+.jobButtonPrimary,
+.jobButtonGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  text-decoration: none;
+  border-radius: var(--radius-full);
+  padding: .7rem 1rem;
+  font-weight: 700;
+  transition: var(--transition-fast);
+}
+
+.jobButtonPrimary {
+  color: var(--color-text-light);
+  background-image: linear-gradient(90deg, var(--color-accent), var(--color-primary));
+  box-shadow: var(--shadow-sm);
+}
+
+.jobButtonPrimary:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.jobButtonGhost {
+  color: var(--color-text-dark);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+}
+
+.dark-mode .jobButtonGhost {
+  color: var(--color-text-light);
+  border-color: var(--color-border);
+}
+
+.jobButtonGhost:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.jobDetails {
+  margin-top: var(--space-xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.detailCol h4 {
+  font-family: var(--font-family-heading);
+  font-size: 1.1rem;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text-dark);
+}
+
+.bulletList {
+  padding-left: 1rem;
+  margin: 0;
+}
+
+.bulletList li {
+  position: relative;
+  list-style: none;
+  padding-left: 1rem;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+}
+
+.bulletList li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--color-primary);
+}
+
+/* ============================= */
+/*       新規：MESSAGE           */
+/* ============================= */
+.messageSection {
+  text-align: left;
+}
+
+.messageHeader {
+  text-align: center;
+}
+
+.messageLead {
+  margin-top: var(--space-xs);
+  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+}
+
+.messageBody {
+  margin-top: var(--space-lg);
+  display: grid;
+  gap: var(--space-md);
+  line-height: 1.9;
+  color: var(--color-text-primary);
+}
+
+/* ============================= */
+/*     新規：VISION / INFO      */
+/* ============================= */
+.visionSection {
+  text-align: left;
+}
+
+.visionHeader {
+  text-align: center;
+}
+
+.visionTagline {
+  margin-top: var(--space-xs);
+  color: var(--color-text-secondary);
+}
+
+.visionBody {
+  margin-top: var(--space-xl);
+  display: grid;
+  gap: var(--space-md);
+}
+
+.visionSub {
+  font-family: var(--font-family-heading);
+  font-size: 1.25rem;
+  color: var(--color-text-dark);
+}
+
+.visionSubSmall {
+  font-family: var(--font-family-heading);
+  font-size: 1.05rem;
+  color: var(--color-text-dark);
+  margin-top: var(--space-md);
+}
+
+.fitListWrap {
+  margin-top: var(--space-sm);
+}
+
+.checkList {
+  padding-left: 0;
+  margin: 0;
+  display: grid;
+  gap: .35rem;
+}
+
+.checkList li {
+  list-style: none;
+  position: relative;
+  padding-left: 1.4rem;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+}
+
+.checkList li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+/* ============================= */
+/*        新規：COMPANY          */
+/* ============================= */
+.companySection {
+  text-align: left;
+}
+
+.companyGrid {
+  margin-top: var(--space-xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.infoCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.kvList {
+  margin: 0;
+}
+
+.kvList>div {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: .75rem;
+  align-items: start;
+  padding: .4rem 0;
+}
+
+.kvList dt {
+  color: var(--color-text-secondary);
+}
+
+.kvList dd {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.infoCard a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.infoCard a:hover {
+  text-decoration: underline;
+  color: var(--color-primary-hover);
+}
+
+.addressBlock {
+  margin-top: .5rem;
+}
+
+.smallNote {
+  color: var(--color-text-secondary);
+  line-height: 1.8;
 }
