@@ -222,8 +222,18 @@ const getDashboardSentiments = async (user, employeeId) => {
     return rows;
 };
 
+/**
+ * ★ 重要：部分更新
+ * - transcript / memo / mindMapData(JSON) を受け付ける
+ * - クライアントが snake_case の mind_map_data を送っても動くようにフォールバック
+ */
 const updateConversation = async (id, dataToUpdate, user) => {
-    const { transcript, memo, mindMapData } = dataToUpdate;
+    const transcript = dataToUpdate.transcript;
+    const memo = dataToUpdate.memo;
+    const mindMapData = (typeof dataToUpdate.mindMapData !== 'undefined')
+        ? dataToUpdate.mindMapData
+        : dataToUpdate.mind_map_data; // ← フォールバック
+
     const fields = [];
     const values = [];
     let query = 'UPDATE conversations SET ';
@@ -238,7 +248,8 @@ const updateConversation = async (id, dataToUpdate, user) => {
     }
     if (typeof mindMapData !== 'undefined') {
         fields.push(`mind_map_data = $${values.length + 1}`);
-        values.push(JSON.stringify(mindMapData)); // JSONBに保存するために文字列化
+        // JSONB へ保存（pg は JS オブジェクトを直接渡してもOKだが明示的に文字列化しておく）
+        values.push(JSON.stringify(mindMapData));
     }
 
     if (fields.length === 0) {

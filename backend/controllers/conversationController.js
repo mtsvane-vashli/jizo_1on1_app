@@ -34,6 +34,7 @@ exports.startConversation = async (req, res) => {
         res.status(500).json({ message: 'Failed to start conversation' });
     }
 };
+
 exports.postMessage = async (req, res) => {
     const { id: conversationId } = req.params;
     const { sender, message } = req.body;
@@ -69,6 +70,7 @@ exports.postMessage = async (req, res) => {
         res.status(500).json({ message: 'Failed to process message.' });
     }
 };
+
 exports.listConversations = async (req, res) => {
     try {
         const conversations = await conversationModel.getAllConversations(req.user);
@@ -78,6 +80,7 @@ exports.listConversations = async (req, res) => {
         res.status(500).json({ error: 'Failed to retrieve conversations.' });
     }
 };
+
 exports.getConversationDetails = async (req, res) => {
     try {
         const conversation = await conversationModel.getConversationById(req.params.id, req.user);
@@ -90,9 +93,15 @@ exports.getConversationDetails = async (req, res) => {
         res.status(500).json({ error: 'Failed to retrieve conversation details.' });
     }
 };
+
 exports.updateConversation = async (req, res) => {
     try {
-        const updatedConversation = await conversationModel.updateConversation(req.params.id, req.body, req.user);
+        // ★ 正規化：snake_case でも camelCase でも受け付ける
+        const patch = { ...req.body };
+        if (typeof patch.mindMapData === 'undefined' && typeof patch.mind_map_data !== 'undefined') {
+            patch.mindMapData = patch.mind_map_data;
+        }
+        const updatedConversation = await conversationModel.updateConversation(req.params.id, patch, req.user);
         if (!updatedConversation) {
             return res.status(404).json({ error: 'Conversation not found or permission denied.' });
         }
@@ -102,6 +111,7 @@ exports.updateConversation = async (req, res) => {
         res.status(500).json({ error: 'Failed to update conversation.' });
     }
 };
+
 exports.deleteConversation = async (req, res) => {
     try {
         const deletedCount = await conversationModel.deleteConversationAndMessages(req.params.id, req.user);
@@ -117,7 +127,7 @@ exports.deleteConversation = async (req, res) => {
 
 
 /**
- * ★★★ 新規追加: 会話を要約し、各種分析を実行する ★★★
+ * ★★★ 会話を要約し、各種分析を実行する ★★★
  */
 exports.summarizeConversation = async (req, res) => {
     const { id: conversationId } = req.params;
@@ -141,8 +151,8 @@ exports.summarizeConversation = async (req, res) => {
         // AIサービスを呼び出して要約、キーワード、感情を並行して生成
         const [summaryContent, keywordsText, sentimentJsonText] = await Promise.all([
             aiService.generateContent(aiService.getSummaryPrompt(formattedMessages, fullTranscript)),
-            aiService.generateContent(aiService.getKeywordsPrompt(formattedMessages, fullTranscript)),
-            aiService.generateContent(aiService.getSentimentPrompt(formattedMessages, fullTranscript))
+            aiService.generateContent(aiService.getKeywordsPrompt(formattedMessages)),
+            aiService.generateContent(aiService.getSentimentPrompt(formattedMessages))
         ]);
 
         // AIの応答をパース

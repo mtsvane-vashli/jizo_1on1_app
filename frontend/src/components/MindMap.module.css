@@ -2,18 +2,19 @@
     width: 100%;
     height: 100%;
     position: relative;
-    background-color: var(--color-bg-card, #fff);
+    background-color: #fbfdff;
 }
 
+/* フルスクリーン */
 .fullscreen {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100vw;
     height: 100vh;
     z-index: 100;
 }
 
+/* コントロール群 */
 .controls {
     position: absolute;
     top: 10px;
@@ -24,34 +25,147 @@
 }
 
 .controls button {
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ddd;
+    background-color: rgba(255, 255, 255, 0.98);
+    border: 1px solid #e5e7eb;
     padding: 8px;
-    border-radius: 4px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    transition: background-color .15s ease, transform .06s ease, box-shadow .15s ease;
 }
 
 .controls button:hover {
-    background-color: #f0f0f0;
+    background-color: #f7f8fa;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+
+.controls button:active {
+    transform: translateY(1px);
 }
 
 .controls button:disabled {
-    opacity: 0.5;
+    opacity: .5;
     cursor: not-allowed;
 }
 
-/* ★★★ 点線アニメーション用のスタイル ★★★ */
-@keyframes dash-animation {
-    to {
-        stroke-dashoffset: -20;
-    }
+/* ノード見た目 */
+.node {
+    min-width: 160px;
+    max-width: 260px;
+    padding: 10px 14px;
+    border: 1px solid #dfe4ea;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    position: relative;
 }
 
-.animatedDash {
-    stroke-dashoffset: 0;
-    animation: dash-animation 1s linear infinite;
+.nodeSelected {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+    border-color: #93c5fd;
+}
+
+.nodeCollapsed {
+    opacity: 0.92;
+}
+
+/* ラベル / 入力 */
+.nodeLabel {
+    font-size: 14px;
+    line-height: 1.45;
+    user-select: none;
+    color: #0f172a;
+}
+
+.nodeInput {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+}
+
+.nodeInput:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25);
+}
+
+/* 折りたたみボタン（右上） */
+.collapseBtn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.collapseBtn:hover {
+    background: #f9fafb;
+}
+
+.collapsed {
+    border-color: #94a3b8;
+    background: #eef2f7;
+}
+
+/* エッジ（矢印） */
+.react-flow__edge-path {
+    stroke: #64748b;
+    /* slate-500 */
+    stroke-width: 2.25px;
+}
+
+/* 左右のみハンドル（接続点） */
+.handle {
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: #2563eb;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+.handleLeft {
+    left: -6px;
+}
+
+.handleRight {
+    right: -6px;
+}
+
+/* 念のため、上下ハンドルが生成されても非表示 */
+.react-flow__handle[data-handlepos="top"],
+.react-flow__handle[data-handlepos="bottom"] {
+    display: none !important;
+}
+
+/* ヒント */
+.hint {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #334155;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    user-select: none;
 }
