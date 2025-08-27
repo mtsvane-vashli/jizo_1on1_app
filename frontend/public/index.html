@@ -1,17 +1,29 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="1on1傾聴サポートAIアプリ" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>おたすけ地蔵くん</title>
-  </head>
-  <body>
-    <noscript>JavaScriptを有効にしてください。</noscript>
-    <div id="root"></div>
-  </body>
+
+<head>
+  <meta charset="utf-8" />
+  <!-- SVGを優先して使う -->
+  <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/icon.svg" />
+  <!-- 古いブラウザ向けフォールバック（任意。残してOK） -->
+  <link rel="alternate icon" href="%PUBLIC_URL%/favicon.ico" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="1on1傾聴サポートAIアプリ" />
+
+  <!-- iOSなどのホーム追加用（PNG推奨。まずは既存のまま） -->
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+
+  <!-- PWAマニフェスト -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+  <title>おたすけ地蔵くん</title>
+</head>
+
+<body>
+  <noscript>JavaScriptを有効にしてください。</noscript>
+  <div id="root"></div>
+</body>
+
 </html>

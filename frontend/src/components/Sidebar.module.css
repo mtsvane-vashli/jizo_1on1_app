@@ -178,3 +178,23 @@
     margin-left: var(--space-md);
   }
 }
+
+/* === ここから追記（ファイル末尾でOK） ===================== */
+.brandImage {
+  width: 32px;
+  height: 32px;
+  display: inline-block;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
+/* 黒いアイコンを白に変換（サイドバーでの視認性向上） */
+.brandWhite {
+  /* 順序が重要。まず黒く均し→白へ反転 */
+  filter: brightness(0) invert(1);
+  /* もっと白くしたい場合は次を併用:
+     filter: brightness(0) invert(1) contrast(120%);
+   */
+}
+
+/* === 追記ここまで =========================================== */
