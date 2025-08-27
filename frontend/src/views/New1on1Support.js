@@ -432,7 +432,7 @@ function New1on1Support() {
                   </div>
                 ))}
                 {state.appState === 'theme_selection' && !state.isLoading && (<SelectionList title="本日の1on1のテーマをお聞かせください" items={THEMES} onSelect={handleThemeSelect} disabled={state.isLoading} />)}
-                {state.appState === 'interaction_selection' && !state.isLoading && (<SelectionList title="AIにどのような関わり方を期待しますか？" items={INTERACTIONS} onSelect={handleInteractionSelect} disabled={state.isLoading} />)}
+                {state.appState === 'interaction_selection' && !state.isLoading && (<SelectionList title="どのような関わり方を期待しますか？" items={INTERACTIONS} onSelect={handleInteractionSelect} disabled={state.isLoading} />)}
                 {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>AIが応答を生成中...</p></div>}
                 <div ref={messagesEndRef} />
               </div>
