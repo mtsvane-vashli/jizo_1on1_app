@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getConversationById, getMessagesByConversationId } from '../services/conversationService';
 import layoutStyles from '../App.module.css';
-import styles from './TranscriptDetailView.module.css'; // Assuming a dedicated CSS module
+import styles from './TranscriptDetailView.module.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -67,19 +67,27 @@ function TranscriptDetailView() {
             <h2 className={layoutStyles.screenHeader}>セッションログ詳細</h2>
             <p className={layoutStyles.screenDescription}>
                 {conversation.employee_name ? `${conversation.employee_name}さんとの会話 - ` : ''}
-                {new Date(conversation.timestamp).toLocaleString()} - テーマ: {conversation.theme || '未設定'}
+                {conversation.timestamp ? new Date(conversation.timestamp).toLocaleString() : ''} - テーマ: {conversation.theme || '未設定'}
             </p>
 
             <div className={styles.detailContainer}>
                 <div className={styles.chatHistory}>
                     <h3>AIチャット履歴</h3>
                     {messages.length > 0 ? (
-                        messages.map((msg, index) => (
-                            <div key={index} className={`${styles.message} ${styles[msg.sender]}`}>
-                                <strong className={styles.sender}>{msg.sender === 'user' ? 'あなた' : 'AI'}:</strong>
-                                <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(msg.text)) }}></div>
-                            </div>
-                        ))
+                        messages.map((msg, index) => {
+                            // text優先、なければmessageを使う（バックエンド差異の吸収）
+                            const raw = (typeof msg?.text === 'string' && msg.text.length > 0)
+                                ? msg.text
+                                : (typeof msg?.message === 'string' ? msg.message : '');
+                            const html = DOMPurify.sanitize(marked.parse(raw));
+
+                            return (
+                                <div key={index} className={`${styles.message} ${styles[msg.sender]}`}>
+                                    <strong className={styles.sender}>{msg.sender === 'user' ? 'あなた' : 'AI'}:</strong>
+                                    <div className={styles.text} dangerouslySetInnerHTML={{ __html: html }}></div>
+                                </div>
+                            );
+                        })
                     ) : (
                         <p>チャット履歴はありません。</p>
                     )}
