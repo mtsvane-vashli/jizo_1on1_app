@@ -131,18 +131,18 @@ const createConversation = async (convData, user) => {
 const getAllConversations = async (user) => {
     if (user.role === 'admin') {
         const sql = `
-      SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
+      SELECT c.id, c.created_at AS timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
              e.name AS employee_name, e.id AS employee_id
         FROM conversations c
         LEFT JOIN employees e ON c.employee_id = e.id
        WHERE c.organization_id = $1
-       ORDER BY c.timestamp DESC
+       ORDER BY c.created_at DESC
     `;
         const { rows } = await pool.query(sql, [user.organizationId]);
         return rows;
     } else {
         const sql = `
-      SELECT c.id, c.timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
+      SELECT c.id, c.created_at AS timestamp, c.theme, c.engagement, c.summary, c.next_actions, c.transcript,
              e.name AS employee_name, e.id AS employee_id
         FROM conversations c
         JOIN user_employee_links uel
@@ -151,7 +151,7 @@ const getAllConversations = async (user) => {
          AND uel.user_id = $1
         LEFT JOIN employees e ON c.employee_id = e.id
        WHERE c.organization_id = $2
-       ORDER BY c.timestamp DESC
+       ORDER BY c.created_at DESC
     `;
         const { rows } = await pool.query(sql, [user.id, user.organizationId]);
         return rows;
@@ -275,7 +275,7 @@ const getDashboardKeywords = async (user, employeeId) => {
 const getDashboardSentiments = async (user, employeeId) => {
     const params = [];
     let sql = `
-    SELECT s.overall_sentiment, s.positive_score, s.negative_score, s.neutral_score, c.timestamp AS conversation_timestamp
+    SELECT s.overall_sentiment, s.positive_score, s.negative_score, s.neutral_score, c.created_at AS conversation_timestamp
       FROM sentiments s
       JOIN conversations c ON s.conversation_id = c.id
   `;
@@ -299,7 +299,7 @@ const getDashboardSentiments = async (user, employeeId) => {
         params.push(employeeId);
     }
 
-    sql += ` ORDER BY c.timestamp ASC LIMIT 20`;
+    sql += ` ORDER BY c.created_at ASC LIMIT 20`;
 
     const { rows } = await pool.query(sql, params);
     return rows;
@@ -404,6 +404,8 @@ module.exports = {
     addMessage,
     updateConversationEngagement,
     updateConversationSummary,
+    getDashboardKeywords,
+    getDashboardSentiments,
     saveKeywords: async (conversationId, keywords) => {
         const client = await pool.connect();
         try {
