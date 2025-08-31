@@ -14,7 +14,14 @@
     z-index: 100;
 }
 
-/* コントロール群 */
+/* ===== キー捕捉用ラッパ ===== */
+.keyCapture {
+    outline: none;
+    height: 100%;
+    width: 100%;
+}
+
+/* コントロール群（右上） */
 .controls {
     position: absolute;
     top: 10px;
@@ -27,14 +34,15 @@
 .controls button {
     background-color: rgba(255, 255, 255, 0.98);
     border: 1px solid #e5e7eb;
-    padding: 8px;
+    padding: 8px 10px;
     border-radius: 10px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     transition: background-color .15s ease, transform .06s ease, box-shadow .15s ease;
+    font-size: 14px;
 }
 
 .controls button:hover {
@@ -122,10 +130,53 @@
     background: #eef2f7;
 }
 
+/* ===== ノード内ツールバー（子/兄弟/削除） ===== */
+.nodeToolbar {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -30px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity .12s ease;
+    pointer-events: none;
+}
+
+.node:hover .nodeToolbar,
+.nodeSelected .nodeToolbar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.nodeToolBtn,
+.nodeToolBtnDanger {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    transition: background-color .15s ease, transform .06s ease, box-shadow .15s ease;
+    color: #334155;
+}
+
+.nodeToolBtn:hover,
+.nodeToolBtnDanger:hover {
+    background-color: #f7f8fa;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.nodeToolBtnDanger {
+    color: #b91c1c;
+}
+
 /* エッジ（矢印） */
 .react-flow__edge-path {
     stroke: #64748b;
-    /* slate-500 */
     stroke-width: 2.25px;
 }
 
@@ -147,13 +198,13 @@
     right: -6px;
 }
 
-/* 念のため、上下ハンドルが生成されても非表示 */
+/* 念のため上下ハンドルが出ても非表示 */
 .react-flow__handle[data-handlepos="top"],
 .react-flow__handle[data-handlepos="bottom"] {
     display: none !important;
 }
 
-/* ヒント */
+/* ヒント（左下） */
 .hint {
     position: absolute;
     left: 10px;
