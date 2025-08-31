@@ -75,7 +75,6 @@ function TranscriptDetailView() {
                     <h3>AIチャット履歴</h3>
                     {messages.length > 0 ? (
                         messages.map((msg, index) => {
-                            // text優先、なければmessageを使う（バックエンド差異の吸収）
                             const raw = (typeof msg?.text === 'string' && msg.text.length > 0)
                                 ? msg.text
                                 : (typeof msg?.message === 'string' ? msg.message : '');
@@ -119,6 +118,9 @@ function TranscriptDetailView() {
                                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions)) }}></div>
                             </>
                         )}
+                        <p className={styles.summaryNote}>
+                            ・要約の注意書き この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
+                        </p>
                     </div>
                 )}
             </div>

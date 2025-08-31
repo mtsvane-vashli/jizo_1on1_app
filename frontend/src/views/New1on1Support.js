@@ -14,44 +14,84 @@ import ThemeToggleButton from '../components/ThemeToggleButton';
 import { io } from 'socket.io-client';
 import { FiMic, FiMicOff, FiRefreshCw } from 'react-icons/fi';
 
-// ★★★ 修正点: ポップアップの文言変更とキーボードイベント処理を追加 ★★★
-const ReplyModal = ({ isOpen, onClose, onSubmit, question, reply, setReply }) => {
+/**
+ * ReplyModal
+ * - 上司の質問（編集可）＋部下の返答（編集可）の2フィールド
+ * - 日本語入力中（isComposing）の Enter は送信しない
+ * - Enter で送信 / Shift+Enter で改行
+ */
+const ReplyModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  question,
+  setQuestion,
+  reply,
+  setReply,
+}) => {
   if (!isOpen) return null;
 
+  const trySubmit = () => {
+    if (question.trim() && reply.trim()) onSubmit();
+  };
+
   const handleKeyDown = (e) => {
-    // Shift + Enterで改行を許可
-    if (e.key === 'Enter' && e.shiftKey) {
-      return;
-    }
-    // Enterキーで送信
+    // 日本語入力（IME）確定中は Enter を無視
+    if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return;
+
+    // Shift+Enter は改行
+    if (e.key === 'Enter' && e.shiftKey) return;
+
+    // Enter 単体で送信
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (reply.trim()) {
-        onSubmit();
-      }
+      trySubmit();
     }
   };
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
-        <h3 className={styles.modalHeader}>部下の返答を入力</h3>
-        <div className={styles.modalQuestionSection}>
-          {/* 文言を「上司の質問」に変更 */}
-          <p className={styles.modalQuestionLabel}>上司の質問:</p>
-          <p className={styles.modalQuestionText}>{question}</p>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <h3 className={styles.modalHeader}>上司の質問と部下の返答を入力</h3>
+
+        <div className={styles.modalFieldGroup}>
+          <label className={styles.modalLabel}>上司の質問</label>
+          <input
+            className={styles.modalInput}
+            type="text"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="例）今週の進捗で詰まっている点は？（Shift+Enterで改行、Enterで送信）"
+            autoFocus={!question}
+          />
         </div>
-        <textarea
-          className={styles.modalTextarea}
-          value={reply}
-          onChange={(e) => setReply(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="部下の返答をここに入力してください... (Shift+Enterで改行)"
-          autoFocus
-        />
+
+        <div className={styles.modalFieldGroup}>
+          <label className={styles.modalLabel}>部下の返答</label>
+          <textarea
+            className={styles.modalTextarea}
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="例）APIの応答遅延によりテストが進んでいません。暫定でモック化を検討しています。"
+            rows={6}
+            autoFocus={!!question}
+          />
+          <p className={styles.modalHint}>
+            Enterで送信、Shift+Enterで改行。日本語入力中のEnterは送信されない。
+          </p>
+        </div>
+
         <div className={styles.modalActions}>
           <button onClick={onClose} className={styles.modalButtonCancel}>キャンセル</button>
-          <button onClick={onSubmit} disabled={!reply.trim()} className={styles.modalButtonSubmit}>送信</button>
+          <button
+            onClick={trySubmit}
+            disabled={!question.trim() || !reply.trim()}
+            className={styles.modalButtonSubmit}
+          >
+            送信
+          </button>
         </div>
       </div>
     </div>
@@ -300,17 +340,24 @@ function New1on1Support() {
     }
   }, [state.currentEmployee, state.selectedTheme]);
 
+  /**
+   * 質問候補のクリック:
+   * - 「その他（上記以外の質問はこちらへ）」の場合は空の質問でポップアップを開く
+   * - それ以外は質問をプレフィルしてポップアップを開く（編集可）
+   */
   const handleSuggestionClick = (question) => {
-    if (question === 'その他（自由に質問する）') {
-      setMessage("（部下への質問を自由に入力してください）");
-    } else {
-      setSelectedQuestion(question);
-      setIsReplyModalOpen(true);
-    }
+    const isOther = question?.startsWith('その他');
+    setSelectedQuestion(isOther ? '' : question || '');
+    setIsReplyModalOpen(true);
   };
 
+  /**
+   * ポップアップからの送信:
+   * - チャット履歴に「上司の質問」と「部下の返答」を追加
+   * - 返答はバックエンドへ postMessage(sender:'employee') を送信
+   */
   const handleSubmitReply = useCallback(async () => {
-    if (!employeeReply.trim() || !selectedQuestion || !state.currentConversationId) return;
+    if (!selectedQuestion.trim() || !employeeReply.trim() || !state.currentConversationId) return;
 
     setIsReplyModalOpen(false);
 
@@ -332,6 +379,11 @@ function New1on1Support() {
     }
   }, [employeeReply, selectedQuestion, state.currentConversationId]);
 
+  /**
+   * 自由入力欄からの送信:
+   * - IME確定中は Enter 送信しない
+   * - 送信後にポップアップで「部下の返答」を入力
+   */
   const handleSendFreeMessage = useCallback(async () => {
     if (!message.trim()) return;
     if (!state.currentConversationId) {
@@ -340,7 +392,7 @@ function New1on1Support() {
     }
     const textToSend = message;
     setMessage('');
-    dispatch({ type: 'ADD_MESSAGES_TO_HISTORY', payload: [{ sender: 'user', message: textToSend }] });
+    // ここでは即時送信せず、ポップアップで返答を入力 → 送信時にまとめて履歴へ追加
     setSelectedQuestion(textToSend);
     setIsReplyModalOpen(true);
   }, [message, state.currentConversationId]);
@@ -360,8 +412,9 @@ function New1on1Support() {
 
   const handleToggleSummary = () => { dispatch({ type: 'TOGGLE_SUMMARY_VISIBILITY' }); };
 
-  // ★★★ 修正点: チャット入力欄のキーボードイベント処理 ★★★
+  // 自由入力欄のキーボード処理（IME考慮）
   const handleFreeMessageKeyDown = (e) => {
+    if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendFreeMessage();
@@ -380,6 +433,7 @@ function New1on1Support() {
           onClose={() => setIsReplyModalOpen(false)}
           onSubmit={handleSubmitReply}
           question={selectedQuestion}
+          setQuestion={setSelectedQuestion}
           reply={employeeReply}
           setReply={setEmployeeReply}
         />
@@ -406,10 +460,25 @@ function New1on1Support() {
                   <div className={styles.summaryArea}>
                     {(state.currentSummary || state.currentNextActions) ? (
                       <>
-                        {state.currentSummary && (<> <h5 className={styles.summaryHeader}>会話の要約</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} /> </>)}
-                        {state.currentNextActions && (<> <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5> <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} /> </>)}
+                        {state.currentSummary && (
+                          <>
+                            <h5 className={styles.summaryHeader}>会話の要約</h5>
+                            <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} />
+                          </>
+                        )}
+                        {state.currentNextActions && (
+                          <>
+                            <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5>
+                            <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} />
+                          </>
+                        )}
+                        <p className={styles.summaryNote}>
+                          ・この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
+                        </p>
                       </>
-                    ) : (<p className={styles.noSummaryText}>まだ要約はありません。</p>)}
+                    ) : (
+                      <p className={styles.noSummaryText}>まだ要約はありません。</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -427,6 +496,8 @@ function New1on1Support() {
                             {q}
                           </button>
                         ))}
+                        {/* 「その他（上記以外の質問はこちらへ）」を常に用意してもよい場合は下行のコメント解除 */}
+                        {/* <button onClick={() => handleSuggestionClick('その他（上記以外の質問はこちらへ）')} className={styles.suggestionButton}>その他（上記以外の質問はこちらへ）</button> */}
                       </div>
                     )}
                   </div>
@@ -438,12 +509,11 @@ function New1on1Support() {
               </div>
               {state.appState === 'support_started' && (
                 <div className={styles.inputArea}>
-                  {/* ★★★ 修正点: inputをtextareaに変更し、キーイベントを追加 ★★★ */}
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleFreeMessageKeyDown}
-                    placeholder="部下への質問を自由に入力... (Shift+Enterで改行)"
+                    placeholder="部下への質問を自由に入力...（Shift+Enterで改行、Enterで送信／IME確定中は送信されない）"
                     className={styles.normalInput}
                     rows="1"
                   />
@@ -487,7 +557,20 @@ function New1on1Support() {
       {state.error && <p className={styles.error}>{state.error}</p>}
       <div className={styles.employeeSelectionContainer}>
         {state.isLoading && state.appState === 'employee_selection' && <p>読み込み中...</p>}
-        {state.appState === 'employee_selection' && (<div className={styles.employeeSelectionGroup}> {state.employees.map(emp => <button key={emp.id} onClick={() => handleEmployeeSelect(emp)} disabled={state.isLoading} className={styles.employeeOptionButton}>{emp.name}</button>)} </div>)}
+        {state.appState === 'employee_selection' && (
+          <div className={styles.employeeSelectionGroup}>
+            {state.employees.map(emp => (
+              <button
+                key={emp.id}
+                onClick={() => handleEmployeeSelect(emp)}
+                disabled={state.isLoading}
+                className={styles.employeeOptionButton}
+              >
+                {emp.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

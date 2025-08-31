@@ -172,12 +172,21 @@ function TranscriptViewer() {
 
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>要約</h3>
-                <div className={styles.contentBlock} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }} />
+                <div
+                    className={styles.contentBlock}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }}
+                />
             </div>
 
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>ネクストアクション</h3>
-                <div className={styles.contentBlock} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }} />
+                <div
+                    className={styles.contentBlock}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }}
+                />
+                <p className={styles.summaryNote}>
+                    ・要約の注意書き この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
+                </p>
             </div>
         </div>
     );

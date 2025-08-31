@@ -235,11 +235,16 @@
     display: flex;
     flex-direction: column;
     height: 60vh;
-    /* Fixed height for the tools area */
     min-height: 400px;
 }
 
 .tabContent {
     flex-grow: 1;
     overflow: hidden;
+}
+
+.summaryNote {
+    margin-top: var(--space-md);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
 }

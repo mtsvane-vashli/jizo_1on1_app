@@ -37,10 +37,9 @@ html.dark {
   display: flex;
   gap: 1.5rem;
   padding: 1.5rem;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 20px);
   background-color: var(--background-color);
   position: relative;
-  /* ★★★ テーマボタン配置のために追加 ★★★ */
 }
 
 .leftPanel,
@@ -52,7 +51,7 @@ html.dark {
 }
 
 .leftPanel {
-  flex: 3;
+  flex: 4;
 }
 
 .rightPanel {
@@ -126,7 +125,6 @@ html.dark .ai {
   background-color: #4a5568;
 }
 
-
 .user {
   background-color: #e3dffc;
   color: #3f327a;
@@ -150,7 +148,6 @@ html.dark .employee {
   background-color: #2c5c43;
   color: #c3e6cb;
 }
-
 
 .loading {
   font-style: italic;
@@ -231,7 +228,6 @@ html.dark .inputArea {
   border-color: var(--accent-color);
 }
 
-
 /* ==========================================================================
    Selection Lists & AI Suggestions
    ========================================================================== */
@@ -300,7 +296,6 @@ html.dark .inputArea {
   color: var(--primary-text-color);
 }
 
-
 /* ==========================================================================
    Reply Modal
    ========================================================================== */
@@ -325,7 +320,7 @@ html.dark .inputArea {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   width: 90%;
-  max-width: 550px;
+  max-width: 650px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -341,26 +336,40 @@ html.dark .inputArea {
   padding-bottom: 1rem;
 }
 
-.modalQuestionSection {
-  background-color: var(--background-color);
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
+.modalFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.modalQuestionLabel {
-  margin: 0 0 0.25rem 0;
-  font-size: 0.8rem;
+.modalLabel {
+  font-size: 0.9rem;
   color: var(--secondary-text-color);
   font-weight: bold;
-  text-transform: uppercase;
 }
 
-.modalQuestionText {
-  margin: 0;
-  font-size: 1rem;
+.modalInput {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--secondary-background-color);
   color: var(--primary-text-color);
-  line-height: 1.5;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modalInput::placeholder,
+.modalTextarea::placeholder {
+  color: var(--secondary-text-color);
+  opacity: 0.8;
+}
+
+.modalInput:focus,
+.modalTextarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.15);
 }
 
 .modalTextarea {
@@ -376,10 +385,10 @@ html.dark .inputArea {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.modalTextarea:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.15);
+.modalHint {
+  font-size: 0.8rem;
+  color: var(--secondary-text-color);
+  margin: 0.25rem 0 0;
 }
 
 .modalActions {
@@ -561,6 +570,13 @@ html.dark .modalButtonCancel:hover {
   padding-top: 1rem;
 }
 
+
+.summaryNote {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+}
+
 .employeeSelectionContainer {
   padding: 2rem;
   background: var(--secondary-background-color);
@@ -605,5 +621,4 @@ html.dark .modalButtonCancel:hover {
   bottom: 2rem;
   right: 2rem;
   z-index: 1001;
-  /* モーダルより手前に来るように調整 */
 }
