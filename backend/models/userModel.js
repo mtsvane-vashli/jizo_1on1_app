@@ -8,6 +8,11 @@ const findUserByUsername = async (username) => {
     return rows[0];
 };
 
+const findUserById = async (id) => {
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    return rows[0];
+};
+
 /**
  * 新しいユーザーを作成する (管理者が実行)
  * @param {object} newUser - { username, password (hashed) }
@@ -16,9 +21,9 @@ const findUserByUsername = async (username) => {
  */
 const createUser = async (newUser, adminUser) => {
     // ★ 管理者と同じ組織に、新しいユーザー(role='user')を作成する
-    const sql = 'INSERT INTO users (username, password, organization_id, role) VALUES ($1, $2, $3, $4) RETURNING id';
+    const sql = 'INSERT INTO users (username, password, organization_id, role, must_change_password) VALUES ($1, $2, $3, $4, $5) RETURNING id';
     try {
-        const { rows } = await pool.query(sql, [newUser.username, newUser.hashedPassword, adminUser.organizationId, 'user']);
+        const { rows } = await pool.query(sql, [newUser.username, newUser.hashedPassword, adminUser.organizationId, 'user', true]);
         return rows[0].id;
     } catch (err) {
         if (err.code === '23505') { // UNIQUE constraint violation
@@ -28,7 +33,23 @@ const createUser = async (newUser, adminUser) => {
     }
 };
 
+/**
+ * パスワードを更新し、強制変更フラグを解除
+ */
+const updatePassword = async ({ userId, orgId, hashedPassword }) => {
+    const sql = `
+        UPDATE users
+           SET password = $1,
+               must_change_password = FALSE,
+               password_changed_at = NOW()
+         WHERE id = $2 AND organization_id = $3
+    `;
+    await pool.query(sql, [hashedPassword, userId, orgId]);
+};
+
 module.exports = {
     findUserByUsername,
-    createUser
+    findUserById,
+    createUser,
+    updatePassword
 };

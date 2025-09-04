@@ -10,4 +10,7 @@ router.post('/login', authController.loginUser);
 // ★ /register から /users に変更し、管理者が実行するため認証をかける
 router.post('/users', authenticateToken, authController.createUserByAdmin); 
 
+// 自分のパスワードを変更（要認証）
+router.post('/change-password', authenticateToken, authController.changePassword);
+
 module.exports = router;

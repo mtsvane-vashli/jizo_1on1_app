@@ -62,6 +62,12 @@ export const AuthProvider = ({ children }) => {
         setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
     };
 
+    // 外部（例: パスワード変更後）から新しいトークンを適用
+    const applyNewToken = (newToken) => {
+        storeToken(newToken);
+        setToken(newToken);
+    };
+
     const value = {
         user,
         token,
@@ -69,6 +75,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!user,
         login,
         logout,
+        applyNewToken,
         // ★★★ コンテキストにテーマと切り替え関数を渡す ★★★
         theme,
         toggleTheme

@@ -26,7 +26,8 @@ const loginUser = async (req, res) => {
             id: user.id,
             username: user.username,
             organizationId: user.organization_id, // DBのカラム名は organization_id
-            role: user.role
+            role: user.role,
+            mustChangePassword: !!user.must_change_password
         };
         const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '8h' });
         
@@ -71,5 +72,45 @@ const createUserByAdmin = async (req, res) => {
 
 module.exports = {
     loginUser,
-    createUserByAdmin
+    createUserByAdmin,
+    changePassword: async (req, res) => {
+        try {
+            const { currentPassword, newPassword } = req.body;
+            if (!currentPassword || !newPassword) {
+                return res.status(400).json({ error: 'Current and new password are required.' });
+            }
+            if (newPassword.length < 8) {
+                return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+            }
+
+            const userId = req.user.id;
+            const orgId = req.user.organizationId;
+            // 現在のパスワードを検証
+            const dbUser = await userModel.findUserById(userId);
+            if (!dbUser || dbUser.organization_id !== orgId) {
+                return res.status(404).json({ error: 'User not found.' });
+            }
+            const ok = await bcrypt.compare(currentPassword, dbUser.password);
+            if (!ok) {
+                return res.status(401).json({ error: 'Current password is incorrect.' });
+            }
+            // パスワード更新
+            const hashed = await bcrypt.hash(newPassword, 10);
+            await userModel.updatePassword({ userId, orgId, hashedPassword: hashed });
+
+            // 新しいJWTを返す（mustChangePassword を false に更新）
+            const tokenPayload = {
+                id: dbUser.id,
+                username: dbUser.username,
+                organizationId: dbUser.organization_id,
+                role: dbUser.role,
+                mustChangePassword: false
+            };
+            const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '8h' });
+            return res.status(200).json({ message: 'Password updated successfully.', token, user: tokenPayload });
+        } catch (err) {
+            console.error('Error changing password:', err);
+            return res.status(500).json({ error: 'Internal server error.' });
+        }
+    }
 };

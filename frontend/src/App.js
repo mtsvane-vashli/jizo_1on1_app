@@ -15,6 +15,7 @@ import LearningResources from './views/LearningResources.js';
 import Settings from './views/Settings.js';
 import Login from './views/Login.js';
 import Register from './views/Register.js';
+import ChangePassword from './views/ChangePassword.js';
 
 import ProtectedRoute from './components/ProtectedRoute.js';
 import { useAuth } from './context/AuthContext.js';
@@ -147,6 +148,14 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePassword />
+            </ProtectedRoute>
+          }
+        />
 
         {/* サイドバー付きの保護されたルート */}
         <Route

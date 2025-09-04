@@ -12,3 +12,14 @@ export const createUser = (userData) => {
         body: JSON.stringify(userData),
     });
 };
+
+/**
+ * 自分のパスワードを変更する
+ * @param {{ currentPassword: string, newPassword: string }} payload
+ */
+export const changePassword = (payload) => {
+    return apiClient('/api/change-password', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+};
