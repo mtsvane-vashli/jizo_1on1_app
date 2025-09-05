@@ -5,6 +5,7 @@ import layoutStyles from '../App.module.css';
 import styles from './TranscriptDetailView.module.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { FiAlertTriangle } from 'react-icons/fi';
 
 function TranscriptDetailView() {
     const { id } = useParams();
@@ -106,6 +107,18 @@ function TranscriptDetailView() {
                 {(conversation.summary || conversation.next_actions) && (
                     <div className={styles.summaryArea}>
                         <h3>要約とネクストアクション</h3>
+
+                        {/* ★ 注意書きを上（目立つ帯）に移動 */}
+                        <div className={styles.summaryAlert} role="note" aria-live="polite">
+                            <FiAlertTriangle className={styles.summaryAlertIcon} />
+                            <div>
+                                <strong>AI生成に関する注意</strong>
+                                <div className={styles.summaryAlertBody}>
+                                    この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
+                                </div>
+                            </div>
+                        </div>
+
                         {conversation.summary && (
                             <>
                                 <h4>要約:</h4>
@@ -118,9 +131,6 @@ function TranscriptDetailView() {
                                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions)) }}></div>
                             </>
                         )}
-                        <p className={styles.summaryNote}>
-                            ・要約の注意書き この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
-                        </p>
                     </div>
                 )}
             </div>

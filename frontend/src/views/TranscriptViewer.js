@@ -8,6 +8,7 @@ import DOMPurify from 'dompurify';
 import Memo from '../components/Memo';
 import MindMap from '../components/MindMap';
 import Tabs from '../components/Tabs';
+import { FiAlertTriangle } from 'react-icons/fi';
 
 function TranscriptViewer() {
     const { id } = useParams();
@@ -17,7 +18,6 @@ function TranscriptViewer() {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('memo');
 
-    // States for editable fields
     const [memo, setMemo] = useState('');
     const [mindMapData, setMindMapData] = useState({ nodes: [], edges: [] });
     const [editingId, setEditingId] = useState(null);
@@ -170,23 +170,34 @@ function TranscriptViewer() {
                 )}
             </div>
 
+            {/* 要約 */}
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>要約</h3>
+
+                {/* ★ 注意書きを上（目立つ帯）に移動 */}
+                <div className={styles.summaryAlert} role="note" aria-live="polite">
+                    <FiAlertTriangle className={styles.summaryAlertIcon} />
+                    <div>
+                        <strong>AI生成に関する注意</strong>
+                        <div className={styles.summaryAlertBody}>
+                            この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
+                        </div>
+                    </div>
+                </div>
+
                 <div
                     className={styles.contentBlock}
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }}
                 />
             </div>
 
+            {/* ネクストアクション */}
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>ネクストアクション</h3>
                 <div
                     className={styles.contentBlock}
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }}
                 />
-                <p className={styles.summaryNote}>
-                    ・要約の注意書き この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
-                </p>
             </div>
         </div>
     );

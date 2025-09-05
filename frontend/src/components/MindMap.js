@@ -1,3 +1,4 @@
+// frontend/src/views/MindMap.js
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import ReactFlow, {
     ReactFlowProvider,
@@ -10,12 +11,12 @@ import ReactFlow, {
     MarkerType,
     Position,
     Handle,
-    useStoreApi,           // 内部ストアは購読しない
+    useStoreApi,
+    useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import styles from './MindMap.module.css';
 import {
-    FiPlus,
     FiRotateCcw,
     FiRotateCw,
     FiMaximize,
@@ -24,6 +25,7 @@ import {
     FiCornerDownRight,
     FiTrash2,
     FiRefreshCw,
+    FiCrosshair, // ← 新規：選択ノードへ移動（照準）
 } from 'react-icons/fi';
 
 /** ====================== 配置・間隔 定数 ====================== */
@@ -151,34 +153,94 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
     const isInitialized = useRef(false);
     const [selectedNodeId, setSelectedNodeId] = useState(null);
 
-    // ReactFlow の store を購読せず、必要時のみ読む
     const storeApi = useStoreApi();
+    const rf = useReactFlow();
 
-    /** ---------- 初期化 ---------- */
+    /** ---------- 初期化（強化版） ---------- */
     useEffect(() => {
         if (mindMapData && !isInitialized.current) {
-            const initialNodes = (mindMapData.nodes || []).map((n) => ({
+            // 元データを反映
+            let initialNodes = (mindMapData.nodes || []).map((n) => ({
                 ...n,
                 type: 'editable',
                 parentId: typeof n.parentId === 'undefined' ? null : n.parentId,
                 collapsed: !!n.collapsed,
             }));
-            if (initialNodes.length === 0) {
-                initialNodes.push({
-                    id: 'node_1',
-                    type: 'editable',
-                    position: { x: ROOT_X, y: ROOT_START_Y },
-                    data: { label: '中心トピック' },
-                    parentId: null,
-                    collapsed: false,
-                });
-            }
-            const initialEdges = (mindMapData.edges || []).map((e) => ({
+            let initialEdges = (mindMapData.edges || []).map((e) => ({
                 ...e,
                 id: e.id || `e_${e.source}_${e.target}`,
                 type: undefined,
                 markerEnd: { type: MarkerType.ArrowClosed },
             }));
+
+            // ★ 必ず「親＋子＋エッジ」を保証する
+            const ensureSeed = () => {
+                if (initialNodes.length === 0) {
+                    // まっさら → 親子を生成
+                    const rootId = 'node_1';
+                    const childId = 'node_2';
+                    initialNodes.push(
+                        {
+                            id: rootId,
+                            type: 'editable',
+                            position: { x: ROOT_X, y: ROOT_START_Y },
+                            data: { label: '中心トピック' },
+                            parentId: null,
+                            collapsed: false,
+                        },
+                        {
+                            id: childId,
+                            type: 'editable',
+                            position: { x: ROOT_X + NODE_WIDTH_FALLBACK + H_GAP_PARENT_CHILD, y: ROOT_START_Y },
+                            data: { label: '子トピック' },
+                            parentId: rootId,
+                            collapsed: false,
+                            selected: true,
+                        }
+                    );
+                    initialEdges.push({
+                        id: `e_${rootId}_${childId}`,
+                        source: rootId,
+                        target: childId,
+                        type: undefined,
+                        markerEnd: { type: MarkerType.ArrowClosed },
+                    });
+                    return;
+                }
+
+                // ノードはあるが、親子関係がない/エッジが無い → 最初のルートに子を付ける
+                const hasAnyEdge = initialEdges.length > 0;
+                const hasAnyParentChild = initialNodes.some((n) => n.parentId !== null);
+                if (!hasAnyEdge || !hasAnyParentChild) {
+                    // 既存のルート（parentId=null）があればそこへ、なければ最初のノードをルート扱い
+                    const root = initialNodes.find((n) => n.parentId === null) || initialNodes[0];
+                    const usedIds = new Set(initialNodes.map((n) => n.id));
+                    let i = 1;
+                    let childId;
+                    do { childId = `node_${i++}`; } while (usedIds.has(childId));
+
+                    const child = {
+                        id: childId,
+                        type: 'editable',
+                        position: { x: (root.position?.x || ROOT_X) + NODE_WIDTH_FALLBACK + H_GAP_PARENT_CHILD, y: root.position?.y || ROOT_START_Y },
+                        data: { label: '子トピック' },
+                        parentId: root.id,
+                        collapsed: false,
+                        selected: true,
+                    };
+                    initialNodes.push(child);
+                    initialEdges.push({
+                        id: `e_${root.id}_${child.id}`,
+                        source: root.id,
+                        target: child.id,
+                        type: undefined,
+                        markerEnd: { type: MarkerType.ArrowClosed },
+                    });
+                }
+            };
+
+            ensureSeed();
+
             const laid = reflowRoots(initialNodes);
             setState({ nodes: laid, edges: initialEdges }, true);
             isInitialized.current = true;
@@ -190,7 +252,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         if (isInitialized.current) setMindMapData(state);
     }, [state, setMindMapData]);
 
-    /** ---------- 変更ハンドラ（空配列なら何もしない） ---------- */
+    /** ---------- 変更ハンドラ ---------- */
     const onNodesChange = useCallback(
         (changes) => {
             if (!changes || changes.length === 0) return;
@@ -206,7 +268,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         [setState]
     );
 
-    /** ---------- 接続（ドラッグ）→ 階層にも反映（レベルごと再パック） ---------- */
+    /** ---------- 接続（ドラッグ）→ 階層にも反映 ---------- */
     const onConnect = useCallback((connection) => {
         const { source, target } = connection;
         if (!source || !target) return;
@@ -239,7 +301,6 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
 
             if (allowParentSet) {
                 const internals = storeApi.getState().nodeInternals;
-                // 新しい親のレベル、古い親のレベルの両方を再パック
                 nodes = reflowLevelForParent(nodes, source, internals);
                 if (oldParent) nodes = reflowLevelForParent(nodes, oldParent, internals);
             }
@@ -247,7 +308,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         });
     }, [setState, storeApi]);
 
-    /** ---------- ラベル編集（子群は変化しないが、念のため親/自分配下を整える） ---------- */
+    /** ---------- ラベル編集 ---------- */
     const updateNodeLabel = useCallback((nodeId, newLabel) => {
         setState((cur) => {
             let nodes = cur.nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n));
@@ -255,11 +316,9 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
             if (!me) return { ...cur, nodes };
 
             const internals = storeApi.getState().nodeInternals;
-            // 自分が親なら配下、さらに同レベル全体を再パック
             if (nodes.some((n) => n.parentId === nodeId)) {
                 nodes = reflowLevelForParent(nodes, nodeId, internals);
             }
-            // 自分に親がいればそのレベルも再パック
             if (me.parentId) nodes = reflowLevelForParent(nodes, me.parentId, internals);
             else nodes = reflowRoots(nodes);
 
@@ -271,7 +330,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         setSelectedNodeId(sel && sel.length ? sel[0].id : null);
     }, []);
 
-    /** ---------- 手動 全体整列（各レベルを順にパック） ---------- */
+    /** ---------- 手動 全体整列 ---------- */
     const reflowAll = useCallback(() => {
         setState((cur) => {
             let nArr = reflowRoots(cur.nodes);
@@ -285,7 +344,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         }, true);
     }, [setState, storeApi]);
 
-    /** ---------- 生成/削除（レベルごと再パック） ---------- */
+    /** ---------- 生成/削除 ---------- */
     const createChild = useCallback((parentId) => {
         setState((cur) => {
             const parent = cur.nodes.find((n) => n.id === parentId);
@@ -375,7 +434,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         return out;
     }
 
-    /** ---------- 折りたたみ/展開（レベルごと再パック） ---------- */
+    /** ---------- 折りたたみ/展開 ---------- */
     const onToggleCollapse = useCallback((nodeId) => {
         setState((cur) => {
             const node = cur.nodes.find((n) => n.id === nodeId);
@@ -393,7 +452,6 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
             );
 
             const internals = storeApi.getState().nodeInternals;
-            // 自分のレベル（=自分が親のレベル）を再パック
             nodes = reflowLevelForParent(nodes, nodeId, internals);
 
             return { ...cur, nodes, edges };
@@ -412,7 +470,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         return () => document.removeEventListener('fullscreenchange', onFsChange);
     }, [setIsFullscreen]);
 
-    /** ---------- キー操作（MacのTab問題を回避） ---------- */
+    /** ---------- キー操作 ---------- */
     useEffect(() => {
         const handler = (e) => {
             if (isEditingElement()) return;
@@ -461,6 +519,23 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
         }));
     }, [nodes, updateNodeLabel, onToggleCollapse, createChild, createSibling, deleteSubtree]);
 
+    /** ---------- ビュー操作：選択ノードへ移動 ---------- */
+    const centerToSelected = useCallback(() => {
+        const id = selectedNodeId || nodes[0]?.id;
+        if (!id) return;
+
+        const internals = storeApi.getState().nodeInternals;
+        const ni = internals?.get?.(id);
+        const fallback = nodes.find((n) => n.id === id);
+
+        const x = (ni?.positionAbsolute?.x ?? fallback?.position?.x ?? 0);
+        const y = (ni?.positionAbsolute?.y ?? fallback?.position?.y ?? 0);
+        const { w, h } = getRectFromInternal(ni);
+
+        // 中心に寄せる（少し拡大）
+        rf.setCenter(x + w / 2, y + h / 2, { zoom: 1.2, duration: 400 });
+    }, [selectedNodeId, nodes, rf, storeApi]);
+
     return (
         <>
             <div className={styles.keyCapture} tabIndex={0} onKeyDown={() => { }}>
@@ -478,13 +553,15 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
                     edgesUpdatable={false}
                     elevateEdgesOnSelect
                 >
-                    <Controls showInteractive={false} />
+                    {/* FitView のデフォルトアイコンは非表示にする（全画面と紛らわしいため） */}
+                    <Controls showInteractive={false} showFitView={false} />
                     <MiniMap />
                     <Background variant="dots" gap={12} size={1} />
                 </ReactFlow>
             </div>
 
             <div className={styles.controls}>
+                {/* 兄弟 or ルート追加：アイコンを ⊕ に変更 */}
                 <button
                     onClick={() =>
                         selectedNodeId
@@ -493,7 +570,7 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
                                 const newRootId = nextNodeId(nodes);
                                 setState((cur) => {
                                     const deselected = cur.nodes.map((n) => ({ ...n, selected: false }));
-                                    const nodes = [...deselected, {
+                                    const nodesNext = [...deselected, {
                                         id: newRootId,
                                         type: 'editable',
                                         position: { x: ROOT_X, y: ROOT_START_Y },
@@ -502,39 +579,35 @@ const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, s
                                         collapsed: false,
                                         selected: true,
                                     }];
-                                    return { ...cur, nodes: reflowRoots(nodes) };
+                                    return { ...cur, nodes: reflowRoots(nodesNext) };
                                 });
                             })()
                     }
                     title={selectedNodeId ? '兄弟ノードを追加（Enter）' : 'ルートを追加'}
                 >
-                    <FiPlus /><span style={{ fontSize: 12 }}>兄弟/ルート</span>
+                    {/* ここを ⊕ に */}
+                    <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⊕</span>
                 </button>
 
                 <button onClick={() => selectedNodeId && createChild(selectedNodeId)} disabled={!selectedNodeId} title="子ノードを追加（Tab）">
-                    <FiCornerRightDown /><span style={{ fontSize: 12 }}>子</span>
+                    <FiCornerRightDown />
                 </button>
 
                 <button onClick={() => selectedNodeId && deleteSubtree(selectedNodeId)} disabled={!selectedNodeId} title="このノード以下を削除（Delete/Backspace）">
-                    <FiTrash2 /><span style={{ fontSize: 12 }}>削除</span>
+                    <FiTrash2 />
                 </button>
 
-                <button onClick={reflowAll} title="全体を整列">
-                    <FiRefreshCw /><span style={{ fontSize: 12 }}>整列</span>
-                </button>
-
+                <button onClick={reflowAll} title="全体を整列"><FiRefreshCw /></button>
                 <button onClick={undo} disabled={!canUndo} title="元に戻す"><FiRotateCcw /></button>
                 <button onClick={redo} disabled={!canRedo} title="やり直す"><FiRotateCw /></button>
+
+                {/* ← 新規：選択ノードへ移動（デフォルトのFit Viewは非表示にしてこちらを使う） */}
+                <button onClick={centerToSelected} title="選択ノードへ移動（照準）"><FiCrosshair /></button>
+
                 <button onClick={handleFullscreen} title="フルスクリーン">{isFullscreen ? <FiMinimize /> : <FiMaximize />}</button>
             </div>
 
-            <div className={styles.hint}>
-                <div>Enter：同階層（兄弟）追加 / Tab：子ノード追加</div>
-                <div>Delete/Backspace：選択ノード以下を削除</div>
-                <div>ノード右上「±」：折りたたみ/展開</div>
-                <div>ノード内のボタンでも「子/兄弟/削除」を操作可</div>
-                <div>左右の●ドラッグで任意ノードに接続（階層も更新）</div>
-            </div>
+            {/* 左下ヒントは削除済み */}
         </>
     );
 };
@@ -568,7 +641,7 @@ export default MindMap;
 
 /** ====================== レイアウト純関数群 ====================== */
 
-// ルート整列（従来どおり固定）
+// ルート整列（縦に等間隔）
 function reflowRoots(nodesArr) {
     const arr = [...nodesArr];
     const roots = arr.filter((n) => n.parentId === null).sort((a, b) => extractNum(a.id) - extractNum(b.id));
@@ -601,7 +674,6 @@ function computeLevels(nodesArr) {
         }
     }
 
-    // 孤立ノード（親が見つからない）の救済
     for (const n of arr) if (!depthMap.has(n.id)) depthMap.set(n.id, 0);
 
     const order = Array.from(parentsByDepth.keys()).sort((a, b) => a - b);
@@ -620,7 +692,6 @@ function reflowLevelForParent(nodesArr, parentId, internals) {
 function reflowLevelForParentList(nodesArr, parentIds, internals) {
     const arr = [...nodesArr];
 
-    // レベル内のすべての子ノードの高さから、統一スロット高を決める
     let maxChildH = 0;
     for (const pid of parentIds) {
         const kids = arr.filter((n) => n.parentId === pid && !n.hidden);
@@ -631,9 +702,8 @@ function reflowLevelForParentList(nodesArr, parentIds, internals) {
         }
     }
     const SLOT = Math.max(MIN_SIBLING_V_GAP, maxChildH + SIBLING_EXTRA_PADDING);
-    const REF_H = maxChildH || NODE_HEIGHT_FALLBACK; // 子が一つでもいれば maxChildH、いなければ使われない
+    const REF_H = maxChildH || NODE_HEIGHT_FALLBACK;
 
-    // 親を画面上の位置（y座標）で昇順に並べ、上から順に詰めていく
     const sortedParents = parentIds
         .map((pid) => arr.find((n) => n.id === pid))
         .filter(Boolean)
@@ -649,7 +719,6 @@ function reflowLevelForParentList(nodesArr, parentIds, internals) {
 
         if (kids.length === 0) continue;
 
-        // 親の実測
         const pI = internals?.get?.(pid);
         const { w: pW, h: pH } = getRectFromInternal(pI);
         const pTop = parent.position?.y || 0;
@@ -657,16 +726,12 @@ function reflowLevelForParentList(nodesArr, parentIds, internals) {
         const pCenterY = pTop + pH / 2;
         const pRightX = pLeft + pW;
 
-        // 子群の高さ（REF_H を基準に算出）
         const groupH = (kids.length - 1) * SLOT + REF_H;
 
-        // 親中心に置きたい top 候補
         const desiredTop = pCenterY - groupH / 2;
 
-        // 直前の群の bottom から最小間隔を空けるように押し下げる
         const top = Math.max(desiredTop, prevBottom + GROUP_GAP_BETWEEN_BLOCKS);
 
-        // 配置：各スロット中心は top + i*SLOT + REF_H/2
         for (let i = 0; i < kids.length; i++) {
             const ki = internals?.get?.(kids[i].id);
             const ch = ki?.measured?.height ?? ki?.height ?? NODE_HEIGHT_FALLBACK;

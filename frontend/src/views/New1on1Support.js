@@ -12,7 +12,7 @@ import MindMap from '../components/MindMap';
 import TranscriptPopup from '../components/TranscriptPopup';
 import ThemeToggleButton from '../components/ThemeToggleButton';
 import { io } from 'socket.io-client';
-import { FiMic, FiMicOff, FiRefreshCw } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
 
 /**
  * ReplyModal
@@ -36,13 +36,8 @@ const ReplyModal = ({
   };
 
   const handleKeyDown = (e) => {
-    // 日本語入力（IME）確定中は Enter を無視
     if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return;
-
-    // Shift+Enter は改行
     if (e.key === 'Enter' && e.shiftKey) return;
-
-    // Enter 単体で送信
     if (e.key === 'Enter') {
       e.preventDefault();
       trySubmit();
@@ -62,7 +57,7 @@ const ReplyModal = ({
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="例）今週の進捗で詰まっている点は？（Shift+Enterで改行、Enterで送信）"
+            placeholder="例）日常生活で何か困っていることはありますか？"
             autoFocus={!question}
           />
         </div>
@@ -74,12 +69,12 @@ const ReplyModal = ({
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="例）APIの応答遅延によりテストが進んでいません。暫定でモック化を検討しています。"
+            placeholder="例）睡眠が不規則で朝のパフォーマンスが落ちています。"
             rows={6}
             autoFocus={!!question}
           />
           <p className={styles.modalHint}>
-            Enterで送信、Shift+Enterで改行。日本語入力中のEnterは送信されない。
+            Enterで送信、Shift+Enterで改行。
           </p>
         </div>
 
@@ -91,6 +86,75 @@ const ReplyModal = ({
             className={styles.modalButtonSubmit}
           >
             送信
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * SafetyChecklistModal
+ * - 新規セッション開始時に表示される「安全宣言チェック」ポップアップ
+ * - 4項目すべてにチェック → 右下のボタンが有効化
+ * - チェック操作にアニメーション
+ */
+const SafetyChecklistModal = ({ open, onConfirm }) => {
+  const [checks, setChecks] = useState([false, false, false, false]);
+  const allChecked = checks.every(Boolean);
+
+  const toggle = (idx) => {
+    setChecks((prev) => prev.map((v, i) => (i === idx ? !v : v)));
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className={styles.checklistOverlay}>
+      <div className={styles.checklistModal} role="dialog" aria-modal="true" aria-labelledby="safetyChecklistTitle">
+        <h3 id="safetyChecklistTitle" className={styles.checklistTitle}>1on1 セッション前の安全宣言</h3>
+        <p className={styles.checklistLead}>
+          次の宣言に同意し、チェックを入れてから会話を始める。
+        </p>
+
+        <ul className={styles.checklistItems}>
+          {[
+            'これは評価の場ではない（安心して話せる環境を作る）',
+            '上司は否定しない（ネガティブな意見も受け止める）',
+            '上司は傾聴を大事にする（真剣に耳を傾ける）',
+            '難しく考えすぎないこと（聴くことに集中する、必要なのは愛）',
+          ].map((text, i) => (
+            <li key={i} className={styles.checkItem}>
+              <label className={styles.checkboxWrap}>
+                <input
+                  type="checkbox"
+                  checked={checks[i]}
+                  onChange={() => toggle(i)}
+                />
+                <span className={styles.fancyCheckbox}>
+                  <svg viewBox="0 0 24 24" className={styles.checkIcon} aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span className={styles.checkText}>{text}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+
+        <div className={styles.checklistNote}>
+          上司側は、部下が話をしても良いんだという環境づくりを徹底して守ります。
+        </div>
+
+        <div className={styles.checklistActions}>
+          <button
+            className={styles.startButton}
+            disabled={!allChecked}
+            onClick={onConfirm}
+            aria-disabled={!allChecked}
+            title={allChecked ? '会話を始める' : 'すべてにチェックを入れてください'}
+          >
+            会話を始める
           </button>
         </div>
       </div>
@@ -192,6 +256,8 @@ function New1on1Support() {
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState('');
   const [employeeReply, setEmployeeReply] = useState('');
+
+  const [showChecklist, setShowChecklist] = useState(false); // ★ 追加: 安全宣言ポップアップ
 
   const isSessionView = location.pathname === '/session';
 
@@ -301,6 +367,7 @@ function New1on1Support() {
       const employeeName = searchParams.get('employeeName');
       if (employeeId && employeeName) {
         dispatch({ type: 'SESSION_INIT_SUCCESS', payload: { employee: { id: employeeId, name: employeeName } } });
+        setShowChecklist(true); // ★ セッション初期化時に安全宣言ポップアップ表示
       } else {
         dispatch({ type: 'SET_ERROR', payload: 'セッション情報が不正です。' });
       }
@@ -322,10 +389,12 @@ function New1on1Support() {
   }, []);
 
   const handleThemeSelect = useCallback((theme) => {
+    if (showChecklist) return; // ★ チェックリスト完了前は選択不可
     dispatch({ type: 'SELECT_THEME', payload: theme });
-  }, []);
+  }, [showChecklist]);
 
   const handleInteractionSelect = useCallback(async (interaction) => {
+    if (showChecklist) return; // ★ チェックリスト完了前は選択不可
     dispatch({ type: 'SELECT_INTERACTION', payload: interaction });
     try {
       const response = await startConversation({
@@ -338,24 +407,14 @@ function New1on1Support() {
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: err.message });
     }
-  }, [state.currentEmployee, state.selectedTheme]);
+  }, [state.currentEmployee, state.selectedTheme, showChecklist]);
 
-  /**
-   * 質問候補のクリック:
-   * - 「その他（上記以外の質問はこちらへ）」の場合は空の質問でポップアップを開く
-   * - それ以外は質問をプレフィルしてポップアップを開く（編集可）
-   */
   const handleSuggestionClick = (question) => {
     const isOther = question?.startsWith('その他');
     setSelectedQuestion(isOther ? '' : question || '');
     setIsReplyModalOpen(true);
   };
 
-  /**
-   * ポップアップからの送信:
-   * - チャット履歴に「上司の質問」と「部下の返答」を追加
-   * - 返答はバックエンドへ postMessage(sender:'employee') を送信
-   */
   const handleSubmitReply = useCallback(async () => {
     if (!selectedQuestion.trim() || !employeeReply.trim() || !state.currentConversationId) return;
 
@@ -379,11 +438,6 @@ function New1on1Support() {
     }
   }, [employeeReply, selectedQuestion, state.currentConversationId]);
 
-  /**
-   * 自由入力欄からの送信:
-   * - IME確定中は Enter 送信しない
-   * - 送信後にポップアップで「部下の返答」を入力
-   */
   const handleSendFreeMessage = useCallback(async () => {
     if (!message.trim()) return;
     if (!state.currentConversationId) {
@@ -392,7 +446,6 @@ function New1on1Support() {
     }
     const textToSend = message;
     setMessage('');
-    // ここでは即時送信せず、ポップアップで返答を入力 → 送信時にまとめて履歴へ追加
     setSelectedQuestion(textToSend);
     setIsReplyModalOpen(true);
   }, [message, state.currentConversationId]);
@@ -412,7 +465,6 @@ function New1on1Support() {
 
   const handleToggleSummary = () => { dispatch({ type: 'TOGGLE_SUMMARY_VISIBILITY' }); };
 
-  // 自由入力欄のキーボード処理（IME考慮）
   const handleFreeMessageKeyDown = (e) => {
     if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -428,6 +480,11 @@ function New1on1Support() {
   if (isSessionView) {
     return (
       <>
+        <SafetyChecklistModal
+          open={showChecklist}
+          onConfirm={() => setShowChecklist(false)}
+        />
+
         <ReplyModal
           isOpen={isReplyModalOpen}
           onClose={() => setIsReplyModalOpen(false)}
@@ -437,19 +494,20 @@ function New1on1Support() {
           reply={employeeReply}
           setReply={setEmployeeReply}
         />
-        <div className={styles.sessionViewContainer}>
+        <div className={styles.sessionViewContainer} aria-hidden={showChecklist}>
           <div className={styles.leftPanel}>
             <div className={styles.sessionHeader}>
               <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId} className={styles.summaryButton}>
                 {state.isGeneratingSummary ? '要約を生成中...' : '会話を終了して要約'}
               </button>
               {state.appState === 'support_started' && (
-                <button onClick={() => dispatch({ type: 'RESET_TO_THEME_SELECTION' })} className={styles.changeThemeButton}>
+                <button onClick={() => dispatch({ type: 'RESET_TO_THEME_SELECTION' })} className={styles.changeThemeButton} disabled={showChecklist}>
                   <FiRefreshCw />
                   <span>テーマを変更</span>
                 </button>
               )}
             </div>
+
             <div className={styles.summaryContainer}>
               <div className={styles.summaryToggleHeader} onClick={handleToggleSummary}>
                 <h4 className={styles.summaryTitle}>要約とネクストアクション</h4>
@@ -460,6 +518,17 @@ function New1on1Support() {
                   <div className={styles.summaryArea}>
                     {(state.currentSummary || state.currentNextActions) ? (
                       <>
+                        {/* ★ 注意書きを上（目立つ帯）に移動 */}
+                        <div className={styles.summaryAlert} role="note" aria-live="polite">
+                          <FiAlertTriangle className={styles.summaryAlertIcon} />
+                          <div>
+                            <strong>AI生成に関する注意</strong>
+                            <div className={styles.summaryAlertBody}>
+                              この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
+                            </div>
+                          </div>
+                        </div>
+
                         {state.currentSummary && (
                           <>
                             <h5 className={styles.summaryHeader}>会話の要約</h5>
@@ -472,9 +541,6 @@ function New1on1Support() {
                             <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} />
                           </>
                         )}
-                        <p className={styles.summaryNote}>
-                          ・この要約はチャットの内容と録音の文字起こしを元に生成しております。文字起こしが不正確な場合があるため、内容に違いが生じることがあります。
-                        </p>
                       </>
                     ) : (
                       <p className={styles.noSummaryText}>まだ要約はありません。</p>
@@ -483,6 +549,7 @@ function New1on1Support() {
                 </div>
               )}
             </div>
+
             <div className={styles.chatContainer}>
               <div className={styles.chatWindow}>
                 {state.chatHistory.map((chat, index) => (
@@ -492,18 +559,20 @@ function New1on1Support() {
                     {chat.sender === 'ai' && chat.suggested_questions && (
                       <div className={styles.suggestions}>
                         {chat.suggested_questions.map((q, i) => (
-                          <button key={i} onClick={() => handleSuggestionClick(q)} className={styles.suggestionButton}>
+                          <button key={i} onClick={() => handleSuggestionClick(q)} className={styles.suggestionButton} disabled={showChecklist}>
                             {q}
                           </button>
                         ))}
-                        {/* 「その他（上記以外の質問はこちらへ）」を常に用意してもよい場合は下行のコメント解除 */}
-                        {/* <button onClick={() => handleSuggestionClick('その他（上記以外の質問はこちらへ）')} className={styles.suggestionButton}>その他（上記以外の質問はこちらへ）</button> */}
                       </div>
                     )}
                   </div>
                 ))}
-                {state.appState === 'theme_selection' && !state.isLoading && (<SelectionList title="本日の1on1のテーマをお聞かせください" items={THEMES} onSelect={handleThemeSelect} disabled={state.isLoading} />)}
-                {state.appState === 'interaction_selection' && !state.isLoading && (<SelectionList title="どのような関わり方を期待しますか？" items={INTERACTIONS} onSelect={handleInteractionSelect} disabled={state.isLoading} />)}
+                {state.appState === 'theme_selection' && !state.isLoading && (
+                  <SelectionList title="本日の1on1のテーマをお聞かせください" items={THEMES} onSelect={handleThemeSelect} disabled={state.isLoading || showChecklist} />
+                )}
+                {state.appState === 'interaction_selection' && !state.isLoading && (
+                  <SelectionList title="どのような関わり方を期待しますか？" items={INTERACTIONS} onSelect={handleInteractionSelect} disabled={state.isLoading || showChecklist} />
+                )}
                 {state.isLoading && <div className={`${styles.message} ${styles.ai} ${styles.loading}`}><p className={styles.text}>AIが応答を生成中...</p></div>}
                 <div ref={messagesEndRef} />
               </div>
@@ -513,18 +582,20 @@ function New1on1Support() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleFreeMessageKeyDown}
-                    placeholder="部下への質問を自由に入力...（Shift+Enterで改行、Enterで送信／IME確定中は送信されない）"
+                    placeholder="部下への質問を自由に入力...（Shift+Enterで改行、Enterで送信）"
                     className={styles.normalInput}
                     rows="1"
+                    disabled={showChecklist}
                   />
-                  <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim()} className={styles.sendButton}>質問する</button>
+                  <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim() || showChecklist} className={styles.sendButton}>質問する</button>
                 </div>
               )}
             </div>
           </div>
+
           <div className={styles.rightPanel}>
             <div className={styles.sessionControls}>
-              <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`}>
+              <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`} disabled={showChecklist}>
                 {isRecording ? <FiMicOff className={styles.micIcon} /> : <FiMic className={styles.micIcon} />}
                 <span>{isRecording ? (isTranscriptPopupMinimized ? '録音中 (表示)' : '録音停止') : '録音開始'}</span>
               </button>
@@ -537,6 +608,7 @@ function New1on1Support() {
               </div>
             </div>
           </div>
+
           <TranscriptPopup
             isVisible={isTranscriptPopupVisible}
             onClose={handleClosePopup}

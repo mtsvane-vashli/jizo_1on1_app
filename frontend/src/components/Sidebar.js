@@ -68,7 +68,7 @@ function Sidebar({
               className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}
             >
               <FiMessageSquare />
-              <span className={styles.navText}>新規1on1支援</span>
+              <span className={styles.navText}>部下との1on1を始める</span>
             </NavLink>
 
             <NavLink
@@ -95,7 +95,7 @@ function Sidebar({
               className={({ isActive }) => isActive ? `${styles.navLink} ${styles.active}` : styles.navLink}
             >
               <FiBook />
-              <span className={styles.navText}>学習リソース</span>
+              <span className={styles.navText}>学習ガイドライン</span>
             </NavLink>
           </nav>
         </div>

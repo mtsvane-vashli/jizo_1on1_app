@@ -622,3 +622,193 @@ html.dark .modalButtonCancel:hover {
   right: 2rem;
   z-index: 1001;
 }
+
+/* ====== Checklist Modal ====== */
+.checklistOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.checklistModal {
+  background: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  width: min(760px, 92vw);
+  border-radius: 14px;
+  padding: 1.5rem 1.25rem 1rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .25);
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.checklistTitle {
+  margin: 0 0 .5rem 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.checklistLead {
+  margin: 0 0 1rem 0;
+  color: var(--secondary-text-color);
+}
+
+.checklistItems {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 .75rem 0;
+  display: grid;
+  gap: .6rem;
+}
+
+.checkboxWrap {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: start;
+  gap: .75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkboxWrap input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fancyCheckbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.checkIcon {
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transform: scale(.5);
+  transition: transform .2s ease, opacity .2s ease;
+}
+
+.checkboxWrap input:checked+.fancyCheckbox {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  transform: scale(1.06);
+}
+
+.checkboxWrap input:checked+.fancyCheckbox .checkIcon {
+  opacity: 1;
+  transform: scale(1);
+  color: #fff;
+}
+
+/* Ripple */
+.fancyCheckbox::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  transform: scale(0);
+  background: rgba(255, 255, 255, .35);
+  opacity: 0;
+}
+
+.checkboxWrap input:checked+.fancyCheckbox::after {
+  animation: ripple .45s ease;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: .5;
+  }
+
+  60% {
+    transform: scale(1.6);
+    opacity: .15;
+  }
+
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.checkText {
+  line-height: 1.6;
+}
+
+.checklistNote {
+  margin: .4rem 0 0;
+  font-size: .95rem;
+  color: var(--secondary-text-color);
+  padding-left: 2.4rem;
+}
+
+.checklistActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: .75rem;
+}
+
+.startButton {
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  padding: .8rem 1.3rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .05s ease, background-color .2s ease, box-shadow .2s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .15);
+}
+
+.startButton:hover {
+  background: var(--accent-color-hover);
+}
+
+.startButton:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ====== Summary Alert (top notice) ====== */
+.summaryAlert {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: start;
+  gap: .75rem;
+  padding: .8rem 1rem;
+  border-left: 4px solid var(--accent-color);
+  background: color-mix(in oklab, var(--accent-color) 16%, transparent);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+html.dark .summaryAlert {
+  background: color-mix(in oklab, var(--accent-color) 24%, transparent);
+}
+
+.summaryAlertIcon {
+  font-size: 1.25rem;
+  margin-top: .15rem;
+}
+
+.summaryAlertBody {
+  color: var(--secondary-text-color);
+}
+
+/* 既存の .summaryNote は今後未使用（互換のため残す） */

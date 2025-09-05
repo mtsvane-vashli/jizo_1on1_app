@@ -98,3 +98,24 @@
 .backButton:hover {
     background-color: var(--color-primary-hover);
 }
+/* 強調注意帯（New1on1Supportと同調） */
+.summaryAlert {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    align-items: start;
+    gap: .75rem;
+    padding: .8rem 1rem;
+    border-left: 4px solid var(--color-primary);
+    background: color-mix(in oklab, var(--color-primary) 16%, transparent);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.summaryAlertIcon {
+    font-size: 1.25rem;
+    margin-top: .15rem;
+}
+
+.summaryAlertBody {
+    color: var(--color-text-secondary);
+}
