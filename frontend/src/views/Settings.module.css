@@ -116,3 +116,24 @@
 .employeeListItem:last-child {
   border-bottom: none;
 }
+
+/* 追加: エラー/削除ボタンスタイル */
+.errorText {
+  color: var(--color-danger);
+  margin-bottom: var(--space-md);
+}
+
+.deleteButton {
+  background-color: var(--color-danger);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s ease;
+}
+
+.deleteButton:hover {
+  background-color: var(--color-danger-dark);
+}

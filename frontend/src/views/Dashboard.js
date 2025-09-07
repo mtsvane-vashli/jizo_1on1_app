@@ -12,8 +12,6 @@ import {
   getDashboardIssues,
   getDashboardPositives,
   getEmployees,
-  createEmployee,
-  deleteEmployee
 } from '../services';
 import layoutStyles from '../App.module.css';
 import styles from './Dashboard.module.css';
@@ -28,8 +26,6 @@ function Dashboard() {
   const [sentimentChartData, setSentimentChartData] = useState({ labels: [], datasets: [] });
   const [employees, setEmployees] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-  const [newEmployeeName, setNewEmployeeName] = useState('');
-  const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [isEmployeesLoading, setIsEmployeesLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -106,41 +102,7 @@ function Dashboard() {
   const barOptions = useMemo(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, indexAxis: 'y' }), []);
   const lineOptions = useMemo(() => ({ responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 1 } } }), []);
 
-  // 新しい部下を追加するハンドラ
-  const handleAddEmployee = useCallback(async () => {
-    if (!newEmployeeName.trim()) {
-      setError('部下の名前は必須です。');
-      return;
-    }
-    try {
-      await createEmployee({ name: newEmployeeName, email: newEmployeeEmail });
-      setNewEmployeeName('');
-      setNewEmployeeEmail('');
-      // 部下リストを再取得
-      const data = await getEmployees();
-      setEmployees(data);
-      setError(null); // 成功したらエラーをクリア
-    } catch (err) {
-      console.error('Error adding employee:', err);
-      setError(`部下の追加に失敗しました: ${err.message}`);
-    }
-  }, [newEmployeeName, newEmployeeEmail]);
-
-  // 部下を削除するハンドラ
-  const handleDeleteEmployee = useCallback(async (id, name) => {
-    if (window.confirm(`${name} を削除してもよろしいですか？`)) {
-      try {
-        await deleteEmployee(id);
-        // 部下リストを再取得
-        const data = await getEmployees();
-        setEmployees(data);
-        setError(null); // 成功したらエラーをクリア
-      } catch (err) {
-        console.error('Error deleting employee:', err);
-        setError(`部下の削除に失敗しました: ${err.message}`);
-      }
-    }
-  }, []);
+  // 部下管理は設定画面に移動（ここでは追加・削除の操作は行わない）
 
   if (authLoading) {
     return <div className={layoutStyles.viewContainer}><p>認証情報を確認中...</p></div>;
@@ -210,51 +172,7 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className={styles.card}>
-        <h3 className={styles.cardHeader}>部下管理</h3>
-        <p className={styles.cardDescription}>登録済みの部下を管理します。</p>
-        <div className={styles.employeeList}>
-          {isEmployeesLoading ? (
-            <p className={styles.loadingText}>部下データを読み込み中...</p>
-          ) : employees.length > 0 ? (
-            <ul>
-              {employees.map((employee) => (
-                <li key={employee.id} className={styles.employeeItem}>
-                  <span>{employee.name} {employee.email && `(${employee.email})`}</span>
-                  <button
-                    className={styles.deleteButton}
-                    onClick={() => handleDeleteEmployee(employee.id, employee.name)}
-                  >
-                    削除
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.loadingText}>登録済みの部下がいません。</p>
-          )}
-        </div>
-        <div className={styles.addEmployeeForm}>
-          <h4>新しい部下を追加</h4>
-          <input
-            type="text"
-            placeholder="名前"
-            value={newEmployeeName}
-            onChange={(e) => setNewEmployeeName(e.target.value)}
-            className={styles.inputField}
-          />
-          <input
-            type="email"
-            placeholder="メールアドレス (任意)"
-            value={newEmployeeEmail}
-            onChange={(e) => setNewEmployeeEmail(e.target.value)}
-            className={styles.inputField}
-          />
-          <button onClick={handleAddEmployee} className={styles.addButton}>
-            追加
-          </button>
-        </div>
-      </div>
+      {/* 部下管理は設定画面へ移動しました */}
     </div>
   );
 }

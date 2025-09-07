@@ -13,6 +13,12 @@ const server = http.createServer(app);
 const whitelist = [
   'http://localhost:3000',
   'https://jizo-1on1.vercel.app',
+  'https://jizo.monetam.xyz',
+  'http://jizo.monetam.xyz',
+  'https://memento-1on1.com',
+  'http://memento-1on1.com',
+  'https://www.memento-1on1.com',
+  'http://www.memento-1on1.com',
 ];
 if (process.env.FRONTEND_URL && !whitelist.includes(process.env.FRONTEND_URL)) {
   whitelist.push(process.env.FRONTEND_URL);
