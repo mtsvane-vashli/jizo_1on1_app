@@ -2,7 +2,7 @@
 
 import { getToken } from './tokenService'; // ★ 修正: tokenServiceから関数をインポート
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = '';
 
 const apiClient = async (endpoint, options = {}) => {
     const token = getToken(); // ★ 修正: localStorageから直接取得するのをやめ、専用関数を使用
