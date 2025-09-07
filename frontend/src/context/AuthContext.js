@@ -42,8 +42,15 @@ export const AuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             const data = await loginUser(username, password);
+            // トークン保存と即時ユーザー設定（useEffect待ちのレースを避ける）
             storeToken(data.token);
             setToken(data.token);
+            try {
+                const decoded = jwtDecode(data.token);
+                setUser(decoded);
+            } catch (e) {
+                console.warn('Failed to decode token right after login:', e);
+            }
             return { success: true };
         } catch (error) {
             console.error('Login error:', error.message);
