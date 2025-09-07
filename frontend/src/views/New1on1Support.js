@@ -267,6 +267,73 @@ function New1on1Support() {
   const [deepDiveError, setDeepDiveError] = useState('');
   const [deepDiveContent, setDeepDiveContent] = useState('');
   const [deepDiveAnchor, setDeepDiveAnchor] = useState('');
+  const [deepDivePosition, setDeepDivePosition] = useState({ top: 0, left: 0 });
+  const [deepDivePlacement, setDeepDivePlacement] = useState('bottom'); // 'bottom' | 'top'
+  const deepDiveRef = useRef(null);
+  const [deepDiveAnchorEl, setDeepDiveAnchorEl] = useState(null);
+  const scrollParentRef = useRef(null);
+
+  const getScrollParent = (element) => {
+    if (!element) return null;
+    let el = element.parentElement;
+    while (el) {
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      if (overflowY === 'auto' || overflowY === 'scroll') return el;
+      el = el.parentElement;
+    }
+    return null;
+  };
+
+  const positionPopover = useCallback((anchorEl) => {
+    if (!anchorEl) return { top: 0, left: 0, placement: 'bottom' };
+    const rect = anchorEl.getBoundingClientRect();
+    const popoverWidth = 360;
+    const margin = 12;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const preferred = spaceBelow >= 180 || spaceBelow >= spaceAbove ? 'bottom' : 'top';
+    const left = Math.min(Math.max(rect.left, margin), viewportWidth - popoverWidth - margin);
+    const top = preferred === 'bottom' ? Math.min(rect.bottom + 8, viewportHeight - margin) : Math.max(rect.top - 8, margin);
+    return { top, left, placement: preferred };
+  }, []);
+
+  // ポップオーバー: 外側クリックやEscで閉じる
+  useEffect(() => {
+    if (!isDeepDiveOpen) return;
+    const onDocMouseDown = (e) => {
+      if (deepDiveRef.current && !deepDiveRef.current.contains(e.target)) {
+        setDeepDiveOpen(false);
+      }
+    };
+    const onKeyDown = (e) => { if (e.key === 'Escape') setDeepDiveOpen(false); };
+    let rafId = null;
+    const onReposition = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const pos = positionPopover(deepDiveAnchorEl);
+        setDeepDivePosition({ top: pos.top, left: pos.left });
+        setDeepDivePlacement(pos.placement);
+      });
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onReposition, { passive: true });
+    window.addEventListener('resize', onReposition);
+    const sp = scrollParentRef.current;
+    if (sp) sp.addEventListener('scroll', onReposition, { passive: true });
+    onReposition();
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onReposition);
+      window.removeEventListener('resize', onReposition);
+      if (sp) sp.removeEventListener('scroll', onReposition);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [isDeepDiveOpen, deepDiveAnchorEl, positionPopover]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [state.chatHistory]);
 
@@ -282,7 +349,7 @@ function New1on1Support() {
 
   useEffect(() => {
     if (!isSessionView) return;
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = '';
     socketRef.current = io(backendUrl);
     socketRef.current.on('transcript_data', handleTranscriptUpdate);
     return () => { socketRef.current?.disconnect(); };
@@ -484,8 +551,27 @@ function New1on1Support() {
   const extractClickedText = (event) => {
     try {
       const sel = window.getSelection ? window.getSelection() : null;
+      // 明示選択があればそれを優先
       const selected = sel && sel.toString().trim();
       if (selected) return selected.slice(0, 400);
+      // キャレット位置の文を抽出
+      if (sel && sel.focusNode) {
+        const node = sel.focusNode;
+        const source = node.nodeType === 3 ? node.nodeValue : (node.textContent || '');
+        const offset = typeof sel.focusOffset === 'number' ? sel.focusOffset : 0;
+        const len = source.length;
+        const isDelim = (ch) => /[。．\.！？!？\?]/.test(ch) || ch === '\n';
+        let start = 0;
+        for (let i = Math.max(0, offset - 1); i >= 0; i--) {
+          if (isDelim(source[i])) { start = i + 1; break; }
+        }
+        let end = len;
+        for (let i = Math.min(len - 1, offset); i < len; i++) {
+          if (isDelim(source[i])) { end = i + 1; break; }
+        }
+        const sentence = source.slice(start, end).trim();
+        if (sentence) return sentence.slice(0, 600);
+      }
     } catch (_) { }
     const target = event.target;
     if (!target) return '';
@@ -497,6 +583,14 @@ function New1on1Support() {
     const queryText = extractClickedText(event);
     if (!queryText) return;
     if (!state.currentConversationId) return;
+    const anchorEl = event.currentTarget || event.target;
+    setDeepDiveAnchorEl(anchorEl);
+    // スクロール親を記録
+    scrollParentRef.current = getScrollParent(anchorEl);
+    // 初回配置
+    const pos = positionPopover(anchorEl);
+    setDeepDivePosition({ top: pos.top, left: pos.left });
+    setDeepDivePlacement(pos.placement);
     setDeepDiveAnchor(queryText);
     setDeepDiveOpen(true);
     setDeepDiveLoading(true);
@@ -582,10 +676,16 @@ function New1on1Support() {
                         )}
 
                         {isDeepDiveOpen && (
-                          <div className={styles.deepDivePanel} role="dialog" aria-label="深掘り説明">
+                          <div
+                            ref={deepDiveRef}
+                            className={`${styles.deepDivePopover} ${deepDivePlacement === 'top' ? styles.top : styles.bottom}`}
+                            style={{ top: deepDivePosition.top, left: deepDivePosition.left }}
+                            role="dialog"
+                            aria-label="深掘り説明"
+                          >
                             <div className={styles.deepDiveHeader}>
                               <span className={styles.deepDiveTitle}>深掘り</span>
-                              <button className={styles.deepDiveClose} onClick={() => setDeepDiveOpen(false)}>閉じる</button>
+                              <button className={styles.deepDiveClose} onClick={() => setDeepDiveOpen(false)}>✕</button>
                             </div>
                             {deepDiveAnchor && (
                               <p className={styles.deepDiveAnchor}><strong>対象:</strong> {deepDiveAnchor}</p>
@@ -595,9 +695,9 @@ function New1on1Support() {
                             ) : deepDiveError ? (
                               <p className={styles.deepDiveError}>{deepDiveError}</p>
                             ) : deepDiveContent ? (
-                              <div className={styles.deepDiveBody}
-                                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(deepDiveContent)) }} />
+                              <div className={styles.deepDiveBody} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(deepDiveContent)) }} />
                             ) : null}
+                            <span className={`${styles.deepDiveArrow} ${deepDivePlacement === 'top' ? styles.top : styles.bottom}`} aria-hidden="true" />
                           </div>
                         )}
                       </>

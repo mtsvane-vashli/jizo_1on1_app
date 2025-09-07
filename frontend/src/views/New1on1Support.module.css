@@ -818,12 +818,20 @@ html.dark .summaryAlert {
   cursor: help;
 }
 
-.deepDivePanel {
-  margin-top: 1rem;
+.deepDivePanel { /* deprecated, kept for compatibility */ }
+
+.deepDivePopover {
+  position: fixed;
+  z-index: 1200;
+  width: min(360px, 92vw);
+  max-width: 360px;
+  max-height: 60vh;
+  overflow: auto;
+  background: var(--secondary-background-color);
+  color: var(--primary-text-color);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: var(--secondary-background-color);
-  box-shadow: var(--box-shadow);
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
   padding: 0.75rem 0.9rem;
 }
 
@@ -866,3 +874,17 @@ html.dark .summaryAlert {
   color: var(--primary-text-color);
   line-height: 1.6;
 }
+
+.deepDiveArrow {
+  position: absolute;
+  left: 18px;
+  width: 16px;
+  height: 16px;
+  background: var(--secondary-background-color);
+  border-left: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+  transform: rotate(45deg);
+}
+
+.deepDiveArrow.bottom { top: -8px; }
+.deepDiveArrow.top { bottom: -8px; transform: rotate(225deg); }
