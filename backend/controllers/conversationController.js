@@ -125,6 +125,46 @@ exports.deleteConversation = async (req, res) => {
     }
 };
 
+/**
+ * ★★★ 深掘り説明（要約/ネクストアクション中の語句クリック対応） ★★★
+ * POST /api/conversations/:id/deep-dive
+ * body: { queryText: string }
+ */
+exports.deepDiveExplanation = async (req, res) => {
+    const { id: conversationId } = req.params;
+    const { queryText } = req.body || {};
+    const user = req.user;
+
+    if (!conversationId || !queryText || !queryText.trim()) {
+        return res.status(400).json({ error: 'Conversation ID and queryText are required.' });
+    }
+
+    try {
+        const conversation = await conversationModel.getConversationById(conversationId, user);
+        if (!conversation) {
+            return res.status(404).json({ error: 'Conversation not found or permission denied.' });
+        }
+
+        // 既存情報を文脈としてAIに渡す
+        const context = {
+            theme: conversation.theme,
+            engagement: conversation.engagement,
+            summary: conversation.summary,
+            nextActions: conversation.next_actions,
+            transcript: conversation.transcript,
+            messages: conversation.messages || [],
+        };
+
+        const prompt = aiService.getDeepDivePrompt(queryText, context);
+        const explanationMd = await aiService.generateContent(prompt);
+
+        res.json({ explanation: explanationMd });
+    } catch (error) {
+        console.error('Error in deepDiveExplanation:', error);
+        res.status(500).json({ error: 'Failed to generate deep dive explanation.' });
+    }
+};
+
 
 /**
  * ★★★ 会話を要約し、各種分析を実行する ★★★

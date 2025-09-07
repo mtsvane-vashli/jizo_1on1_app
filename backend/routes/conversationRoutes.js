@@ -11,7 +11,8 @@ const {
     getConversationDetails,
     updateConversation,
     deleteConversation,
-    summarizeConversation
+    summarizeConversation,
+    deepDiveExplanation
 } = require('../controllers/conversationController');
 
 // ★ 修正: ルーティングパスを修正し、'/conversations'を明示的に追加します
@@ -37,5 +38,7 @@ router.post('/conversations/:id/messages', protect, postMessage);
 
 // POST /api/conversations/:id/summarize -> 会話の要約を生成
 router.post('/conversations/:id/summarize', protect, summarizeConversation);
+// POST /api/conversations/:id/deep-dive -> 要約/ネクストアクションの深掘り説明
+router.post('/conversations/:id/deep-dive', protect, deepDiveExplanation);
 
 module.exports = router;

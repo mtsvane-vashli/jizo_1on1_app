@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEmployees, startConversation, postMessage, generateSummary, updateConversation } from '../services';
+import { getEmployees, startConversation, postMessage, generateSummary, updateConversation, deepDive } from '../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import layoutStyles from '../App.module.css';
@@ -261,6 +261,13 @@ function New1on1Support() {
 
   const isSessionView = location.pathname === '/session';
 
+  // 深掘り（要約/ネクストアクション）用の状態はコンポーネント直下で宣言（Hooks順序を守る）
+  const [isDeepDiveOpen, setDeepDiveOpen] = useState(false);
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+  const [deepDiveError, setDeepDiveError] = useState('');
+  const [deepDiveContent, setDeepDiveContent] = useState('');
+  const [deepDiveAnchor, setDeepDiveAnchor] = useState('');
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [state.chatHistory]);
 
   const handleTranscriptUpdate = useCallback((data) => {
@@ -473,6 +480,38 @@ function New1on1Support() {
     }
   };
 
+  // 要約/ネクストアクションのクリックテキスト抽出と深掘り実行
+  const extractClickedText = (event) => {
+    try {
+      const sel = window.getSelection ? window.getSelection() : null;
+      const selected = sel && sel.toString().trim();
+      if (selected) return selected.slice(0, 400);
+    } catch (_) { }
+    const target = event.target;
+    if (!target) return '';
+    const text = (target.innerText || target.textContent || '').trim();
+    return text ? text.slice(0, 600) : '';
+  };
+
+  const handleSummaryClick = async (event) => {
+    const queryText = extractClickedText(event);
+    if (!queryText) return;
+    if (!state.currentConversationId) return;
+    setDeepDiveAnchor(queryText);
+    setDeepDiveOpen(true);
+    setDeepDiveLoading(true);
+    setDeepDiveError('');
+    setDeepDiveContent('');
+    try {
+      const res = await deepDive(state.currentConversationId, queryText);
+      setDeepDiveContent(res.explanation || '');
+    } catch (err) {
+      setDeepDiveError(err.message || '説明の生成に失敗しました。');
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  };
+
   if (authLoading || (state.appState === 'initial' && state.isLoading)) {
     return <div className={layoutStyles.loadingScreen}><p>データを読み込み中...</p></div>;
   }
@@ -532,14 +571,34 @@ function New1on1Support() {
                         {state.currentSummary && (
                           <>
                             <h5 className={styles.summaryHeader}>会話の要約</h5>
-                            <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} />
+                            <div className={styles.summaryText} onClick={handleSummaryClick} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} />
                           </>
                         )}
                         {state.currentNextActions && (
                           <>
                             <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5>
-                            <div className={styles.summaryText} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} />
+                            <div className={styles.summaryText} onClick={handleSummaryClick} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} />
                           </>
+                        )}
+
+                        {isDeepDiveOpen && (
+                          <div className={styles.deepDivePanel} role="dialog" aria-label="深掘り説明">
+                            <div className={styles.deepDiveHeader}>
+                              <span className={styles.deepDiveTitle}>深掘り</span>
+                              <button className={styles.deepDiveClose} onClick={() => setDeepDiveOpen(false)}>閉じる</button>
+                            </div>
+                            {deepDiveAnchor && (
+                              <p className={styles.deepDiveAnchor}><strong>対象:</strong> {deepDiveAnchor}</p>
+                            )}
+                            {deepDiveLoading ? (
+                              <p className={styles.deepDiveLoading}>深掘り中...</p>
+                            ) : deepDiveError ? (
+                              <p className={styles.deepDiveError}>{deepDiveError}</p>
+                            ) : deepDiveContent ? (
+                              <div className={styles.deepDiveBody}
+                                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(deepDiveContent)) }} />
+                            ) : null}
+                          </div>
                         )}
                       </>
                     ) : (

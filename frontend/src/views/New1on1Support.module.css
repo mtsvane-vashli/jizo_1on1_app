@@ -812,3 +812,57 @@ html.dark .summaryAlert {
 }
 
 /* 既存の .summaryNote は今後未使用（互換のため残す） */
+
+/* ====== Deep Dive Panel ====== */
+.summaryText {
+  cursor: help;
+}
+
+.deepDivePanel {
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--secondary-background-color);
+  box-shadow: var(--box-shadow);
+  padding: 0.75rem 0.9rem;
+}
+
+.deepDiveHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .5rem;
+}
+
+.deepDiveTitle {
+  font-weight: 700;
+  color: var(--primary-text-color);
+}
+
+.deepDiveClose {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--primary-text-color);
+  padding: .25rem .6rem;
+  cursor: pointer;
+}
+
+.deepDiveAnchor {
+  font-size: .9rem;
+  color: var(--secondary-text-color);
+  margin: .25rem 0 .5rem;
+}
+
+.deepDiveLoading {
+  color: var(--secondary-text-color);
+}
+
+.deepDiveError {
+  color: var(--error-color);
+}
+
+.deepDiveBody {
+  color: var(--primary-text-color);
+  line-height: 1.6;
+}

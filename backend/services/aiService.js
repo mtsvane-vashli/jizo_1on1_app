@@ -133,7 +133,7 @@ const getSummaryPrompt = (formattedMessages, transcript) => {
 
         ## 出力形式
         **要約:**
-        [会話の全体的な内容と部下の主要な話題を、上司が理解しやすいように500文字程度で要約]
+        [会話の全体的な内容と部下の主要な話題を、上司が理解しやすいように1000文字程度で要約]
 
         **ネクストアクション:**
         - [上司が次回の1on1や日々の業務で部下に対して具体的にどのような働きかけをすべきか、具体的な行動提案を箇条書きで3～5点]
@@ -201,6 +201,47 @@ const getPositivesSummaryPrompt = (transcript, conversationId) => {
 --- 文字起こしテキスト ---
 ${transcript}
 `;
+};
+
+// Deep dive prompt: explain clicked text in context
+const getDeepDivePrompt = (queryText, context) => {
+  const { theme, engagement, summary, nextActions, transcript, messages } = context || {};
+  const formattedHistory = (messages || [])
+    .map((m) => `${m.sender === 'user' ? '上司' : (m.sender === 'employee' ? '部下' : 'AI')}: ${m.message}`)
+    .join('\n');
+
+  return `あなたは、上司向けに1on1の要約中の用語や記述を、会話の文脈に沿って噛み砕いて解説するアシスタントです。以下の情報を踏まえ、指定されたテキストについて、意味・背景・重要性・実践ポイントを簡潔に深掘りしてください。
+
+【1on1メタ】
+- テーマ: ${theme || '不明'}
+- 関わり方: ${engagement || '不明'}
+
+【要約】
+${summary || '（要約なし）'}
+
+【ネクストアクション】
+${nextActions || '（提案なし）'}
+
+【会話履歴（要約的）】
+${formattedHistory || '（履歴なし）'}
+
+【文字起こし（抜粋可）】
+${(transcript || '').slice(0, 4000)}
+
+【深掘り対象テキスト】
+${queryText}
+
+出力はMarkdownで、以下の見出し構成・分量（300~500字程度）を目安に日本語で記述してください。
+
+### なにを指すか（要点）
+—
+### 背景と文脈
+—
+### なぜ重要か（上司視点）
+—
+### 次の一歩（具体例）
+—
+`; 
 };
 
 async function generateContent(prompt) {
@@ -273,6 +314,7 @@ module.exports = {
   generateInitialMessage,
   generateFollowUp,
   getSummaryPrompt,
+  getDeepDivePrompt,
   getKeywordsPrompt,
   getSentimentPrompt,
   getIssuesSummaryPrompt,

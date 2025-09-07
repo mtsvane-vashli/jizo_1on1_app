@@ -7,3 +7,4 @@ export * from './chatService';
 export * from './employeeService';
 export * from './userService';
 export * from './tokenService';
+export * from './deepDiveService';
