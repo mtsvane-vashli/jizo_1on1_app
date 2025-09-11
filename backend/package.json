@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "db:migrate": "npm run db:migrate:schema && npm run db:migrate:002 && npm run db:migrate:003 && npm run db:migrate:004 && npm run db:migrate:005 && npm run db:migrate:006 && npm run db:migrate:007 && npm run db:migrate:008 && npm run db:migrate:009",
+    "db:migrate": "npm run db:migrate:schema && npm run db:migrate:002 && npm run db:migrate:003 && npm run db:migrate:004 && npm run db:migrate:005 && npm run db:migrate:006 && npm run db:migrate:007 && npm run db:migrate:008 && npm run db:migrate:009 && npm run db:migrate:010",
     "db:migrate:schema": "node run-migration.js migrations/schema.sql",
     "db:migrate:002": "node run-migration.js migrations/002_add_user_id_columns.sql",
     "db:migrate:003": "node run-migration.js migrations/003_add_transcript_column.sql",
@@ -13,7 +13,8 @@
     "db:migrate:006": "node run-migration.js migrations/006_add_conversation_org_column.sql",
     "db:migrate:007": "node run-migration.js migrations/007_update_messages_columns.sql",
     "db:migrate:008": "node run-migration.js migrations/008_relax_messages_sender_check.sql",
-    "db:migrate:009": "node run-migration.js migrations/009_add_user_password_flags.sql"
+    "db:migrate:009": "node run-migration.js migrations/009_add_user_password_flags.sql",
+    "db:migrate:010": "node run-migration.js migrations/010_allow_duplicate_employee_names.sql"
   },
   "keywords": [],
   "author": "",

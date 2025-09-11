@@ -65,18 +65,9 @@ CREATE TABLE IF NOT EXISTS employees (
     created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 組織内 name 大小無視ユニーク
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_indexes
-        WHERE schemaname = 'public'
-          AND indexname = 'ux_employees_org_name_lower'
-    ) THEN
-        CREATE UNIQUE INDEX ux_employees_org_name_lower
-            ON employees (organization_id, LOWER(name));
-    END IF;
-END $$;
+-- 組織内 name 検索用の非ユニークインデックス（大文字小文字無視）
+CREATE INDEX IF NOT EXISTS ix_employees_org_name_lower
+    ON employees (organization_id, LOWER(name));
 
 -- 組織内 email ユニーク（NULL は許容）
 DO $$
