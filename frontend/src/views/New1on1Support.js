@@ -11,6 +11,7 @@ import Memo from '../components/Memo';
 import MindMap from '../components/MindMap';
 import TranscriptPopup from '../components/TranscriptPopup';
 import ThemeToggleButton from '../components/ThemeToggleButton';
+import BrainJuiceButton from '../components/BrainJuiceButton';
 import { io } from 'socket.io-client';
 import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
 
@@ -272,6 +273,9 @@ function New1on1Support() {
   const deepDiveRef = useRef(null);
   const [deepDiveAnchorEl, setDeepDiveAnchorEl] = useState(null);
   const scrollParentRef = useRef(null);
+
+  // 脳汁ボタンの沈黙状態（必要ならUI制御に利用可）
+  const [isSilenceActive, setIsSilenceActive] = useState(false);
 
   const getScrollParent = (element) => {
     if (!element) return null;
@@ -639,6 +643,15 @@ function New1on1Support() {
                   <span>テーマを変更</span>
                 </button>
               )}
+              {/* 脳汁ボタン：小型アイコン＋15秒沈黙タイマー */}
+              
+              <BrainJuiceButton
+                movable
+                storageKey="brainjuice_pos"
+                onStartSilence={() => setIsSilenceActive(true)}
+                onEndSilence={() => setIsSilenceActive(false)}
+              />
+
             </div>
 
             <div className={styles.summaryContainer}>

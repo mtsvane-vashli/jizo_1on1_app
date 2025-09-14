@@ -1,0 +1,371 @@
+/* =========================
+   基本レイアウト
+   ========================= */
+.wrapper {
+    position: relative;
+    width: 64px;
+    height: 84px;
+    /* 上:アイコン  下:タイマー帯 */
+    user-select: none;
+    z-index: 1200;
+    font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans JP", sans-serif;
+    overflow: visible;
+    /* バッジやトーストを切り捨てない */
+}
+
+/* 可動（固定配置＋ドラッグ） */
+.movable {
+    position: fixed;
+    cursor: grab;
+    touch-action: none;
+}
+
+.dragging {
+    cursor: grabbing;
+}
+
+/* トークン（デフォルト） */
+:root {
+    --bj-accent: #00c8ff;
+    /* 下部フィルの上側 */
+    --bj-accent-2: #9d6bff;
+    /* 下部フィルの下側 */
+    --bj-bg: #0b0b0f;
+    --bj-border: rgba(255, 255, 255, .12);
+    --bj-glow: rgba(0, 255, 204, .35);
+    --bj-badge: #1e88e5;
+
+    --bj-icon-bg: rgba(255, 255, 255, .06);
+    --bj-icon-border: rgba(255, 255, 255, .24);
+    --bj-icon-border-hover: rgba(255, 255, 255, .42);
+
+    --bj-timer-bg: rgba(255, 255, 255, .07);
+    --bj-timer-border: rgba(255, 255, 255, .22);
+    --bj-bubble: rgba(255, 255, 255, .95);
+
+    /* 高コントラスト用：脳の線色・太さ */
+    --bj-brain-stroke: #f7fbff;
+    --bj-brain-stroke-w: 2.2px;
+}
+
+/* トースト */
+.toast {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translate(-50%, 6px);
+    background: rgba(0, 0, 0, .82);
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+}
+
+.toastShow {
+    opacity: 1;
+    transform: translate(-50%, -6px);
+}
+
+/* 「沈黙中」バッジ */
+.silenceBadge {
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bj-badge, #1e88e5);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+}
+
+/* 本体 */
+.btn {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto;
+    border-radius: 16px;
+    background: var(--bj-bg);
+    border: 1px solid var(--bj-border);
+    overflow: hidden;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
+}
+
+/* 充填レイヤー（下から色で満たす） */
+.fill {
+    --fill: 0%;
+    position: absolute;
+    inset: auto 0 0 0;
+    height: var(--fill);
+    background: linear-gradient(180deg, var(--bj-accent), var(--bj-accent-2));
+    transition: height .12s linear;
+    pointer-events: none;
+}
+
+/* 泡アニメ */
+.bubbles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.bubbles span {
+    position: absolute;
+    bottom: -12px;
+    left: var(--x, 50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--bj-bubble);
+    opacity: .85;
+    animation: rise 1.6s ease-in infinite;
+    animation-delay: var(--d, 0s);
+}
+
+@keyframes rise {
+    0% {
+        transform: translateY(0) scale(.8);
+        opacity: .7;
+    }
+
+    60% {
+        opacity: .9;
+    }
+
+    100% {
+        transform: translateY(-110%) scale(1);
+        opacity: 0;
+    }
+}
+
+/* タイマー帯 */
+.timerStrip {
+    position: absolute;
+    inset: auto 6px 6px 6px;
+    height: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--bj-timer-border);
+    background: var(--bj-timer-bg);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    outline: none;
+    transition: transform .06s ease, box-shadow .2s ease;
+}
+
+.timerStrip:hover {
+    box-shadow: 0 2px 10px var(--bj-glow);
+}
+
+.timerStrip:active {
+    transform: translateY(0.5px) scale(.995);
+}
+
+.timerStrip:disabled {
+    cursor: default;
+}
+
+.timerInner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.count {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+
+/* =========================
+   アイコンスロット（視認性改善）
+   ========================= */
+.iconSlot {
+    position: absolute;
+    inset: 6px 6px auto 6px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02));
+    border: 1px solid var(--bj-icon-border);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    outline: none;
+    padding: 0;
+    transition: box-shadow .2s ease, transform .06s ease, border-color .2s ease;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, .04) inset,
+        0 4px 14px var(--bj-glow);
+}
+
+.iconSlot:hover {
+    border-color: var(--bj-icon-border-hover);
+}
+
+.iconSlot:active {
+    transform: scale(.985);
+}
+
+/* 背面ハロー：明るいリング＋ぼかしで背景と分離 */
+.halo {
+    position: absolute;
+    inset: 6px;
+    border-radius: 999px;
+    pointer-events: none;
+    background:
+        radial-gradient(40% 40% at 50% 55%, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0) 70%),
+        radial-gradient(80% 80% at 50% 50%, rgba(0, 200, 255, .20), rgba(157, 107, 255, .12) 60%, rgba(0, 0, 0, 0) 72%);
+    filter: blur(0.6px);
+}
+
+/* マスク塗り（明色グラデ） */
+.brainFill {
+    position: absolute;
+    inset: 0 10px 0 10px;
+    height: 100%;
+    background:
+        linear-gradient(145deg, #b6f0ff 0%, #9fd6ff 35%, #d3c4ff 70%, #f2c8ff 100%);
+    /* Safari/Chrome */
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    /* Firefox/Edge */
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    opacity: .98;
+}
+
+/* 外部SVG（脳ライン） */
+.brainIcon {
+    width: 32px;
+    height: 32px;
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45));
+    color: var(--bj-brain-stroke);
+    /* 万一 currentColor を拾う要素があれば */
+}
+
+/* SVG内部のパス類を強制上書き（高コントラスト） */
+.brainIcon :global(path),
+.brainIcon :global(line),
+.brainIcon :global(polyline),
+.brainIcon :global(circle),
+.brainIcon :global(rect),
+.brainIcon :global(ellipse) {
+    stroke: var(--bj-brain-stroke) !important;
+    stroke-width: var(--bj-brain-stroke-w) !important;
+    fill: none !important;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* =========================
+   テーマ / 形状
+   ========================= */
+/* soft */
+.theme_soft .btn {
+    background: #1b1b1b;
+    border-color: rgba(255, 255, 255, .12);
+}
+
+.theme_soft .fill {
+    background: linear-gradient(180deg, var(--bj-accent), var(--bj-accent-2));
+}
+
+/* neon（デフォルト） */
+.theme_neon .btn {
+    background: #0b0b0f;
+    border-color: rgba(0, 255, 204, .16);
+    box-shadow: 0 10px 28px rgba(0, 255, 204, .08), 0 0 0 1px rgba(0, 255, 204, .06) inset;
+}
+
+.theme_neon {
+    --bj-accent: #00c8ff;
+    --bj-accent-2: #9d6bff;
+    --bj-glow: rgba(0, 255, 204, .30);
+    --bj-icon-border: rgba(255, 255, 255, .28);
+    --bj-icon-border-hover: rgba(255, 255, 255, .48);
+    --bj-timer-bg: rgba(0, 255, 204, .07);
+    --bj-timer-border: rgba(0, 255, 204, .22);
+    --bj-bubble: rgba(255, 255, 255, .95);
+    --bj-brain-stroke: #ffffff;
+    /* 真っ白に寄せて視認性MAX */
+}
+
+/* glass */
+.theme_glass .btn {
+    background: rgba(255, 255, 255, .10);
+    border-color: rgba(255, 255, 255, .22);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.theme_glass .silenceBadge {
+    background: rgba(30, 136, 229, .9);
+}
+
+.theme_glass {
+    --bj-brain-stroke: #0b0b0f;
+}
+
+/* 明るい面に黒ストローク */
+
+/* mono */
+.theme_mono .btn {
+    background: #161616;
+    border-color: rgba(255, 255, 255, .08);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .22);
+}
+
+.theme_mono {
+    --bj-accent: #e6e6e6;
+    --bj-accent-2: #ffffff;
+    --bj-glow: rgba(255, 255, 255, .25);
+    --bj-icon-bg: rgba(255, 255, 255, .06);
+    --bj-bubble: #eee;
+    --bj-brain-stroke: #ffffff;
+}
+
+/* 形状 */
+.shape_rounded .btn {
+    border-radius: 16px;
+}
+
+.shape_rounded .iconSlot {
+    border-radius: 12px;
+}
+
+.shape_rounded .timerStrip {
+    border-radius: 10px;
+}
+
+.shape_pill .btn {
+    border-radius: 999px;
+}
+
+.shape_pill .iconSlot {
+    border-radius: 999px;
+}
+
+.shape_pill .timerStrip {
+    border-radius: 999px;
+}
