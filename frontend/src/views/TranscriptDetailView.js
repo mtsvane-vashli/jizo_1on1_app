@@ -228,6 +228,13 @@ function TranscriptDetailView() {
                     </div>
                 )}
 
+                {conversation.memo && (
+                    <div className={styles.memoArea}>
+                        <h3>メモ</h3>
+                        <div className={styles.memoContent}>{conversation.memo}</div>
+                    </div>
+                )}
+
                 {(conversation.summary || conversation.next_actions) && (
                     <div className={styles.summaryArea}>
                         <h3>要約とネクストアクション</h3>

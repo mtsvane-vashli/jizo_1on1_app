@@ -250,6 +250,12 @@ function New1on1Support() {
   const [isTranscriptPopupVisible, setIsTranscriptPopupVisible] = useState(false);
   const [isTranscriptPopupMinimized, setIsTranscriptPopupMinimized] = useState(false);
 
+  const memoAutoSaveTimeoutRef = useRef(null);
+  const lastSavedMemoRef = useRef('');
+  const memoValueRef = useRef('');
+  const [memoSaveState, setMemoSaveState] = useState('idle');
+  const [memoSaveError, setMemoSaveError] = useState('');
+
   const socketRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
@@ -423,8 +429,29 @@ function New1on1Support() {
     setIsTranscriptPopupMinimized(true);
   };
 
+  const persistMemo = useCallback(async (nextMemo) => {
+    if (!state.currentConversationId) return;
+    setMemoSaveState('saving');
+    setMemoSaveError('');
+    try {
+      await updateConversation(state.currentConversationId, { memo: nextMemo });
+      lastSavedMemoRef.current = nextMemo;
+      setMemoSaveState('saved');
+    } catch (err) {
+      console.error('Failed to auto-save memo', err);
+      setMemoSaveState('error');
+      setMemoSaveError(err.message || 'メモの自動保存に失敗しました。');
+    }
+  }, [state.currentConversationId]);
+
   const handleSaveTools = useCallback(async () => {
     if (!state.currentConversationId) return;
+    if (memoAutoSaveTimeoutRef.current) {
+      clearTimeout(memoAutoSaveTimeoutRef.current);
+      memoAutoSaveTimeoutRef.current = null;
+    }
+    setMemoSaveState('saving');
+    setMemoSaveError('');
     try {
       const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
       await updateConversation(state.currentConversationId, {
@@ -432,11 +459,60 @@ function New1on1Support() {
         mindMapData,
         transcript: formattedTranscript
       });
+      lastSavedMemoRef.current = memo;
+      setMemoSaveState('saved');
     } catch (err) {
       console.error("Failed to save tools data", err);
+      setMemoSaveState('error');
+      setMemoSaveError(err?.message || 'メモの保存に失敗しました。');
       alert("メモとマインドマップの保存に失敗しました。");
     }
   }, [state.currentConversationId, memo, mindMapData, transcript]);
+
+  useEffect(() => {
+    memoValueRef.current = memo;
+  }, [memo]);
+
+  useEffect(() => {
+    if (!state.currentConversationId) return;
+    if (memo === lastSavedMemoRef.current) return;
+
+    if (memoAutoSaveTimeoutRef.current) {
+      clearTimeout(memoAutoSaveTimeoutRef.current);
+    }
+
+    setMemoSaveState('saving');
+    setMemoSaveError('');
+
+    memoAutoSaveTimeoutRef.current = setTimeout(() => {
+      memoAutoSaveTimeoutRef.current = null;
+      persistMemo(memo);
+    }, 1200);
+
+    return () => {
+      if (memoAutoSaveTimeoutRef.current) {
+        clearTimeout(memoAutoSaveTimeoutRef.current);
+        memoAutoSaveTimeoutRef.current = null;
+      }
+    };
+  }, [memo, persistMemo, state.currentConversationId]);
+
+  useEffect(() => {
+    if (memoAutoSaveTimeoutRef.current) {
+      clearTimeout(memoAutoSaveTimeoutRef.current);
+      memoAutoSaveTimeoutRef.current = null;
+    }
+    lastSavedMemoRef.current = memoValueRef.current;
+    setMemoSaveState('idle');
+    setMemoSaveError('');
+  }, [state.currentConversationId]);
+
+  useEffect(() => () => {
+    if (memoAutoSaveTimeoutRef.current) {
+      clearTimeout(memoAutoSaveTimeoutRef.current);
+      memoAutoSaveTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -776,7 +852,7 @@ function New1on1Support() {
             <div className={styles.workspace}>
               <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
               <div className={styles.tabContent}>
-                {activeTab === 'memo' && <Memo memo={memo} setMemo={setMemo} />}
+                {activeTab === 'memo' && <Memo memo={memo} setMemo={setMemo} saveState={memoSaveState} errorMessage={memoSaveError} />}
                 {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={setMindMapData} />}
               </div>
             </div>

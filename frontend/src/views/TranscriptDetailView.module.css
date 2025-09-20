@@ -7,7 +7,8 @@
 
 .chatHistory,
 .transcriptArea,
-.summaryArea {
+.summaryArea,
+.memoArea {
     background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -17,7 +18,8 @@
 
 .chatHistory h3,
 .transcriptArea h3,
-.summaryArea h3 {
+.summaryArea h3,
+.memoArea h3 {
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 1rem;
@@ -74,6 +76,16 @@
     font-size: 0.9rem;
     line-height: 1.6;
     color: var(--color-text-primary);
+}
+
+.memoContent {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
 }
 
 .contentBlock {

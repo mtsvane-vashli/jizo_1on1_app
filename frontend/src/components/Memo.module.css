@@ -25,3 +25,23 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
+
+.memoStatus {
+    margin-top: 0.5rem;
+    min-height: 1em;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    transition: color 0.2s ease;
+}
+
+.memoStatusSaving {
+    color: var(--color-primary);
+}
+
+.memoStatusSaved {
+    color: var(--color-accent);
+}
+
+.memoStatusError {
+    color: var(--color-danger);
+}
