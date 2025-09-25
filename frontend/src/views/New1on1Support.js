@@ -249,6 +249,10 @@ function New1on1Support() {
   const [interimTranscript, setInterimTranscript] = useState('');
   const [isTranscriptPopupVisible, setIsTranscriptPopupVisible] = useState(false);
   const [isTranscriptPopupMinimized, setIsTranscriptPopupMinimized] = useState(false);
+  const [isVoiceInputAvailable, setIsVoiceInputAvailable] = useState(false);
+  const [isVoiceInputActive, setIsVoiceInputActive] = useState(false);
+  const [voiceInterimText, setVoiceInterimText] = useState('');
+  const [voiceInputError, setVoiceInputError] = useState('');
 
   const memoAutoSaveTimeoutRef = useRef(null);
   const lastSavedMemoRef = useRef('');
@@ -259,6 +263,9 @@ function New1on1Support() {
   const socketRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
+  const voiceRecognitionRef = useRef(null);
+  const resumeTranscriptAfterVoiceRef = useRef(false);
+  const isComponentMountedRef = useRef(true);
 
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState('');
@@ -294,6 +301,41 @@ function New1on1Support() {
     }
     return null;
   };
+
+  useEffect(() => {
+    isComponentMountedRef.current = true;
+    if (typeof window === 'undefined') return undefined;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setIsVoiceInputAvailable(Boolean(SpeechRecognition));
+
+    return () => {
+      isComponentMountedRef.current = false;
+      if (voiceRecognitionRef.current) {
+        try {
+          voiceRecognitionRef.current.onresult = null;
+          voiceRecognitionRef.current.onerror = null;
+          voiceRecognitionRef.current.onend = null;
+          voiceRecognitionRef.current.stop();
+        } catch (err) {
+          // no-op
+        }
+        voiceRecognitionRef.current = null;
+      }
+      resumeTranscriptAfterVoiceRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (state.appState === 'support_started' || !isVoiceInputActive) return;
+    resumeTranscriptAfterVoiceRef.current = false;
+    if (voiceRecognitionRef.current) {
+      try {
+        voiceRecognitionRef.current.stop();
+      } catch (err) {
+        console.error('Failed to stop voice input on state change:', err);
+      }
+    }
+  }, [isVoiceInputActive, state.appState]);
 
   const positionPopover = useCallback((anchorEl) => {
     if (!anchorEl) return { top: 0, left: 0, placement: 'bottom' };
@@ -428,6 +470,117 @@ function New1on1Support() {
     setIsTranscriptPopupVisible(false);
     setIsTranscriptPopupMinimized(true);
   };
+
+  const cleanupVoiceRecognition = useCallback((resume = true) => {
+    const shouldResume = resume && resumeTranscriptAfterVoiceRef.current;
+    resumeTranscriptAfterVoiceRef.current = false;
+
+    if (isComponentMountedRef.current) {
+      setIsVoiceInputActive(false);
+      setVoiceInterimText('');
+    }
+    voiceRecognitionRef.current = null;
+
+    if (shouldResume && isComponentMountedRef.current) {
+      setIsTranscriptPopupVisible(true);
+      setIsTranscriptPopupMinimized(false);
+      setIsRecording(true);
+      startRecording();
+    }
+  }, [startRecording]);
+
+  const handleToggleVoiceInput = useCallback(() => {
+    if (isVoiceInputActive) {
+      if (voiceRecognitionRef.current) {
+        try {
+          voiceRecognitionRef.current.stop();
+        } catch (err) {
+          console.error('Failed to stop voice input:', err);
+        }
+      }
+      return;
+    }
+
+    if (!isVoiceInputAvailable || typeof window === 'undefined') {
+      setVoiceInputError('このブラウザでは音声入力を利用できません。');
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceInputError('このブラウザでは音声入力を利用できません。');
+      return;
+    }
+
+    setVoiceInputError('');
+    resumeTranscriptAfterVoiceRef.current = isRecording;
+
+    if (isRecording) {
+      stopRecording();
+      setIsRecording(false);
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ja-JP';
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        let finalText = '';
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const result = event.results[i];
+          const transcriptText = result[0]?.transcript?.trim();
+          if (!transcriptText) continue;
+          if (result.isFinal) {
+            finalText += `${transcriptText} `;
+          } else {
+            interim += `${transcriptText} `;
+          }
+        }
+
+        const trimmedFinal = finalText.trim();
+        if (trimmedFinal) {
+          setMessage((prev) => {
+            if (!prev) return trimmedFinal;
+            const needsSpace = !prev.endsWith(' ') && !/^([、。,.!?])/.test(trimmedFinal);
+            return `${prev}${needsSpace ? ' ' : ''}${trimmedFinal}`;
+          });
+        }
+
+        setVoiceInterimText(interim.trim());
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Voice input error:', event);
+        const errorMessage = event.error === 'not-allowed'
+          ? 'マイクの使用が許可されませんでした。ブラウザの設定を確認してください。'
+          : event.error === 'no-speech'
+            ? '音声が検出できませんでした。もう一度お試しください。'
+            : '音声入力中にエラーが発生しました。';
+        setVoiceInputError(errorMessage);
+        try {
+          recognition.stop();
+        } catch (err) {
+          // ignore stop error
+        }
+      };
+
+      recognition.onend = () => {
+        cleanupVoiceRecognition(true);
+      };
+
+      voiceRecognitionRef.current = recognition;
+      setIsVoiceInputActive(true);
+      setVoiceInterimText('');
+      recognition.start();
+    } catch (error) {
+      console.error('Failed to start voice input:', error);
+      setVoiceInputError('音声入力を開始できませんでした。');
+      cleanupVoiceRecognition(true);
+    }
+  }, [cleanupVoiceRecognition, isRecording, isVoiceInputActive, isVoiceInputAvailable, setMessage, startRecording, stopRecording]);
 
   const persistMemo = useCallback(async (nextMemo) => {
     if (!state.currentConversationId) return;
@@ -826,25 +979,58 @@ function New1on1Support() {
                 <div ref={messagesEndRef} />
               </div>
               {state.appState === 'support_started' && (
-                <div className={styles.inputArea}>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={handleFreeMessageKeyDown}
-                    placeholder="部下への質問を自由に入力...（Shift+Enterで改行、Enterで送信）"
-                    className={styles.normalInput}
-                    rows="1"
-                    disabled={showChecklist}
-                  />
-                  <button onClick={handleSendFreeMessage} disabled={state.isLoading || !message.trim() || showChecklist} className={styles.sendButton}>質問する</button>
-                </div>
+                <>
+                  <div className={styles.inputArea}>
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyDown={handleFreeMessageKeyDown}
+                      placeholder="部下への質問を自由に入力...（Shift+Enterで改行、Enterで送信）"
+                      className={styles.normalInput}
+                      rows="1"
+                      disabled={showChecklist}
+                    />
+                    <div className={styles.inputButtons}>
+                      <button
+                        type="button"
+                        onClick={handleToggleVoiceInput}
+                        className={`${styles.voiceButton} ${isVoiceInputActive ? styles.voiceButtonActive : ''}`}
+                        disabled={!isVoiceInputAvailable || state.isLoading || showChecklist}
+                        aria-pressed={isVoiceInputActive}
+                        title={isVoiceInputAvailable ? '音声で質問を入力します' : 'このブラウザでは音声入力を利用できません。'}
+                      >
+                        {isVoiceInputActive ? <FiMicOff className={styles.voiceIcon} /> : <FiMic className={styles.voiceIcon} />}
+                        <span>{isVoiceInputActive ? '音声入力停止' : '音声入力'}</span>
+                      </button>
+                      <button
+                        onClick={handleSendFreeMessage}
+                        disabled={state.isLoading || !message.trim() || showChecklist}
+                        className={styles.sendButton}
+                      >
+                        質問する
+                      </button>
+                    </div>
+                  </div>
+                  {(isVoiceInputActive || voiceInterimText || voiceInputError) && (
+                    <div className={styles.voiceStatusRow} role="status" aria-live="polite">
+                      {isVoiceInputActive && <span className={styles.voiceStatusActive}>音声入力中...</span>}
+                      {voiceInterimText && <span className={styles.voiceInterimText}>{voiceInterimText}</span>}
+                      {voiceInputError && <span className={styles.voiceStatusError}>{voiceInputError}</span>}
+                    </div>
+                  )}
+                  {!isVoiceInputAvailable && !voiceInputError && (
+                    <div className={styles.voiceStatusRow}>
+                      <span className={styles.voiceStatusNotice}>このブラウザは音声入力に対応していません。</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
 
           <div className={styles.rightPanel}>
             <div className={styles.sessionControls}>
-              <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`} disabled={showChecklist}>
+              <button onClick={handleToggleRecording} className={`${styles.recordButton} ${isRecording ? styles.recording : ''}`} disabled={showChecklist || isVoiceInputActive}>
                 {isRecording ? <FiMicOff className={styles.micIcon} /> : <FiMic className={styles.micIcon} />}
                 <span>{isRecording ? (isTranscriptPopupMinimized ? '録音中 (表示)' : '録音停止') : '録音開始'}</span>
               </button>

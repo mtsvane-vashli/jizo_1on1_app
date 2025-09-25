@@ -187,6 +187,47 @@ html.dark .inputArea {
   box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.15);
 }
 
+.inputButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.voiceButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.voiceButton:hover {
+  background-color: rgba(142, 68, 173, 0.1);
+  border-color: var(--accent-color);
+}
+
+.voiceButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.voiceButtonActive {
+  background-color: rgba(142, 68, 173, 0.12);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.voiceIcon {
+  font-size: 1rem;
+}
+
 .sendButton {
   padding: 0.75rem 1.5rem;
   background-color: var(--accent-color);
@@ -205,6 +246,32 @@ html.dark .inputArea {
 .sendButton:disabled {
   background-color: #bdc3c7;
   cursor: not-allowed;
+}
+
+.voiceStatusRow {
+  margin: 0.5rem 1rem 0;
+  font-size: 0.85rem;
+  color: var(--secondary-text-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.voiceStatusActive {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.voiceInterimText {
+  color: var(--primary-text-color);
+}
+
+.voiceStatusError {
+  color: var(--danger-color, #e74c3c);
+}
+
+.voiceStatusNotice {
+  color: var(--secondary-text-color);
 }
 
 .changeThemeButton {
