@@ -69,19 +69,10 @@ CREATE TABLE IF NOT EXISTS employees (
 CREATE INDEX IF NOT EXISTS ix_employees_org_name_lower
     ON employees (organization_id, LOWER(name));
 
--- 組織内 email ユニーク（NULL は許容）
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_indexes
-        WHERE schemaname = 'public'
-          AND indexname = 'ux_employees_org_email'
-    ) THEN
-        CREATE UNIQUE INDEX ux_employees_org_email
-            ON employees (organization_id, email)
-            WHERE email IS NOT NULL;
-    END IF;
-END $$;
+-- 組織内 email 検索用の非ユニークインデックス（NULL は除外）
+CREATE INDEX IF NOT EXISTS ix_employees_org_email
+    ON employees (organization_id, email)
+    WHERE email IS NOT NULL;
 
 -- 複合参照用（organization_id, id）ユニーク
 DO $$

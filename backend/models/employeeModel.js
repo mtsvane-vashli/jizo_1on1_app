@@ -21,8 +21,7 @@ const createEmployee = async (newEmployee, user) => {
         return employeeId;
     } catch (err) {
         if (err.code === '23505') {
-            // 現在の一意制約は email のみ（NULL は許容）
-            throw new Error('Employee with this email already exists in this organization.');
+            throw new Error('Employee already exists in this organization.');
         }
         throw err;
     }
