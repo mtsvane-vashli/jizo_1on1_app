@@ -80,9 +80,117 @@ const createUserByAdmin = async (req, res) => {
     }
 };
 
+const listOrgUsers = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Permission denied. Only admins can view organization users.' });
+    }
+
+    try {
+        const users = await userModel.getUsersByOrganization(req.user.organizationId);
+        const payload = users.map((u) => ({
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            mustChangePassword: !!u.must_change_password,
+            passwordChangedAt: u.password_changed_at,
+            createdAt: u.created_at
+        }));
+        return res.status(200).json(payload);
+    } catch (error) {
+        console.error('Error fetching organization users:', error);
+        return res.status(500).json({ error: 'Failed to fetch organization users.' });
+    }
+};
+
+const updateUserByAdmin = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Permission denied. Only admins can update users.' });
+    }
+
+    const targetUserId = Number(req.params.id);
+    if (Number.isNaN(targetUserId)) {
+        return res.status(400).json({ error: 'Invalid user id.' });
+    }
+
+    const { username, email, role, mustChangePassword } = req.body ?? {};
+    const updates = {};
+
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'username')) {
+        if (!username || typeof username !== 'string') {
+            return res.status(400).json({ error: 'Username is required when provided.' });
+        }
+        updates.username = username;
+    }
+
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'email')) {
+        if (email && typeof email === 'string') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ error: 'Invalid email format.' });
+            }
+            updates.email = email;
+        } else if (email === '' || email === null) {
+            updates.email = null;
+        } else if (email === undefined) {
+            // nothing
+        } else {
+            return res.status(400).json({ error: 'Invalid email value.' });
+        }
+    }
+
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'role')) {
+        if (role !== 'admin' && role !== 'user') {
+            return res.status(400).json({ error: 'Role must be either "admin" or "user".' });
+        }
+        updates.role = role;
+    }
+
+    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'mustChangePassword')) {
+        if (typeof mustChangePassword !== 'boolean') {
+            return res.status(400).json({ error: 'mustChangePassword must be a boolean value.' });
+        }
+        updates.mustChangePassword = mustChangePassword;
+    }
+
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided for update.' });
+    }
+
+    try {
+        const updatedUser = await userModel.updateUserByAdmin({
+            targetUserId,
+            organizationId: req.user.organizationId,
+            ...updates
+        });
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        return res.status(200).json({
+            id: updatedUser.id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            mustChangePassword: !!updatedUser.must_change_password,
+            passwordChangedAt: updatedUser.password_changed_at,
+            createdAt: updatedUser.created_at
+        });
+    } catch (error) {
+        console.error('Error updating user by admin:', error);
+        if (error.code === '23505') {
+            return res.status(409).json({ error: 'Username or email already exists in this organization.' });
+        }
+        return res.status(500).json({ error: 'Failed to update user.' });
+    }
+};
+
 module.exports = {
     loginUser,
     createUserByAdmin,
+    listOrgUsers,
+    updateUserByAdmin,
     changePassword: async (req, res) => {
         try {
             const { currentPassword, newPassword } = req.body;

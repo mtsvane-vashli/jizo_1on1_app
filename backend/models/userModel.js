@@ -19,6 +19,17 @@ const findUserById = async (id) => {
     return rows[0];
 };
 
+const getUsersByOrganization = async (organizationId) => {
+    const sql = `
+        SELECT id, username, email, role, must_change_password, password_changed_at, created_at
+          FROM users
+         WHERE organization_id = $1
+         ORDER BY created_at ASC, id ASC
+    `;
+    const { rows } = await pool.query(sql, [organizationId]);
+    return rows;
+};
+
 /**
  * 新しいユーザーを作成する (管理者が実行)
  * @param {object} newUser - { username, password (hashed) }
@@ -62,10 +73,54 @@ const updatePassword = async ({ userId, orgId, hashedPassword }) => {
     await pool.query(sql, [hashedPassword, userId, orgId]);
 };
 
+const updateUserByAdmin = async ({ targetUserId, organizationId, username, email, role, mustChangePassword }) => {
+    const fields = [];
+    const params = [];
+
+    if (username !== undefined) {
+        fields.push(`username = $${fields.length + 1}`);
+        params.push(username);
+    }
+    if (email !== undefined) {
+        fields.push(`email = $${fields.length + 1}`);
+        params.push(email);
+    }
+    if (role !== undefined) {
+        fields.push(`role = $${fields.length + 1}`);
+        params.push(role);
+    }
+    if (mustChangePassword !== undefined) {
+        fields.push(`must_change_password = $${fields.length + 1}`);
+        params.push(mustChangePassword);
+        if (!mustChangePassword) {
+            // 既にパスワードを変更済み扱いにする場合、特に更新不要
+        }
+    }
+
+    if (fields.length === 0) {
+        return null;
+    }
+
+    const sql = `
+        UPDATE users
+           SET ${fields.join(', ')}
+         WHERE id = $${fields.length + 1}
+           AND organization_id = $${fields.length + 2}
+         RETURNING id, username, email, role, must_change_password, password_changed_at, created_at
+    `;
+
+    params.push(targetUserId, organizationId);
+
+    const { rows } = await pool.query(sql, params);
+    return rows[0] || null;
+};
+
 module.exports = {
     findUserByUsername,
     findUserByEmail,
     findUserById,
+    getUsersByOrganization,
     createUser,
-    updatePassword
+    updatePassword,
+    updateUserByAdmin
 };

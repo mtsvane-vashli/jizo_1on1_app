@@ -37,3 +37,14 @@ export const resetPasswordWithToken = ({ token, newPassword }) => {
         body: JSON.stringify({ token, newPassword }),
     });
 };
+
+export const getOrganizationUsers = () => {
+    return apiClient('/api/users');
+};
+
+export const updateOrganizationUser = (userId, payload) => {
+    return apiClient(`/api/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+    });
+};
