@@ -452,6 +452,21 @@ html.dark .inputArea {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.modalVoiceRow {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.modalVoiceStatus {
+  font-size: 0.8rem;
+  color: var(--secondary-text-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .modalHint {
   font-size: 0.8rem;
   color: var(--secondary-text-color);

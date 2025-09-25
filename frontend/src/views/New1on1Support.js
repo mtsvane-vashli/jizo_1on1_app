@@ -29,6 +29,12 @@ const ReplyModal = ({
   setQuestion,
   reply,
   setReply,
+  onToggleVoiceInput,
+  isVoiceInputAvailable,
+  isVoiceInputActive,
+  voiceInputTarget,
+  voiceInterimText,
+  voiceInputError,
 }) => {
   if (!isOpen) return null;
 
@@ -74,6 +80,24 @@ const ReplyModal = ({
             rows={6}
             autoFocus={!!question}
           />
+          <div className={styles.modalVoiceRow}>
+            <button
+              type="button"
+              onClick={() => onToggleVoiceInput && onToggleVoiceInput('reply')}
+              className={`${styles.voiceButton} ${(isVoiceInputActive && voiceInputTarget === 'reply') ? styles.voiceButtonActive : ''}`}
+              disabled={!isVoiceInputAvailable || (isVoiceInputActive && voiceInputTarget !== 'reply')}
+              aria-pressed={isVoiceInputActive && voiceInputTarget === 'reply'}
+            >
+              {(isVoiceInputActive && voiceInputTarget === 'reply') ? <FiMicOff className={styles.voiceIcon} /> : <FiMic className={styles.voiceIcon} />}
+              <span>{(isVoiceInputActive && voiceInputTarget === 'reply') ? '音声入力停止' : '音声入力'}</span>
+            </button>
+            <div className={styles.modalVoiceStatus} role="status" aria-live="polite">
+              {(isVoiceInputActive && voiceInputTarget === 'reply') && <span className={styles.voiceStatusActive}>音声入力中...</span>}
+              {(voiceInputTarget === 'reply' && voiceInterimText) && <span className={styles.voiceInterimText}>{voiceInterimText}</span>}
+              {(voiceInputTarget === 'reply' && voiceInputError) && <span className={styles.voiceStatusError}>{voiceInputError}</span>}
+              {!isVoiceInputAvailable && !voiceInputError && <span className={styles.voiceStatusNotice}>音声入力はこのブラウザで利用できません。</span>}
+            </div>
+          </div>
           <p className={styles.modalHint}>
             Enterで送信、Shift+Enterで改行。
           </p>
@@ -251,6 +275,7 @@ function New1on1Support() {
   const [isTranscriptPopupMinimized, setIsTranscriptPopupMinimized] = useState(false);
   const [isVoiceInputAvailable, setIsVoiceInputAvailable] = useState(false);
   const [isVoiceInputActive, setIsVoiceInputActive] = useState(false);
+  const [voiceInputTarget, setVoiceInputTarget] = useState(null); // 'chat' | 'reply' | null
   const [voiceInterimText, setVoiceInterimText] = useState('');
   const [voiceInputError, setVoiceInputError] = useState('');
 
@@ -477,6 +502,7 @@ function New1on1Support() {
 
     if (isComponentMountedRef.current) {
       setIsVoiceInputActive(false);
+      setVoiceInputTarget(null);
       setVoiceInterimText('');
     }
     voiceRecognitionRef.current = null;
@@ -489,16 +515,28 @@ function New1on1Support() {
     }
   }, [startRecording]);
 
-  const handleToggleVoiceInput = useCallback(() => {
+  const handleToggleVoiceInput = useCallback((target) => {
+    if (!target) return;
+
     if (isVoiceInputActive) {
+      if (voiceInputTarget === target) {
+        if (voiceRecognitionRef.current) {
+          try {
+            voiceRecognitionRef.current.stop();
+          } catch (err) {
+            console.error('Failed to stop voice input:', err);
+          }
+        }
+        return;
+      }
+
       if (voiceRecognitionRef.current) {
         try {
           voiceRecognitionRef.current.stop();
         } catch (err) {
-          console.error('Failed to stop voice input:', err);
+          console.error('Failed to switch voice input target:', err);
         }
       }
-      return;
     }
 
     if (!isVoiceInputAvailable || typeof window === 'undefined') {
@@ -542,11 +580,19 @@ function New1on1Support() {
 
         const trimmedFinal = finalText.trim();
         if (trimmedFinal) {
-          setMessage((prev) => {
-            if (!prev) return trimmedFinal;
-            const needsSpace = !prev.endsWith(' ') && !/^([、。,.!?])/.test(trimmedFinal);
-            return `${prev}${needsSpace ? ' ' : ''}${trimmedFinal}`;
-          });
+          if (target === 'chat') {
+            setMessage((prev) => {
+              if (!prev) return trimmedFinal;
+              const needsSpace = !prev.endsWith(' ') && !/^([、。,.!?])/.test(trimmedFinal);
+              return `${prev}${needsSpace ? ' ' : ''}${trimmedFinal}`;
+            });
+          } else if (target === 'reply') {
+            setEmployeeReply((prev) => {
+              if (!prev) return trimmedFinal;
+              const needsSpace = !prev.endsWith(' ') && !/^([、。,.!?])/.test(trimmedFinal);
+              return `${prev}${needsSpace ? ' ' : ''}${trimmedFinal}`;
+            });
+          }
         }
 
         setVoiceInterimText(interim.trim());
@@ -573,6 +619,7 @@ function New1on1Support() {
 
       voiceRecognitionRef.current = recognition;
       setIsVoiceInputActive(true);
+      setVoiceInputTarget(target);
       setVoiceInterimText('');
       recognition.start();
     } catch (error) {
@@ -580,7 +627,7 @@ function New1on1Support() {
       setVoiceInputError('音声入力を開始できませんでした。');
       cleanupVoiceRecognition(true);
     }
-  }, [cleanupVoiceRecognition, isRecording, isVoiceInputActive, isVoiceInputAvailable, setMessage, startRecording, stopRecording]);
+  }, [cleanupVoiceRecognition, isRecording, isVoiceInputActive, isVoiceInputAvailable, setEmployeeReply, setMessage, startRecording, stopRecording, voiceInputTarget]);
 
   const persistMemo = useCallback(async (nextMemo) => {
     if (!state.currentConversationId) return;
@@ -859,6 +906,12 @@ function New1on1Support() {
           setQuestion={setSelectedQuestion}
           reply={employeeReply}
           setReply={setEmployeeReply}
+          onToggleVoiceInput={handleToggleVoiceInput}
+          isVoiceInputAvailable={isVoiceInputAvailable}
+          isVoiceInputActive={isVoiceInputActive}
+          voiceInputTarget={voiceInputTarget}
+          voiceInterimText={voiceInputTarget === 'reply' ? voiceInterimText : ''}
+          voiceInputError={voiceInputTarget === 'reply' ? voiceInputError : ''}
         />
         <div className={styles.sessionViewContainer} aria-hidden={showChecklist}>
           <div className={styles.leftPanel}>
@@ -993,14 +1046,14 @@ function New1on1Support() {
                     <div className={styles.inputButtons}>
                       <button
                         type="button"
-                        onClick={handleToggleVoiceInput}
-                        className={`${styles.voiceButton} ${isVoiceInputActive ? styles.voiceButtonActive : ''}`}
+                        onClick={() => handleToggleVoiceInput('chat')}
+                        className={`${styles.voiceButton} ${(isVoiceInputActive && voiceInputTarget === 'chat') ? styles.voiceButtonActive : ''}`}
                         disabled={!isVoiceInputAvailable || state.isLoading || showChecklist}
-                        aria-pressed={isVoiceInputActive}
+                        aria-pressed={isVoiceInputActive && voiceInputTarget === 'chat'}
                         title={isVoiceInputAvailable ? '音声で質問を入力します' : 'このブラウザでは音声入力を利用できません。'}
                       >
-                        {isVoiceInputActive ? <FiMicOff className={styles.voiceIcon} /> : <FiMic className={styles.voiceIcon} />}
-                        <span>{isVoiceInputActive ? '音声入力停止' : '音声入力'}</span>
+                        {(isVoiceInputActive && voiceInputTarget === 'chat') ? <FiMicOff className={styles.voiceIcon} /> : <FiMic className={styles.voiceIcon} />}
+                        <span>{(isVoiceInputActive && voiceInputTarget === 'chat') ? '音声入力停止' : '音声入力'}</span>
                       </button>
                       <button
                         onClick={handleSendFreeMessage}
@@ -1011,7 +1064,7 @@ function New1on1Support() {
                       </button>
                     </div>
                   </div>
-                  {(isVoiceInputActive || voiceInterimText || voiceInputError) && (
+                  {(voiceInputTarget === 'chat' && (isVoiceInputActive || voiceInterimText || voiceInputError)) && (
                     <div className={styles.voiceStatusRow} role="status" aria-live="polite">
                       {isVoiceInputActive && <span className={styles.voiceStatusActive}>音声入力中...</span>}
                       {voiceInterimText && <span className={styles.voiceInterimText}>{voiceInterimText}</span>}
