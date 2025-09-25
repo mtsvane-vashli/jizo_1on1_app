@@ -78,6 +78,7 @@ export default function Login() {
                 <input id="remember-me" name="remember-me" type="checkbox" className={styles.checkbox} />
                 <label htmlFor="remember-me" className={styles.label}>ログイン状態を保持する</label>
               </div>
+              <Link to="/forgot-password" className={styles.forgotPasswordLink}>パスワードを忘れた場合</Link>
             </div>
 
             <div>

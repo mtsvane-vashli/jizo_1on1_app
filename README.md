@@ -12,6 +12,7 @@
     * データは組織（企業）ごとに完全に分離され、セキュアに管理されます。
     * 組織の管理者は、組織全体のデータ閲覧やユーザー管理が可能です。
     * 一般ユーザーは、自分が関わったデータにのみアクセスできます。
+* **パスワードリセット**: メールリンクから新しいパスワードを設定でき、トークンは1時間で自動失効します。
 
 ## 🏗️ アーキテクチャの特徴
 
@@ -64,5 +65,22 @@ GEMINI_API_KEY="your_gemini_api_key"
 # CORS設定で許可するフロントエンドのURL
 FRONTEND_URL="http://localhost:3000"
 
+# パスワードリセットメール送信設定（SMTP）
+SMTP_HOST="smtp.example.com"
+SMTP_PORT=587
+SMTP_USER="smtp-user"
+SMTP_PASS="smtp-password"
+SMTP_SECURE=false
+RESET_EMAIL_FROM="地蔵1on1 <no-reply@example.com>"
+
+# パスワードリセット用のリンク生成に使用するフロントエンドURL
+PASSWORD_RESET_URL_BASE="http://localhost:3000/reset-password"
+
+# トークン有効期限（分）
+PASSWORD_RESET_EXPIRATION_MINUTES=60
+
 # (任意) バックエンドサーバーのポート番号
 PORT=5000
+```
+
+> SMTP設定を省略した場合、リセットメールは送信されず、生成されたトークンがバックエンドのログに出力されます（ローカル開発向け）。本番環境では必ずSMTPを設定してください。

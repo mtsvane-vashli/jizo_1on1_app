@@ -21,7 +21,8 @@ const TranscriptPopup = ({
     }, [transcript, interimTranscript]);
 
     const handleMouseDown = useCallback((e) => {
-        if (e.target.closest(`.${styles.popupHeader}`)) {
+        const headerSelector = `.${CSS.escape(styles.popupHeader)}`;
+        if (e.target.closest(headerSelector)) {
             e.preventDefault();
             setIsDragging(true);
             const popupRect = popupRef.current.getBoundingClientRect();

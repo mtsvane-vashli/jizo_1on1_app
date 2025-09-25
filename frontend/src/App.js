@@ -16,6 +16,8 @@ import Settings from './views/Settings.js';
 import Login from './views/Login.js';
 import Register from './views/Register.js';
 import ChangePassword from './views/ChangePassword.js';
+import ForgotPassword from './views/ForgotPassword.js';
+import ResetPassword from './views/ResetPassword.js';
 
 import ProtectedRoute from './components/ProtectedRoute.js';
 import { useAuth } from './context/AuthContext.js';
@@ -148,6 +150,8 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/change-password"
           element={

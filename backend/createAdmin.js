@@ -40,6 +40,10 @@ async function createAdmin() {
       rl.question('Enter the username for the new admin: ', resolve);
     });
 
+    const email = await new Promise(resolve => {
+      rl.question('Enter the email for the new admin (optional): ', resolve);
+    });
+
     const password = await new Promise(resolve => {
       rl.question('Enter the password for the new admin: ', (p) => {
         if (process.stdout.isTTY) {
@@ -67,8 +71,10 @@ async function createAdmin() {
 
     // 3. ユーザーをDBに挿入
     const userRes = await pool.query(
-      'INSERT INTO users (organization_id, username, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
-      [organizationId, username, hashedPassword, 'admin']
+      `INSERT INTO users (organization_id, username, email, password, role)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      [organizationId, username, email || null, hashedPassword, 'admin']
     );
 
     console.log(`✅ Admin user "${username}" created successfully for organization "${organizationName}" with ID: ${userRes.rows[0].id}`);

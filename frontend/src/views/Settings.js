@@ -11,6 +11,7 @@ function Settings() {
   const { user } = useAuth();
 
   const [newUsername, setNewUsername] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewPassword] = useState('');
   const [addingUser, setAddingUser] = useState(false);
   const [userCreationError, setUserCreationError] = useState('');
@@ -28,10 +29,17 @@ function Settings() {
       setAddingUser(true);
       setUserCreationError('');
       setUserCreationSuccess('');
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(newUserEmail)) {
+          setUserCreationError('有効なメールアドレスを入力してください。');
+          setAddingUser(false);
+          return;
+      }
       try {
-          await createUser({ username: newUsername, password: newUserPassword });
+          await createUser({ username: newUsername, email: newUserEmail, password: newUserPassword });
           setUserCreationSuccess(`ユーザー「${newUsername}」が正常に作成されました。`);
           setNewUsername('');
+          setNewUserEmail('');
           setNewPassword('');
       } catch (err) {
           setUserCreationError(`ユーザー作成に失敗しました: ${err.message}`);
@@ -115,13 +123,24 @@ function Settings() {
                 <input type="text" id="new-username" className={styles.input} value={newUsername} onChange={(e) => setNewUsername(e.target.value)} disabled={addingUser} /> {/* ★ */}
               </div>
               <div className={styles.inputGroup}> {/* ★ */}
+                <label htmlFor="new-user-email">メールアドレス</label>
+                <input
+                  type="email"
+                  id="new-user-email"
+                  className={styles.input}
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  disabled={addingUser}
+                />
+              </div>
+              <div className={styles.inputGroup}> {/* ★ */}
                 <label htmlFor="new-user-password">新規パスワード</label>
                 <input type="password" id="new-user-password" className={styles.input} value={newUserPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={addingUser} /> {/* ★ */}
               </div>
               {userCreationError && <p style={{color: 'red'}}>{userCreationError}</p>}
               {userCreationSuccess && <p style={{color: 'green'}}>{userCreationSuccess}</p>}
               <div className={styles.buttonGroup}> {/* ★ */}
-                <button type="submit" className={styles.saveButton} disabled={addingUser || !newUsername || !newUserPassword}> {/* ★ */}
+                <button type="submit" className={styles.saveButton} disabled={addingUser || !newUsername || !newUserEmail || !newUserPassword}> {/* ★ */}
                   {addingUser ? '作成中...' : 'このユーザーを作成'}
                 </button>
               </div>

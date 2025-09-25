@@ -7,6 +7,9 @@ const authenticateToken = require('../middleware/authMiddleware');
 
 router.post('/login', authController.loginUser);
 
+router.post('/password-reset/request', authController.requestPasswordReset);
+router.post('/password-reset/confirm', authController.resetPassword);
+
 // ★ /register から /users に変更し、管理者が実行するため認証をかける
 router.post('/users', authenticateToken, authController.createUserByAdmin); 
 

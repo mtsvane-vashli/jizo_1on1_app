@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     id               SERIAL PRIMARY KEY,
     organization_id  INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     username         TEXT NOT NULL,
+    email            TEXT,
     password         TEXT NOT NULL,
     role             TEXT NOT NULL DEFAULT 'user',  -- 'admin' or 'user'
     created_at       TIMESTAMPTZ DEFAULT NOW()
@@ -37,6 +38,21 @@ BEGIN
     ) THEN
         CREATE UNIQUE INDEX ux_users_org_username_lower
             ON users (organization_id, LOWER(username));
+    END IF;
+END $$;
+
+-- 組織内 email ユニーク（大文字小文字無視、NULL は許容）
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND indexname = 'ux_users_org_email_lower'
+    ) THEN
+        CREATE UNIQUE INDEX ux_users_org_email_lower
+            ON users (organization_id, LOWER(email))
+            WHERE email IS NOT NULL;
     END IF;
 END $$;
 

@@ -8,6 +8,12 @@ const findUserByUsername = async (username) => {
     return rows[0];
 };
 
+const findUserByEmail = async (email) => {
+    const sql = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1)';
+    const { rows } = await pool.query(sql, [email]);
+    return rows[0];
+};
+
 const findUserById = async (id) => {
     const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     return rows[0];
@@ -21,13 +27,22 @@ const findUserById = async (id) => {
  */
 const createUser = async (newUser, adminUser) => {
     // ★ 管理者と同じ組織に、新しいユーザー(role='user')を作成する
-    const sql = 'INSERT INTO users (username, password, organization_id, role, must_change_password) VALUES ($1, $2, $3, $4, $5) RETURNING id';
+    const sql = `INSERT INTO users (username, email, password, organization_id, role, must_change_password)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 RETURNING id`;
     try {
-        const { rows } = await pool.query(sql, [newUser.username, newUser.hashedPassword, adminUser.organizationId, 'user', true]);
+        const { rows } = await pool.query(sql, [
+            newUser.username,
+            newUser.email,
+            newUser.hashedPassword,
+            adminUser.organizationId,
+            'user',
+            true
+        ]);
         return rows[0].id;
     } catch (err) {
         if (err.code === '23505') { // UNIQUE constraint violation
-            throw new Error('Username already exists in this organization.');
+            throw new Error('Username or email already exists in this organization.');
         }
         throw err;
     }
@@ -49,6 +64,7 @@ const updatePassword = async ({ userId, orgId, hashedPassword }) => {
 
 module.exports = {
     findUserByUsername,
+    findUserByEmail,
     findUserById,
     createUser,
     updatePassword
