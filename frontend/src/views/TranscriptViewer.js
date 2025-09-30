@@ -294,11 +294,9 @@ function TranscriptViewer() {
                 )}
             </div>
 
-            {/* 要約 */}
             <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>要約</h3>
+                <h3 className={styles.sectionTitle}>要約とネクストアクション</h3>
 
-                {/* ★ 注意書きを上（目立つ帯）に移動 */}
                 <div className={styles.summaryAlert} role="note" aria-live="polite">
                     <FiAlertTriangle className={styles.summaryAlertIcon} />
                     <div>
@@ -310,44 +308,54 @@ function TranscriptViewer() {
                     </div>
                 </div>
 
-                <div
-                    className={styles.contentBlock}
-                    onClick={handleSummaryClick}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }}
-                />
-            </div>
+                <div className={styles.summaryStack}>
+                    <section className={styles.summaryCard}>
+                        <header className={styles.summaryCardHeader}>
+                            <h4 className={styles.summaryCardTitle}>会話の要約</h4>
+                            <span className={styles.summaryHelper}>クリックすると深掘りが表示されます</span>
+                        </header>
+                        <div
+                            className={`${styles.summaryBody} ${styles.summaryText}`}
+                            onClick={handleSummaryClick}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary || '要約はありません。')) }}
+                        />
+                    </section>
 
-            {/* ネクストアクション */}
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>ネクストアクション</h3>
-                <div
-                    className={styles.contentBlock}
-                    onClick={handleSummaryClick}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }}
-                />
-
-            {isDeepDiveOpen && (
-                <div
-                    ref={deepDiveRef}
-                    className={`${styles.deepDivePopover} ${deepDivePlacement === 'top' ? styles.top : styles.bottom}`}
-                    style={{ top: deepDivePosition.top, left: deepDivePosition.left }}
-                    role="dialog"
-                    aria-label="深掘り説明"
-                >
-                    <div className={styles.deepDiveHeader}>
-                        <span className={styles.deepDiveTitle}>深掘り</span>
-                        <button className={styles.deepDiveClose} onClick={() => setDeepDiveOpen(false)}>✕</button>
-                    </div>
-                    {deepDiveLoading ? (
-                        <p className={styles.deepDiveLoading}>深掘り中...</p>
-                    ) : deepDiveError ? (
-                        <p className={styles.deepDiveError}>{deepDiveError}</p>
-                    ) : deepDiveContent ? (
-                        <div className={styles.deepDiveBody} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(deepDiveContent)) }} />
-                    ) : null}
-                    <span className={`${styles.deepDiveArrow} ${deepDivePlacement === 'top' ? styles.top : styles.bottom}`} aria-hidden="true" />
+                    <section className={`${styles.summaryCard} ${styles.summaryActionCard}`}>
+                        <header className={styles.summaryCardHeader}>
+                            <h4 className={styles.summaryCardTitle}>ネクストアクション</h4>
+                            <span className={styles.summaryHelper}>上司の次ステップを簡潔に確認</span>
+                        </header>
+                        <div
+                            className={`${styles.summaryBody} ${styles.summaryText}`}
+                            onClick={handleSummaryClick}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions || 'ネクストアクションはありません。')) }}
+                        />
+                    </section>
                 </div>
-            )}
+
+                {isDeepDiveOpen && (
+                    <div
+                        ref={deepDiveRef}
+                        className={`${styles.deepDivePopover} ${deepDivePlacement === 'top' ? styles.top : styles.bottom}`}
+                        style={{ top: deepDivePosition.top, left: deepDivePosition.left }}
+                        role="dialog"
+                        aria-label="深掘り説明"
+                    >
+                        <div className={styles.deepDiveHeader}>
+                            <span className={styles.deepDiveTitle}>深掘り</span>
+                            <button className={styles.deepDiveClose} onClick={() => setDeepDiveOpen(false)}>✕</button>
+                        </div>
+                        {deepDiveLoading ? (
+                            <p className={styles.deepDiveLoading}>深掘り中...</p>
+                        ) : deepDiveError ? (
+                            <p className={styles.deepDiveError}>{deepDiveError}</p>
+                        ) : deepDiveContent ? (
+                            <div className={styles.deepDiveBody} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(deepDiveContent)) }} />
+                        ) : null}
+                        <span className={`${styles.deepDiveArrow} ${deepDivePlacement === 'top' ? styles.top : styles.bottom}`} aria-hidden="true" />
+                    </div>
+                )}
             </div>
         </div>
     );

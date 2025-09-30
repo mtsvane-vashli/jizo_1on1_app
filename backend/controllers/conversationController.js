@@ -196,10 +196,35 @@ exports.summarizeConversation = async (req, res) => {
         ]);
 
         // AIの応答をパース
-        const summaryMatch = summaryContent.match(/\*\*要約:\*\*\n([\s\S]*?)(?=\*\*ネクストアクション:\*\*|$)/);
-        const nextActionsMatch = summaryContent.match(/\*\*ネクストアクション:\*\*\n([\s\S]*)/);
-        const summary = summaryMatch ? summaryMatch[1].trim() : '';
-        const nextActions = nextActionsMatch ? nextActionsMatch[1].trim() : '';
+        const sectionRegex = /\*\*(.+?)\*\*\s*\n([\s\S]*?)(?=\n\*\*|$)/g;
+        const sections = {};
+        let sectionMatch;
+        while ((sectionMatch = sectionRegex.exec(summaryContent)) !== null) {
+            const title = sectionMatch[1]?.trim();
+            if (!title) continue;
+            sections[title] = sectionMatch[2]?.trim() || '';
+        }
+
+        const legacySummaryMatch = summaryContent.match(/\*\*要約:\*\*\n([\s\S]*?)(?=\*\*ネクストアクション:\*\*|$)/);
+        const legacyNextMatch = summaryContent.match(/\*\*ネクストアクション:\*\*\n([\s\S]*)/);
+
+        const highlight = sections['ハイライト（最大3件）'];
+        const background = sections['部下の背景と意図（200〜300文字）'];
+        const followHint = sections['フォローのヒント（任意 1〜2行）'];
+        const modernNext = sections['ネクストアクション（3件以内）'];
+
+        const compiledSummaryParts = [];
+        if (highlight) compiledSummaryParts.push('**ハイライト**\n' + highlight.trim());
+        if (background) compiledSummaryParts.push('**部下の背景と意図**\n' + background.trim());
+        if (followHint) compiledSummaryParts.push('**フォローのヒント**\n' + followHint.trim());
+
+        const summary = compiledSummaryParts.length > 0
+            ? compiledSummaryParts.join('\n\n')
+            : (legacySummaryMatch ? legacySummaryMatch[1].trim() : summaryContent.trim());
+
+        const nextActions = modernNext && modernNext.trim().length > 0
+            ? modernNext.trim()
+            : (legacyNextMatch ? legacyNextMatch[1].trim() : '');
         const keywords = keywordsText.split(',').map(k => k.trim()).filter(k => k.length > 0);
         const sentimentResult = JSON.parse(sentimentJsonText.replace(/```json\n|```/g, '').trim());
 

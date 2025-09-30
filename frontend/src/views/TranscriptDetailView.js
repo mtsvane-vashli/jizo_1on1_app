@@ -249,18 +249,34 @@ function TranscriptDetailView() {
                             </div>
                         </div>
 
-                        {conversation.summary && (
-                            <>
-                                <h4>要約:</h4>
-                                <div className={styles.contentBlock} onClick={handleSummaryClick} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary)) }}></div>
-                            </>
-                        )}
-                        {conversation.next_actions && (
-                            <>
-                                <h4>ネクストアクション:</h4>
-                                <div className={styles.contentBlock} onClick={handleSummaryClick} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions)) }}></div>
-                            </>
-                        )}
+                        <div className={styles.summaryCards}>
+                            {conversation.summary && (
+                                <section className={styles.summaryCard}>
+                                    <header className={styles.summaryCardHeader}>
+                                        <h4 className={styles.summaryCardTitle}>会話の要約</h4>
+                                        <span className={styles.summaryHelper}>クリックで深掘りのヒントを表示</span>
+                                    </header>
+                                    <div
+                                        className={`${styles.summaryBody} ${styles.summaryText}`}
+                                        onClick={handleSummaryClick}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.summary)) }}
+                                    />
+                                </section>
+                            )}
+                            {conversation.next_actions && (
+                                <section className={`${styles.summaryCard} ${styles.summaryActionCard}`}>
+                                    <header className={styles.summaryCardHeader}>
+                                        <h4 className={styles.summaryCardTitle}>ネクストアクション</h4>
+                                        <span className={styles.summaryHelper}>上司の具体的な次の一手を整理</span>
+                                    </header>
+                                    <div
+                                        className={`${styles.summaryBody} ${styles.summaryText}`}
+                                        onClick={handleSummaryClick}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(conversation.next_actions)) }}
+                                    />
+                                </section>
+                            )}
+                        </div>
 
                         {isDeepDiveOpen && (
                             <div

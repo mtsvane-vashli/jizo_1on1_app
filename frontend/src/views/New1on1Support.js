@@ -1044,18 +1044,34 @@ function New1on1Support() {
                           </div>
                         </div>
 
-                        {state.currentSummary && (
-                          <>
-                            <h5 className={styles.summaryHeader}>会話の要約</h5>
-                            <div className={styles.summaryText} onClick={handleSummaryClick} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }} />
-                          </>
-                        )}
-                        {state.currentNextActions && (
-                          <>
-                            <h5 className={styles.summaryHeader} style={{ marginTop: '1rem' }}>ネクストアクション</h5>
-                            <div className={styles.summaryText} onClick={handleSummaryClick} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }} />
-                          </>
-                        )}
+                        <div className={styles.summaryCards}>
+                          {state.currentSummary && (
+                            <section className={styles.summaryCard}>
+                              <header className={styles.summaryCardHeader}>
+                                <h5 className={styles.summaryHeader}>会話の要約</h5>
+                                <span className={styles.summaryHelper}>気になる箇所をクリックすると深掘りできます</span>
+                              </header>
+                              <div
+                                className={`${styles.summaryBody} ${styles.summaryText}`}
+                                onClick={handleSummaryClick}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentSummary)) }}
+                              />
+                            </section>
+                          )}
+                          {state.currentNextActions && (
+                            <section className={`${styles.summaryCard} ${styles.summaryActionCard}`}>
+                              <header className={styles.summaryCardHeader}>
+                                <h5 className={styles.summaryHeader}>ネクストアクション</h5>
+                                <span className={styles.summaryHelper}>上司が次に取れる動きを素早く確認</span>
+                              </header>
+                              <div
+                                className={`${styles.summaryBody} ${styles.summaryText}`}
+                                onClick={handleSummaryClick}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(state.currentNextActions)) }}
+                              />
+                            </section>
+                          )}
+                        </div>
 
                         {isDeepDiveOpen && (
                           <div
