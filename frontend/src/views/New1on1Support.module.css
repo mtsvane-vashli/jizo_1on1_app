@@ -905,8 +905,8 @@ html.dark .summaryAlert {
 .deepDivePopover {
   position: fixed;
   z-index: 1200;
-  width: min(360px, 92vw);
-  max-width: 360px;
+  width: min(1080px, 92vw);
+  max-width: 1080px;
   max-height: 60vh;
   overflow: auto;
   background: var(--secondary-background-color);
@@ -936,12 +936,6 @@ html.dark .summaryAlert {
   color: var(--primary-text-color);
   padding: .25rem .6rem;
   cursor: pointer;
-}
-
-.deepDiveAnchor {
-  font-size: .9rem;
-  color: var(--secondary-text-color);
-  margin: .25rem 0 .5rem;
 }
 
 .deepDiveLoading {

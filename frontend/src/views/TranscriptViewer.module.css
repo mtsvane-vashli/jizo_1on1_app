@@ -271,10 +271,10 @@
 
 /* ====== Deep Dive Popover ====== */
 .deepDivePopover {
-    position: fixed;
-    z-index: 1200;
-    width: min(360px, 92vw);
-    max-width: 360px;
+  position: fixed;
+  z-index: 1200;
+  width: min(1080px, 92vw);
+  max-width: 1080px;
     max-height: 60vh;
     overflow: auto;
     background: var(--secondary-background-color);
@@ -303,7 +303,6 @@
     cursor: pointer;
 }
 
-.deepDiveAnchor { font-size: .9rem; color: var(--secondary-text-color); margin: .25rem 0 .5rem; }
 .deepDiveLoading { color: var(--secondary-text-color); }
 .deepDiveError { color: var(--error-color); }
 .deepDiveBody { color: var(--primary-text-color); line-height: 1.6; }

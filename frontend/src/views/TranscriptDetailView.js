@@ -20,7 +20,6 @@ function TranscriptDetailView() {
     const [deepDiveLoading, setDeepDiveLoading] = useState(false);
     const [deepDiveError, setDeepDiveError] = useState('');
     const [deepDiveContent, setDeepDiveContent] = useState('');
-    const [deepDiveAnchor, setDeepDiveAnchor] = useState('');
     const [deepDivePosition, setDeepDivePosition] = useState({ top: 0, left: 0 });
     const [deepDivePlacement, setDeepDivePlacement] = useState('bottom');
     const deepDiveRef = useRef(null);
@@ -42,10 +41,10 @@ function TranscriptDetailView() {
     const positionPopover = (anchorEl) => {
         if (!anchorEl) return { top: 0, left: 0, placement: 'bottom' };
         const rect = anchorEl.getBoundingClientRect();
-        const popoverWidth = 360;
         const margin = 12;
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
+        const popoverWidth = Math.min(1080, viewportWidth * 0.92);
         const spaceBelow = viewportHeight - rect.bottom;
         const spaceAbove = rect.top;
         const preferred = spaceBelow >= 180 || spaceBelow >= spaceAbove ? 'bottom' : 'top';
@@ -143,8 +142,7 @@ function TranscriptDetailView() {
         const pos = positionPopover(anchorEl);
         setDeepDivePosition({ top: pos.top, left: pos.left });
         setDeepDivePlacement(pos.placement);
-        setDeepDiveAnchor(queryText);
-        setDeepDiveOpen(true);
+            setDeepDiveOpen(true);
         setDeepDiveLoading(true);
         setDeepDiveError('');
         setDeepDiveContent('');
@@ -276,9 +274,6 @@ function TranscriptDetailView() {
                                     <span className={styles.deepDiveTitle}>深掘り</span>
                                     <button className={styles.deepDiveClose} onClick={() => setDeepDiveOpen(false)}>✕</button>
                                 </div>
-                                {deepDiveAnchor && (
-                                    <p className={styles.deepDiveAnchor}><strong>対象:</strong> {deepDiveAnchor}</p>
-                                )}
                                 {deepDiveLoading ? (
                                     <p className={styles.deepDiveLoading}>深掘り中...</p>
                                 ) : deepDiveError ? (
