@@ -29,7 +29,8 @@ const ReplyModal = ({
   setQuestion,
   reply,
   setReply,
-  onToggleVoiceInput,
+  onVoiceInputStart,
+  onVoiceInputStop,
   isVoiceInputAvailable,
   isVoiceInputActive,
   voiceInputTarget,
@@ -83,13 +84,40 @@ const ReplyModal = ({
           <div className={styles.modalVoiceRow}>
             <button
               type="button"
-              onClick={() => onToggleVoiceInput && onToggleVoiceInput('reply')}
+              onPointerDown={(event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                event.preventDefault();
+                try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) { /* no-op */ }
+                onVoiceInputStart && onVoiceInputStart('reply');
+              }}
+              onPointerUp={(event) => {
+                if (event.currentTarget.releasePointerCapture) {
+                  try { event.currentTarget.releasePointerCapture(event.pointerId); } catch (_) { /* no-op */ }
+                }
+                onVoiceInputStop && onVoiceInputStop();
+              }}
+              onPointerLeave={() => { onVoiceInputStop && onVoiceInputStop(); }}
+              onPointerCancel={() => { onVoiceInputStop && onVoiceInputStop(); }}
+              onKeyDown={(event) => {
+                if (event.repeat) return;
+                if (event.key === ' ' || event.key === 'Enter') {
+                  event.preventDefault();
+                  onVoiceInputStart && onVoiceInputStart('reply');
+                }
+              }}
+              onKeyUp={(event) => {
+                if (event.key === ' ' || event.key === 'Enter') {
+                  event.preventDefault();
+                  onVoiceInputStop && onVoiceInputStop();
+                }
+              }}
               className={`${styles.voiceButton} ${(isVoiceInputActive && voiceInputTarget === 'reply') ? styles.voiceButtonActive : ''}`}
               disabled={!isVoiceInputAvailable || (isVoiceInputActive && voiceInputTarget !== 'reply')}
               aria-pressed={isVoiceInputActive && voiceInputTarget === 'reply'}
+              title={isVoiceInputAvailable ? '押している間だけ音声入力します' : 'このブラウザでは音声入力を利用できません。'}
             >
               {(isVoiceInputActive && voiceInputTarget === 'reply') ? <FiMicOff className={styles.voiceIcon} /> : <FiMic className={styles.voiceIcon} />}
-              <span>{(isVoiceInputActive && voiceInputTarget === 'reply') ? '音声入力停止' : '音声入力'}</span>
+              <span>押している間 音声入力</span>
             </button>
             <div className={styles.modalVoiceStatus} role="status" aria-live="polite">
               {(isVoiceInputActive && voiceInputTarget === 'reply') && <span className={styles.voiceStatusActive}>音声入力中...</span>}
@@ -289,6 +317,9 @@ function New1on1Support() {
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const voiceRecognitionRef = useRef(null);
+  const voiceHoldTargetRef = useRef(null);
+  const voiceRestartTimeoutRef = useRef(null);
+  const voiceSessionIdRef = useRef(0);
   const resumeTranscriptAfterVoiceRef = useRef(false);
   const isComponentMountedRef = useRef(true);
 
@@ -346,6 +377,11 @@ function New1on1Support() {
         }
         voiceRecognitionRef.current = null;
       }
+      if (voiceRestartTimeoutRef.current) {
+        clearTimeout(voiceRestartTimeoutRef.current);
+        voiceRestartTimeoutRef.current = null;
+      }
+      voiceHoldTargetRef.current = null;
       resumeTranscriptAfterVoiceRef.current = false;
     };
   }, []);
@@ -497,8 +533,14 @@ function New1on1Support() {
   };
 
   const cleanupVoiceRecognition = useCallback((resume = true) => {
+    if (voiceRestartTimeoutRef.current) {
+      clearTimeout(voiceRestartTimeoutRef.current);
+      voiceRestartTimeoutRef.current = null;
+    }
     const shouldResume = resume && resumeTranscriptAfterVoiceRef.current;
     resumeTranscriptAfterVoiceRef.current = false;
+    voiceSessionIdRef.current += 1;
+    voiceHoldTargetRef.current = null;
 
     if (isComponentMountedRef.current) {
       setIsVoiceInputActive(false);
@@ -515,48 +557,35 @@ function New1on1Support() {
     }
   }, [startRecording]);
 
-  const handleToggleVoiceInput = useCallback((target) => {
-    if (!target) return;
-
-    if (isVoiceInputActive) {
-      if (voiceInputTarget === target) {
-        if (voiceRecognitionRef.current) {
-          try {
-            voiceRecognitionRef.current.stop();
-          } catch (err) {
-            console.error('Failed to stop voice input:', err);
-          }
-        }
-        return;
-      }
-
-      if (voiceRecognitionRef.current) {
-        try {
-          voiceRecognitionRef.current.stop();
-        } catch (err) {
-          console.error('Failed to switch voice input target:', err);
-        }
-      }
-    }
-
-    if (!isVoiceInputAvailable || typeof window === 'undefined') {
-      setVoiceInputError('このブラウザでは音声入力を利用できません。');
-      return;
-    }
+  const startVoiceRecognition = useCallback((target) => {
+    if (typeof window === 'undefined') return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setVoiceInputError('このブラウザでは音声入力を利用できません。');
+      cleanupVoiceRecognition(true);
       return;
     }
 
-    setVoiceInputError('');
-    resumeTranscriptAfterVoiceRef.current = isRecording;
-
-    if (isRecording) {
-      stopRecording();
-      setIsRecording(false);
+    if (voiceRestartTimeoutRef.current) {
+      clearTimeout(voiceRestartTimeoutRef.current);
+      voiceRestartTimeoutRef.current = null;
     }
+
+    if (voiceRecognitionRef.current) {
+      try {
+        voiceRecognitionRef.current.onresult = null;
+        voiceRecognitionRef.current.onerror = null;
+        voiceRecognitionRef.current.onend = null;
+        voiceRecognitionRef.current.stop();
+      } catch (_) {
+        // ignore cleanup error
+      }
+      voiceRecognitionRef.current = null;
+    }
+
+    const nextSessionId = voiceSessionIdRef.current + 1;
+    voiceSessionIdRef.current = nextSessionId;
 
     try {
       const recognition = new SpeechRecognition();
@@ -565,6 +594,8 @@ function New1on1Support() {
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event) => {
+        if (voiceSessionIdRef.current !== nextSessionId) return;
+
         let interim = '';
         let finalText = '';
         for (let i = event.resultIndex; i < event.results.length; i += 1) {
@@ -606,19 +637,27 @@ function New1on1Support() {
             ? '音声が検出できませんでした。もう一度お試しください。'
             : '音声入力中にエラーが発生しました。';
         setVoiceInputError(errorMessage);
-        try {
-          recognition.stop();
-        } catch (err) {
-          // ignore stop error
-        }
-      };
-
-      recognition.onend = () => {
         cleanupVoiceRecognition(true);
       };
 
+      recognition.onend = () => {
+        if (voiceSessionIdRef.current !== nextSessionId) return;
+
+        voiceRecognitionRef.current = null;
+
+        if (voiceHoldTargetRef.current === target) {
+          voiceRestartTimeoutRef.current = setTimeout(() => {
+            startVoiceRecognition(target);
+          }, 80);
+        } else {
+          cleanupVoiceRecognition(true);
+        }
+      };
+
       voiceRecognitionRef.current = recognition;
-      setIsVoiceInputActive(true);
+      if (!isVoiceInputActive) {
+        setIsVoiceInputActive(true);
+      }
       setVoiceInputTarget(target);
       setVoiceInterimText('');
       recognition.start();
@@ -627,7 +666,55 @@ function New1on1Support() {
       setVoiceInputError('音声入力を開始できませんでした。');
       cleanupVoiceRecognition(true);
     }
-  }, [cleanupVoiceRecognition, isRecording, isVoiceInputActive, isVoiceInputAvailable, setEmployeeReply, setMessage, startRecording, stopRecording, voiceInputTarget]);
+  }, [cleanupVoiceRecognition, isVoiceInputActive, setEmployeeReply, setMessage]);
+
+  const handleStartVoiceInput = useCallback((target) => {
+    if (!target) return;
+
+    if (!isVoiceInputAvailable || typeof window === 'undefined') {
+      setVoiceInputError('このブラウザでは音声入力を利用できません。');
+      return;
+    }
+
+    if (voiceHoldTargetRef.current === target && isVoiceInputActive) {
+      return;
+    }
+
+    voiceHoldTargetRef.current = target;
+    setVoiceInputError('');
+
+    resumeTranscriptAfterVoiceRef.current = isRecording;
+    if (isRecording) {
+      stopRecording();
+      setIsRecording(false);
+    }
+
+    startVoiceRecognition(target);
+  }, [isRecording, isVoiceInputActive, isVoiceInputAvailable, setIsRecording, startVoiceRecognition, stopRecording]);
+
+  const handleStopVoiceInput = useCallback(() => {
+    if (voiceRestartTimeoutRef.current) {
+      clearTimeout(voiceRestartTimeoutRef.current);
+      voiceRestartTimeoutRef.current = null;
+    }
+
+    voiceHoldTargetRef.current = null;
+
+    if (!isVoiceInputActive && !voiceRecognitionRef.current) return;
+
+    setVoiceInterimText('');
+
+    if (voiceRecognitionRef.current) {
+      try {
+        voiceRecognitionRef.current.stop();
+      } catch (err) {
+        console.error('Failed to stop voice input:', err);
+        cleanupVoiceRecognition(true);
+      }
+    } else {
+      cleanupVoiceRecognition(true);
+    }
+  }, [cleanupVoiceRecognition, isVoiceInputActive]);
 
   const persistMemo = useCallback(async (nextMemo) => {
     if (!state.currentConversationId) return;
@@ -906,7 +993,8 @@ function New1on1Support() {
           setQuestion={setSelectedQuestion}
           reply={employeeReply}
           setReply={setEmployeeReply}
-          onToggleVoiceInput={handleToggleVoiceInput}
+          onVoiceInputStart={handleStartVoiceInput}
+          onVoiceInputStop={handleStopVoiceInput}
           isVoiceInputAvailable={isVoiceInputAvailable}
           isVoiceInputActive={isVoiceInputActive}
           voiceInputTarget={voiceInputTarget}
@@ -1046,14 +1134,40 @@ function New1on1Support() {
                     <div className={styles.inputButtons}>
                       <button
                         type="button"
-                        onClick={() => handleToggleVoiceInput('chat')}
+                        onPointerDown={(event) => {
+                          if (event.pointerType === 'mouse' && event.button !== 0) return;
+                          event.preventDefault();
+                          try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) { /* no-op */ }
+                          handleStartVoiceInput('chat');
+                        }}
+                        onPointerUp={(event) => {
+                          if (event.currentTarget.releasePointerCapture) {
+                            try { event.currentTarget.releasePointerCapture(event.pointerId); } catch (_) { /* no-op */ }
+                          }
+                          handleStopVoiceInput();
+                        }}
+                        onPointerLeave={handleStopVoiceInput}
+                        onPointerCancel={handleStopVoiceInput}
+                        onKeyDown={(event) => {
+                          if (event.repeat) return;
+                          if (event.key === ' ' || event.key === 'Enter') {
+                            event.preventDefault();
+                            handleStartVoiceInput('chat');
+                          }
+                        }}
+                        onKeyUp={(event) => {
+                          if (event.key === ' ' || event.key === 'Enter') {
+                            event.preventDefault();
+                            handleStopVoiceInput();
+                          }
+                        }}
                         className={`${styles.voiceButton} ${(isVoiceInputActive && voiceInputTarget === 'chat') ? styles.voiceButtonActive : ''}`}
                         disabled={!isVoiceInputAvailable || state.isLoading || showChecklist}
                         aria-pressed={isVoiceInputActive && voiceInputTarget === 'chat'}
-                        title={isVoiceInputAvailable ? '音声で質問を入力します' : 'このブラウザでは音声入力を利用できません。'}
+                        title={isVoiceInputAvailable ? '押している間だけ音声入力します' : 'このブラウザでは音声入力を利用できません。'}
                       >
                         {(isVoiceInputActive && voiceInputTarget === 'chat') ? <FiMicOff className={styles.voiceIcon} /> : <FiMic className={styles.voiceIcon} />}
-                        <span>{(isVoiceInputActive && voiceInputTarget === 'chat') ? '音声入力停止' : '音声入力'}</span>
+                        <span>押している間 音声入力</span>
                       </button>
                       <button
                         onClick={handleSendFreeMessage}
