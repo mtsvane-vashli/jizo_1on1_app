@@ -426,7 +426,7 @@ function New1on1Support() {
 
   useEffect(() => {
     if (!isSessionView) return;
-    const backendUrl = '';
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
     socketRef.current = io(backendUrl);
     socketRef.current.on('transcript_data', handleTranscriptUpdate);
     return () => { socketRef.current?.disconnect(); };
