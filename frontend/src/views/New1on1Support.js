@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getEmployees, startConversation, postMessage, generateSummary, updateConversation, deepDive } from '../services';
+import { getEmployees, startConversation, postMessage, generateSummary, updateConversation, deepDive, refreshQuestions, onePointAdvice } from '../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import layoutStyles from '../App.module.css';
@@ -13,7 +13,63 @@ import TranscriptPopup from '../components/TranscriptPopup';
 import ThemeToggleButton from '../components/ThemeToggleButton';
 import BrainJuiceButton from '../components/BrainJuiceButton';
 import { io } from 'socket.io-client';
-import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle, FiZap } from 'react-icons/fi';
+
+
+/**
+ * AdviceModal
+ * - ワンポイントアドバイス（Markdown）を表示するだけの簡単モーダル
+ * - 画面外クリック/✕ボタンで閉じる
+ */
+const AdviceModal = ({ open, onClose, loading, error, content }) => {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className={styles.adviceModalBackdrop} onClick={onClose}>
+      <div
+        className={styles.adviceModal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="adviceModalTitle"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.adviceModalHeader}>
+          <h3 id="adviceModalTitle">ワンポイントアドバイス</h3>
+          <button
+            type="button"
+            className={styles.adviceModalClose}
+            aria-label="閉じる"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className={styles.adviceModalBody}>
+          {loading ? (
+            <p>生成中...</p>
+          ) : error ? (
+            <p className={styles.adviceError}>{error}</p>
+          ) : (
+            <div
+              className={styles.adviceContent}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(marked.parse(content || '（内容なし）')),
+              }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /**
  * ReplyModal
@@ -323,11 +379,21 @@ function New1on1Support() {
   const resumeTranscriptAfterVoiceRef = useRef(false);
   const isComponentMountedRef = useRef(true);
 
+  const transcriptionRestartTimeoutRef = useRef(null); // ★ 追加: 再起動ディレイ管理
+
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState('');
   const [employeeReply, setEmployeeReply] = useState('');
 
   const [showChecklist, setShowChecklist] = useState(false); // ★ 追加: 安全宣言ポップアップ
+
+  const [overrideSuggestions, setOverrideSuggestions] = useState([]);      // 更新で得た4案
+  const [isRefreshingSug, setIsRefreshingSug] = useState(false);
+
+  const [adviceOpen, setAdviceOpen] = useState(false);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [adviceError, setAdviceError] = useState('');
+  const [adviceContent, setAdviceContent] = useState('');
 
   const isSessionView = location.pathname === '/session';
 
@@ -342,7 +408,8 @@ function New1on1Support() {
   const [deepDiveAnchorEl, setDeepDiveAnchorEl] = useState(null);
   const scrollParentRef = useRef(null);
 
-  // 脳汁ボタンの沈黙状態（必要ならUI制御に利用可）
+  // 脳汁ボタンの沈黙状態（現状は未使用のため lint 無効化）
+  // eslint-disable-next-line no-unused-vars
   const [isSilenceActive, setIsSilenceActive] = useState(false);
 
   const getScrollParent = (element) => {
@@ -449,8 +516,6 @@ function New1on1Support() {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [state.chatHistory]);
 
-  const transcriptionRestartTimeoutRef = useRef(null);
-
   const handleTranscriptUpdate = useCallback((data) => {
     if (data.isFinal) {
       setTranscript(prev => [...prev, { transcript: data.transcript.trim(), speakerTag: data.speakerTag }]);
@@ -461,11 +526,14 @@ function New1on1Support() {
     }
   }, []);
 
+  // --- 録音制御はここへ（依存を先に初期化する） ---
   const stopRecording = useCallback(() => {
+    // 再開ディレイを確実にクリア
     if (transcriptionRestartTimeoutRef.current) {
       clearTimeout(transcriptionRestartTimeoutRef.current);
       transcriptionRestartTimeoutRef.current = null;
     }
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
@@ -499,29 +567,26 @@ function New1on1Support() {
     }
   }, []);
 
+  // Backend からの STT 再起動指示に応答（停止→少し待って→再開）
   const restartTranscription = useCallback(({ reason } = {}) => {
     if (transcriptionRestartTimeoutRef.current) {
       clearTimeout(transcriptionRestartTimeoutRef.current);
       transcriptionRestartTimeoutRef.current = null;
     }
-    if (!socketRef.current) {
-      return;
-    }
+    if (!socketRef.current) return;
 
     console.info('Received transcription restart request from backend', reason);
 
     const shouldResume = isRecording;
-    stopRecording();
-
-    if (!shouldResume) {
-      return;
+    if (shouldResume) {
+      stopRecording();
+      transcriptionRestartTimeoutRef.current = setTimeout(() => {
+        startRecording();
+      }, 400);
     }
-
-    transcriptionRestartTimeoutRef.current = setTimeout(() => {
-      startRecording();
-    }, 400);
   }, [isRecording, startRecording, stopRecording]);
 
+  // Socket 接続（再起動イベント購読付き）
   useEffect(() => {
     if (!isSessionView) return;
     const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
@@ -891,9 +956,38 @@ function New1on1Support() {
   }, [state.currentEmployee, state.selectedTheme, showChecklist]);
 
   const handleSuggestionClick = (question) => {
-    const isOther = question?.startsWith('その他');
-    setSelectedQuestion(isOther ? '' : question || '');
+    setSelectedQuestion(question || '');
     setIsReplyModalOpen(true);
+  };
+
+  const handleRefreshSuggestions = async () => {
+    if (!state.currentConversationId) return;
+    setIsRefreshingSug(true);
+    try {
+      const res = await refreshQuestions(state.currentConversationId);
+      const list = (res && res.suggested_questions) ? res.suggested_questions : [];
+      setOverrideSuggestions(list);
+    } catch (err) {
+      alert(err?.message || '質問例の更新に失敗しました');
+    } finally {
+      setIsRefreshingSug(false);
+    }
+  };
+
+  const handleOpenAdvice = async () => {
+    if (!state.currentConversationId) return;
+    setAdviceOpen(true);
+    setAdviceLoading(true);
+    setAdviceError('');
+    setAdviceContent('');
+    try {
+      const res = await onePointAdvice(state.currentConversationId);
+      setAdviceContent(res?.advice_md || '（内容なし）');
+    } catch (err) {
+      setAdviceError(err?.message || 'アドバイスの生成に失敗しました');
+    } finally {
+      setAdviceLoading(false);
+    }
   };
 
   const handleSubmitReply = useCallback(async () => {
@@ -967,7 +1061,8 @@ function New1on1Support() {
         const source = node.nodeType === 3 ? node.nodeValue : (node.textContent || '');
         const offset = typeof sel.focusOffset === 'number' ? sel.focusOffset : 0;
         const len = source.length;
-        const isDelim = (ch) => /[。．\.！？!？\?]/.test(ch) || ch === '\n';
+        // 句点・終端記号検出（不要なエスケープを削除）
+        const isDelim = (ch) => /[。．.!?！？]/.test(ch) || ch === '\n';
         let start = 0;
         for (let i = Math.max(0, offset - 1); i >= 0; i--) {
           if (isDelim(source[i])) { start = i + 1; break; }
@@ -1040,6 +1135,13 @@ function New1on1Support() {
           voiceInterimText={voiceInputTarget === 'reply' ? voiceInterimText : ''}
           voiceInputError={voiceInputTarget === 'reply' ? voiceInputError : ''}
         />
+        <AdviceModal
+          open={adviceOpen}
+          onClose={() => setAdviceOpen(false)}
+          loading={adviceLoading}
+          error={adviceError}
+          content={adviceContent}
+        />
         <div className={styles.sessionViewContainer} aria-hidden={showChecklist}>
           <div className={styles.leftPanel}>
             <div className={styles.sessionHeader}>
@@ -1047,13 +1149,34 @@ function New1on1Support() {
                 {state.isGeneratingSummary ? '要約を生成中...' : '会話を終了して要約'}
               </button>
               {state.appState === 'support_started' && (
-                <button onClick={() => dispatch({ type: 'RESET_TO_THEME_SELECTION' })} className={styles.changeThemeButton} disabled={showChecklist}>
-                  <FiRefreshCw />
-                  <span>テーマを変更</span>
-                </button>
+                <>
+                  <button onClick={() => dispatch({ type: 'RESET_TO_THEME_SELECTION' })} className={styles.changeThemeButton} disabled={showChecklist}>
+                    <FiRefreshCw />
+                    <span>テーマを変更</span>
+                  </button>
+                  <button
+                    onClick={handleRefreshSuggestions}
+                    className={styles.refreshSugButton}
+                    disabled={isRefreshingSug || showChecklist}
+                    title="新しい質問例を4つ提案"
+                  >
+                    <FiRefreshCw />
+                    <span>{isRefreshingSug ? '更新中...' : '質問例を更新'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenAdvice}
+                    className={styles.adviceButton}
+                    disabled={showChecklist}
+                    title="会話の感情・傾聴・次の一言などのコーチングを表示"
+                  >
+                    <FiZap />
+                    <span>ワンポイントアドバイス</span>
+                  </button>
+                </>
               )}
               {/* 脳汁ボタン：小型アイコン＋15秒沈黙タイマー */}
-              
+
               <BrainJuiceButton
                 movable
                 storageKey="brainjuice_pos"
@@ -1151,13 +1274,22 @@ function New1on1Support() {
                   <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
                     <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : (chat.sender === 'employee' ? state.currentEmployee?.name || '部下' : 'AIアシスタント')}:</strong>
                     <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.message)) }}></div>
-                    {chat.sender === 'ai' && chat.suggested_questions && (
+                    {chat.sender === 'ai' && (chat.suggested_questions || overrideSuggestions.length > 0) && (
                       <div className={styles.suggestions}>
-                        {chat.suggested_questions.map((q, i) => (
-                          <button key={i} onClick={() => handleSuggestionClick(q)} className={styles.suggestionButton} disabled={showChecklist}>
-                            {q}
-                          </button>
-                        ))}
+                        {(() => {
+                          // 1) まず「更新で上書き」優先
+                          //const base = (overrideSuggestions.length > 0 ? overrideSuggestions : (chat.suggested_questions || []));
+                          // 2) 「その他」を除外
+                          const list = (overrideSuggestions.length ? overrideSuggestions : (chat.suggested_questions || []))
+                            .filter(q => q && q.trim())
+                            .slice(0, 4);
+
+                          return list.map((q, i) => (
+                            <button key={`${q}-${i}`} onClick={() => handleSuggestionClick(q)} className={styles.suggestionButton} disabled={showChecklist}>
+                              {q}
+                            </button>
+                          ));
+                        })()}
                       </div>
                     )}
                   </div>

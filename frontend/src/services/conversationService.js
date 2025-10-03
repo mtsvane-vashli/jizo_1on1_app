@@ -63,7 +63,7 @@ export const updateConversationTranscript = (conversationId, updatedTranscriptSt
 
 /**
  * 任意フィールドを部分更新（PATCH）
- * 例）updateConversation(id, { memo: '...', mindMapData: {...} })
+ * 例）updateConversation(id, { memo: '.', mindMapData: {.} })
  */
 export const updateConversation = (conversationId, dataToUpdate) => {
   return apiClient(`/api/conversations/${conversationId}`, {
@@ -89,5 +89,33 @@ export const generateSummary = (conversationId, transcript) => {
   return apiClient(`/api/conversations/${conversationId}/summarize`, {
     method: 'POST',
     body: JSON.stringify({ transcript }),
+  });
+};
+
+/**
+ * ★ Deep Dive（要約内クリック時の詳細説明）
+ */
+export const deepDive = (conversationId, queryText) => {
+  return apiClient(`/api/conversations/${conversationId}/deep-dive`, {
+    method: 'POST',
+    body: JSON.stringify({ queryText }),
+  });
+};
+
+/**
+ * ★ 質問例の更新（4件。バックエンド側で「その他」を除外しなくてもOK、フロントで除外）
+ */
+export const refreshQuestions = (conversationId) => {
+  return apiClient(`/api/conversations/${conversationId}/refresh-questions`, {
+    method: 'POST',
+  });
+};
+
+/**
+ * ★ ワンポイントアドバイス（Markdown を返す）
+ */
+export const onePointAdvice = (conversationId) => {
+  return apiClient(`/api/conversations/${conversationId}/one-point-advice`, {
+    method: 'POST',
   });
 };

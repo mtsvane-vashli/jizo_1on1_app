@@ -987,7 +987,7 @@ html.dark .summaryAlert {
   cursor: help;
 }
 
-.deepDivePanel { /* deprecated, kept for compatibility */ }
+
 
 .deepDivePopover {
   position: fixed;
@@ -1071,3 +1071,119 @@ html.dark .summaryAlert {
 
 .deepDiveArrow.bottom { top: -8px; }
 .deepDiveArrow.top { bottom: -8px; transform: rotate(225deg); }
+
+
+/* 質問例更新ボタン */
+.refreshSugButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  padding: 0.8rem 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+
+.refreshSugButton:hover {
+  background-color: var(--hover-color);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+/* ワンポイントアドバイスボタン */
+.adviceButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  padding: 0.8rem 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+
+.adviceButton:hover {
+  background-color: var(--hover-color);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+/* アドバイスモーダル */
+.adviceModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4000;
+}
+
+/* 背景を白、文字を濃いめに。余白・段落も強化 */
+.adviceModal {
+  background: #fff;                 /* ← 白 */
+  color: #2c3e50;
+  width: min(880px, 92vw);
+  max-height: 80vh;
+  border: 1px solid #e0e6ed;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 見出し＆本文タイポグラフィ */
+.adviceContent :is(h2, h3, h4) { margin: 1rem 0 .6rem; }
+.adviceContent p { line-height: 1.9; margin: .6rem 0; }
+.adviceContent ul { padding-left: 1.25rem; margin: .6rem 0; }
+.adviceContent li { line-height: 1.8; margin: .35rem 0; }
+
+/* 重要語を色分けしたい時に使える軽いアクセント */
+.adviceContent strong { color: #8e44ad; }
+
+
+.adviceModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .8rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.adviceModalClose {
+  font-size: 1.2rem;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+}
+
+.adviceModalBody {
+  padding: 1rem;
+  overflow: auto;
+}
+
+.adviceError {
+  color: var(--danger-color, #e74c3c);
+}
+
+.adviceContent :is(h2, h3, h4) {
+  margin: .8rem 0 .4rem;
+}
+
+.adviceContent p,
+.adviceContent li {
+  line-height: 1.7;
+}

@@ -4,7 +4,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
-const { Server } = require("socket.io");
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,16 +20,37 @@ const whitelist = [
   'https://www.memento-1on1.com',
   'http://www.memento-1on1.com',
 ];
+
+// .env で FRONTEND_URL を渡している場合もホワイトリストに追加
 if (process.env.FRONTEND_URL && !whitelist.includes(process.env.FRONTEND_URL)) {
   whitelist.push(process.env.FRONTEND_URL);
 }
+
+/**
+ * dev 用: localhost/127.0.0.1 はポート不問で許可
+ */
+const isDevOrigin = (origin) => {
+  if (!origin) return true; // 同一オリジンやcurl/Postman等は許可
+  try {
+    const u = new URL(origin);
+    return (u.hostname === 'localhost' || u.hostname === '127.0.0.1');
+  } catch (_) {
+    return false;
+  }
+};
+
+// 共通の許可判定
+const isAllowedOrigin = (origin) => {
+  return isDevOrigin(origin) || whitelist.includes(origin);
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || whitelist.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
     }
+    console.warn('[CORS BLOCKED] origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
   },
   optionsSuccessStatus: 200,
   credentials: true
@@ -40,16 +61,29 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- ルーターの接続 ---
-// ★★★ 修正: ベースパスを '/api' に統一し、元のURL構造を維持します ★★★
-// これにより、フロントエンドのserviceファイルを変更する必要がなくなります。
+// ★ ベースパス '/api' を維持
 app.use('/api', require('./routes/authRoutes'));
 app.use('/api', require('./routes/employeeRoutes'));
 app.use('/api', require('./routes/conversationRoutes'));
 app.use('/api', require('./routes/dashboardRoutes'));
 
-
 // --- WebSocketサーバー設定 ---
-const io = new Server(server, { cors: corsOptions });
+// socket.io にも同じ CORS 判定を適用（メソッド/ヘッダも明示）
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      console.warn('[Socket.IO CORS BLOCKED] origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }
+});
+
 const { setupTranscriptionStream } = require('./services/aiService');
 
 io.on('connection', (socket) => {
