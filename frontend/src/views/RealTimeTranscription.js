@@ -17,7 +17,7 @@ const RealTimeTranscription = ({
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const socketRef = useRef(null);
-  const streamRestartIntervalRef = useRef(null);
+  const restartTimeoutRef = useRef(null);
   const lastSpeakerTag = useRef(null);
   const transcriptDisplayRef = useRef(null);
 
@@ -32,7 +32,7 @@ const RealTimeTranscription = ({
     const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
     socketRef.current = io(backendUrl);
 
-    socketRef.current.on('transcript_data', (data) => {
+    const handleTranscriptData = (data) => {
       if (data.isFinal) {
         onTranscriptUpdate(data);
         setInterimTranscript('');
@@ -41,19 +41,30 @@ const RealTimeTranscription = ({
         const speakerPrefix = data.speakerTag ? `話者${data.speakerTag}: ` : '';
         setInterimTranscript(speakerPrefix + data.transcript);
       }
-    });
+    };
+
+    const handleRestart = (payload) => restartRecording(payload || {});
+
+    socketRef.current.on('transcript_data', handleTranscriptData);
+    socketRef.current.on('transcription_restart', handleRestart);
 
     return () => {
       if (socketRef.current) {
+        socketRef.current.off('transcript_data', handleTranscriptData);
+        socketRef.current.off('transcription_restart', handleRestart);
         socketRef.current.disconnect();
       }
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
     };
-  }, [onTranscriptUpdate]);
+  }, [onTranscriptUpdate, restartRecording]);
 
   const stopRecording = useCallback(() => {
-    if (streamRestartIntervalRef.current) {
-      clearInterval(streamRestartIntervalRef.current);
-      streamRestartIntervalRef.current = null;
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
@@ -101,15 +112,30 @@ const RealTimeTranscription = ({
     }
   }, [isRecording, onToggleRecording]);
 
+  const restartRecording = useCallback(({ reason } = {}) => {
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+
+    console.info('Received transcription restart request from backend', reason);
+
+    const shouldResume = isRecording;
+    stopRecording();
+
+    if (!shouldResume) {
+      return;
+    }
+
+    restartTimeoutRef.current = setTimeout(() => {
+      startRecording();
+    }, 400);
+  }, [isRecording, startRecording, stopRecording]);
+
 
   useEffect(() => {
     if (isRecording) {
-      const restartStream = async () => {
-        stopRecording();
-        setTimeout(() => startRecording(), 500);
-      };
       startRecording();
-      streamRestartIntervalRef.current = setInterval(restartStream, 240000);
     } else {
       stopRecording();
     }

@@ -449,6 +449,8 @@ function New1on1Support() {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [state.chatHistory]);
 
+  const transcriptionRestartTimeoutRef = useRef(null);
+
   const handleTranscriptUpdate = useCallback((data) => {
     if (data.isFinal) {
       setTranscript(prev => [...prev, { transcript: data.transcript.trim(), speakerTag: data.speakerTag }]);
@@ -459,15 +461,11 @@ function New1on1Support() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isSessionView) return;
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-    socketRef.current = io(backendUrl);
-    socketRef.current.on('transcript_data', handleTranscriptUpdate);
-    return () => { socketRef.current?.disconnect(); };
-  }, [isSessionView, handleTranscriptUpdate]);
-
   const stopRecording = useCallback(() => {
+    if (transcriptionRestartTimeoutRef.current) {
+      clearTimeout(transcriptionRestartTimeoutRef.current);
+      transcriptionRestartTimeoutRef.current = null;
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
@@ -500,6 +498,49 @@ function New1on1Support() {
       setIsTranscriptPopupVisible(false);
     }
   }, []);
+
+  const restartTranscription = useCallback(({ reason } = {}) => {
+    if (transcriptionRestartTimeoutRef.current) {
+      clearTimeout(transcriptionRestartTimeoutRef.current);
+      transcriptionRestartTimeoutRef.current = null;
+    }
+    if (!socketRef.current) {
+      return;
+    }
+
+    console.info('Received transcription restart request from backend', reason);
+
+    const shouldResume = isRecording;
+    stopRecording();
+
+    if (!shouldResume) {
+      return;
+    }
+
+    transcriptionRestartTimeoutRef.current = setTimeout(() => {
+      startRecording();
+    }, 400);
+  }, [isRecording, startRecording, stopRecording]);
+
+  useEffect(() => {
+    if (!isSessionView) return;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    socketRef.current = io(backendUrl);
+    socketRef.current.on('transcript_data', handleTranscriptUpdate);
+    const handleRestart = (payload) => restartTranscription(payload || {});
+    socketRef.current.on('transcription_restart', handleRestart);
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('transcript_data', handleTranscriptUpdate);
+        socketRef.current.off('transcription_restart', handleRestart);
+        socketRef.current.disconnect();
+      }
+      if (transcriptionRestartTimeoutRef.current) {
+        clearTimeout(transcriptionRestartTimeoutRef.current);
+        transcriptionRestartTimeoutRef.current = null;
+      }
+    };
+  }, [isSessionView, handleTranscriptUpdate, restartTranscription]);
 
   const handleToggleRecording = () => {
     if (isRecording && isTranscriptPopupMinimized) {

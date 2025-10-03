@@ -276,7 +276,8 @@ async function generateContent(prompt) {
   }
 }
 
-function setupTranscriptionStream(onTranscription) {
+function setupTranscriptionStream(onTranscription, options = {}) {
+  const { onRestartRequest } = options;
   const requestConfig = {
     encoding: 'WEBM_OPUS',
     sampleRateHertz: 48000,
@@ -291,38 +292,141 @@ function setupTranscriptionStream(onTranscription) {
     diarizationSpeakerCount: 2,
   };
 
-  const recognizeStream = speechClient
-    .streamingRecognize({
+  const MAX_STREAM_DURATION_MS = 4 * 60 * 1000; // stay below 305s API limit
+  const ROTATION_SAFETY_MS = 10 * 1000; // rotate slightly before hitting limit
+
+  let recognizeStream = null;
+  let streamStartedAt = 0;
+  let managerDestroyed = false;
+  let rotationTimer = null;
+
+  const handleStreamData = (data) => {
+    if (data.results?.[0]?.alternatives?.[0]) {
+      const result = data.results[0];
+      const transcript = result.alternatives[0].transcript;
+
+      let speakerTag = null;
+      if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
+        speakerTag = result.alternatives[0].words[0].speakerTag;
+      }
+
+      if (transcript) {
+        onTranscription({
+          transcript: transcript.trim(),
+          speakerTag: speakerTag,
+          isFinal: result.isFinal
+        });
+      }
+    }
+  };
+
+  const clearRotationTimer = () => {
+    if (rotationTimer) {
+      clearTimeout(rotationTimer);
+      rotationTimer = null;
+    }
+  };
+
+  const requestRestart = (reason = 'manual') => {
+    if (managerDestroyed) {
+      return;
+    }
+    managerDestroyed = true;
+    clearRotationTimer();
+    if (recognizeStream) {
+      recognizeStream.removeAllListeners();
+      try {
+        recognizeStream.destroy();
+      } catch (error) {
+        console.error('Failed to destroy recognize stream:', error);
+      }
+      recognizeStream = null;
+    }
+    console.info(`Requesting Speech-to-Text stream restart (reason: ${reason})`);
+    if (typeof onRestartRequest === 'function') {
+      setImmediate(() => onRestartRequest(reason));
+    }
+  };
+
+  const handleStreamError = (err) => {
+    console.error('Speech-to-Text API Error:', err);
+    if (managerDestroyed) {
+      return;
+    }
+    if (err && err.code === 11) {
+      requestRestart('api-limit');
+    } else {
+      requestRestart(`api-error-${err?.code ?? 'unknown'}`);
+    }
+  };
+
+  const createStream = () => {
+    if (managerDestroyed) {
+      return;
+    }
+    clearRotationTimer();
+    recognizeStream = speechClient.streamingRecognize({
       config: {
         ...requestConfig,
         enableAutomaticPunctuation: true,
       },
       interimResults: true,
-    })
-    .on('error', (err) => {
-      console.error('Speech-to-Text API Error:', err);
-    })
-    .on('data', (data) => {
-      if (data.results[0] && data.results[0].alternatives[0]) {
-        const result = data.results[0];
-        const transcript = result.alternatives[0].transcript;
-
-        let speakerTag = null;
-        if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
-          speakerTag = result.alternatives[0].words[0].speakerTag;
-        }
-
-        if (transcript) {
-          onTranscription({
-            transcript: transcript.trim(),
-            speakerTag: speakerTag,
-            isFinal: result.isFinal
-          });
-        }
-      }
     });
 
-  return recognizeStream;
+    recognizeStream.on('error', handleStreamError);
+    recognizeStream.on('data', handleStreamData);
+    streamStartedAt = Date.now();
+    rotationTimer = setTimeout(() => {
+      requestRestart('timer');
+    }, Math.max(1000, MAX_STREAM_DURATION_MS - ROTATION_SAFETY_MS));
+  };
+
+  const write = (audioData) => {
+    if (managerDestroyed) {
+      return;
+    }
+
+    if (!recognizeStream || recognizeStream.destroyed) {
+      requestRestart('stream-missing');
+      return;
+    }
+
+    if (Date.now() - streamStartedAt >= MAX_STREAM_DURATION_MS - ROTATION_SAFETY_MS) {
+      requestRestart('duration');
+      return;
+    }
+
+    try {
+      recognizeStream.write(audioData);
+    } catch (error) {
+      console.error('Failed to write audio data to recognize stream:', error);
+      requestRestart('write-failed');
+    }
+  };
+
+  const destroy = () => {
+    managerDestroyed = true;
+    clearRotationTimer();
+    if (recognizeStream) {
+      recognizeStream.removeAllListeners();
+      try {
+        recognizeStream.destroy();
+      } catch (error) {
+        console.error('Failed to destroy recognize stream:', error);
+      }
+      recognizeStream = null;
+    }
+  };
+
+  createStream();
+
+  return {
+    write,
+    destroy,
+    get destroyed() {
+      return managerDestroyed;
+    }
+  };
 }
 
 module.exports = {

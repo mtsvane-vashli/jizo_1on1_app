@@ -54,41 +54,51 @@ const { setupTranscriptionStream } = require('./services/aiService');
 
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
-  let recognizeStream = null;
+  let transcriptionManager = null;
 
   socket.on('start_transcription', () => {
     console.log('Starting transcription for:', socket.id);
-    if (recognizeStream) {
-      recognizeStream.destroy();
+    if (transcriptionManager) {
+      transcriptionManager.destroy();
     }
 
-    recognizeStream = setupTranscriptionStream((transcript) => {
+    transcriptionManager = setupTranscriptionStream((transcript) => {
       socket.emit('transcript_data', transcript);
-    });
-    recognizeStream.on('error', (err) => {
-      console.error('Speech-to-Text API Error:', err);
+    }, {
+      onRestartRequest: (reason) => {
+        console.log(`Requesting client transcription restart for ${socket.id} (reason: ${reason})`);
+        if (socket.connected) {
+          socket.emit('transcription_restart', { reason });
+        }
+        if (transcriptionManager) {
+          transcriptionManager.destroy();
+          transcriptionManager = null;
+        }
+      }
     });
   });
 
   socket.on('audio_stream', (audioData) => {
-    if (recognizeStream && !recognizeStream.destroyed) {
-      recognizeStream.write(audioData);
+    if (transcriptionManager && !transcriptionManager.destroyed) {
+      transcriptionManager.write(audioData);
+    } else if (!transcriptionManager) {
+      console.warn('Received audio_stream without active transcription manager.');
     }
   });
 
   socket.on('end_transcription', () => {
     console.log('Ending transcription for:', socket.id);
-    if (recognizeStream) {
-      recognizeStream.destroy();
-      recognizeStream = null;
+    if (transcriptionManager) {
+      transcriptionManager.destroy();
+      transcriptionManager = null;
     }
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
-    if (recognizeStream) {
-      recognizeStream.destroy();
-      recognizeStream = null;
+    if (transcriptionManager) {
+      transcriptionManager.destroy();
+      transcriptionManager = null;
     }
   });
 });
