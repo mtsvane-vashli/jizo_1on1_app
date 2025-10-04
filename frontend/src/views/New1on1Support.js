@@ -293,6 +293,8 @@ const INTERACTIONS = [
 const initialNodes = [
   { id: '1', type: 'default', data: { label: '中心テーマ' }, position: { x: 250, y: 150 } },
 ];
+const AUTO_TRANSCRIPT_THEME = { id: 'auto-transcript-theme', text: 'リアルタイム文字起こしセッション' };
+const AUTO_TRANSCRIPT_INTERACTION = { id: 'auto-transcript-interaction', text: '録音内容を整理したい' };
 
 const SelectionList = ({ title, items, onSelect, disabled }) => {
   const circledNumbers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
@@ -336,6 +338,20 @@ function chatReducer(state, action) {
     case 'SUMMARY_GENERATION_SUCCESS': return { ...state, isGeneratingSummary: false, currentSummary: action.payload.summary, currentNextActions: action.payload.nextActions, isSummaryVisible: true, };
     case 'TOGGLE_SUMMARY_VISIBILITY': return { ...state, isSummaryVisible: !state.isSummaryVisible };
     case 'RESET_TO_THEME_SELECTION': return { ...state, appState: 'theme_selection', selectedTheme: null, selectedInteraction: null, chatHistory: state.chatHistory.slice(0, 1) };
+    case 'SET_CONVERSATION_CONTEXT': {
+      const {
+        conversationId,
+        selectedTheme,
+        selectedInteraction,
+      } = action.payload;
+      return {
+        ...state,
+        currentConversationId: conversationId,
+        selectedTheme: state.selectedTheme || selectedTheme || state.selectedTheme,
+        selectedInteraction: state.selectedInteraction || selectedInteraction || state.selectedInteraction,
+        appState: 'support_started',
+      };
+    }
     default: return state;
   }
 }
@@ -372,6 +388,9 @@ function New1on1Support() {
   const socketRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
+  const isTranscriptionActiveRef = useRef(false);
+  const socketReadyRef = useRef(false);
+  const pendingStartTranscriptionRef = useRef(false);
   const voiceRecognitionRef = useRef(null);
   const voiceHoldTargetRef = useRef(null);
   const voiceRestartTimeoutRef = useRef(null);
@@ -528,34 +547,85 @@ function New1on1Support() {
 
   // --- 録音制御はここへ（依存を先に初期化する） ---
   const stopRecording = useCallback(() => {
-    // 再開ディレイを確実にクリア
     if (transcriptionRestartTimeoutRef.current) {
       clearTimeout(transcriptionRestartTimeoutRef.current);
       transcriptionRestartTimeoutRef.current = null;
     }
+    pendingStartTranscriptionRef.current = false;
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach(track => track.stop());
-      audioStreamRef.current = null;
-    }
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('end_transcription');
-    }
+    return new Promise((resolve) => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder) {
+        const wasStreaming = isTranscriptionActiveRef.current;
+        isTranscriptionActiveRef.current = false;
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => track.stop());
+          audioStreamRef.current = null;
+        }
+        if (wasStreaming && socketRef.current?.connected && socketReadyRef.current) {
+          socketRef.current.emit('end_transcription');
+        }
+        resolve();
+        return;
+      }
+
+      const handleStop = () => {
+        recorder.removeEventListener('stop', handleStop);
+        resolve();
+      };
+
+      recorder.addEventListener('stop', handleStop, { once: true });
+
+      try {
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
+        } else {
+          handleStop();
+        }
+      } catch (err) {
+        console.warn('MediaRecorder stop failed:', err);
+        handleStop();
+      }
+    });
   }, []);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { noiseSuppression: true, echoCancellation: true } });
       audioStreamRef.current = stream;
-      socketRef.current.emit('start_transcription');
+
+      if (socketRef.current?.connected && socketReadyRef.current) {
+        socketRef.current.emit('start_transcription');
+      } else {
+        pendingStartTranscriptionRef.current = true;
+        console.warn('Socket not connected, transcription start has been queued.');
+      }
+
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && socketRef.current) {
+        if (
+          event.data.size > 0 &&
+          isTranscriptionActiveRef.current &&
+          socketRef.current?.connected &&
+          socketReadyRef.current
+        ) {
           socketRef.current.emit('audio_stream', event.data);
+        }
+      };
+      recorder.onstart = () => {
+        isTranscriptionActiveRef.current = true;
+      };
+      recorder.onstop = () => {
+        const wasStreaming = isTranscriptionActiveRef.current;
+        isTranscriptionActiveRef.current = false;
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => track.stop());
+          audioStreamRef.current = null;
+        }
+        mediaRecorderRef.current = null;
+        if (wasStreaming && socketRef.current?.connected && socketReadyRef.current) {
+          socketRef.current.emit('end_transcription');
         }
       };
       recorder.start(1000);
@@ -568,7 +638,7 @@ function New1on1Support() {
   }, []);
 
   // Backend からの STT 再起動指示に応答（停止→少し待って→再開）
-  const restartTranscription = useCallback(({ reason } = {}) => {
+  const restartTranscription = useCallback(async ({ reason } = {}) => {
     if (transcriptionRestartTimeoutRef.current) {
       clearTimeout(transcriptionRestartTimeoutRef.current);
       transcriptionRestartTimeoutRef.current = null;
@@ -579,7 +649,7 @@ function New1on1Support() {
 
     const shouldResume = isRecording;
     if (shouldResume) {
-      stopRecording();
+      await stopRecording();
       transcriptionRestartTimeoutRef.current = setTimeout(() => {
         startRecording();
       }, 400);
@@ -592,12 +662,31 @@ function New1on1Support() {
     const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
     socketRef.current = io(backendUrl);
     socketRef.current.on('transcript_data', handleTranscriptUpdate);
-    const handleRestart = (payload) => restartTranscription(payload || {});
+    const handleRestart = (payload) => {
+      restartTranscription(payload || {});
+    };
+    const handleConnect = () => {
+      socketReadyRef.current = true;
+      if (pendingStartTranscriptionRef.current) {
+        socketRef.current.emit('start_transcription');
+        pendingStartTranscriptionRef.current = false;
+      }
+    };
+    const handleDisconnect = () => {
+      socketReadyRef.current = false;
+      pendingStartTranscriptionRef.current = false;
+    };
     socketRef.current.on('transcription_restart', handleRestart);
+    socketRef.current.on('connect', handleConnect);
+    socketRef.current.on('disconnect', handleDisconnect);
     return () => {
+      pendingStartTranscriptionRef.current = false;
+      socketReadyRef.current = false;
       if (socketRef.current) {
         socketRef.current.off('transcript_data', handleTranscriptUpdate);
         socketRef.current.off('transcription_restart', handleRestart);
+        socketRef.current.off('connect', handleConnect);
+        socketRef.current.off('disconnect', handleDisconnect);
         socketRef.current.disconnect();
       }
       if (transcriptionRestartTimeoutRef.current) {
@@ -836,8 +925,9 @@ function New1on1Support() {
     }
   }, [state.currentConversationId]);
 
-  const handleSaveTools = useCallback(async () => {
-    if (!state.currentConversationId) return;
+  const handleSaveTools = useCallback(async (conversationIdOverride) => {
+    const targetConversationId = conversationIdOverride || state.currentConversationId;
+    if (!targetConversationId) return;
     if (memoAutoSaveTimeoutRef.current) {
       clearTimeout(memoAutoSaveTimeoutRef.current);
       memoAutoSaveTimeoutRef.current = null;
@@ -846,7 +936,7 @@ function New1on1Support() {
     setMemoSaveError('');
     try {
       const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
-      await updateConversation(state.currentConversationId, {
+      await updateConversation(targetConversationId, {
         memo,
         mindMapData,
         transcript: formattedTranscript
@@ -860,6 +950,45 @@ function New1on1Support() {
       alert("メモとマインドマップの保存に失敗しました。");
     }
   }, [state.currentConversationId, memo, mindMapData, transcript]);
+
+  const ensureConversationForSummary = useCallback(async () => {
+    if (state.currentConversationId) {
+      return state.currentConversationId;
+    }
+
+    if (!state.currentEmployee) {
+      dispatch({ type: 'SET_ERROR', payload: '会話に必要な情報が不足しています。ページを再読み込みしてください。' });
+      throw new Error('Missing employee context');
+    }
+
+    const themeToUse = state.selectedTheme || AUTO_TRANSCRIPT_THEME;
+    const interactionToUse = state.selectedInteraction || AUTO_TRANSCRIPT_INTERACTION;
+
+    try {
+      const response = await startConversation({
+        employeeId: state.currentEmployee.id,
+        employeeName: state.currentEmployee.name,
+        theme: themeToUse.text,
+        stance: interactionToUse.text,
+        transcriptionOnly: true,
+      });
+
+      dispatch({
+        type: 'SET_CONVERSATION_CONTEXT',
+        payload: {
+          conversationId: response.conversationId,
+          selectedTheme: themeToUse,
+          selectedInteraction: interactionToUse,
+        },
+      });
+
+      return response.conversationId;
+    } catch (error) {
+      const message = error?.message || 'セッションの初期化に失敗しました。';
+      dispatch({ type: 'SET_ERROR', payload: message });
+      throw error;
+    }
+  }, [state.currentConversationId, state.currentEmployee, state.selectedTheme, state.selectedInteraction]);
 
   useEffect(() => {
     memoValueRef.current = memo;
@@ -1026,17 +1155,27 @@ function New1on1Support() {
   }, [message, state.currentConversationId]);
 
   const handleGenerateSummary = useCallback(async () => {
-    if (!state.currentConversationId) return;
+    let conversationId = state.currentConversationId;
+
+    if (!conversationId) {
+      try {
+        conversationId = await ensureConversationForSummary();
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (!conversationId) return;
     dispatch({ type: 'START_SUMMARY_GENERATION' });
     try {
-      await handleSaveTools();
+      await handleSaveTools(conversationId);
       const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
-      const data = await generateSummary(state.currentConversationId, formattedTranscript);
+      const data = await generateSummary(conversationId, formattedTranscript);
       dispatch({ type: 'SUMMARY_GENERATION_SUCCESS', payload: data });
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: err.message });
     }
-  }, [state.currentConversationId, transcript, handleSaveTools]);
+  }, [state.currentConversationId, transcript, handleSaveTools, ensureConversationForSummary]);
 
   const handleToggleSummary = () => { dispatch({ type: 'TOGGLE_SUMMARY_VISIBILITY' }); };
 
@@ -1145,7 +1284,11 @@ function New1on1Support() {
         <div className={styles.sessionViewContainer} aria-hidden={showChecklist}>
           <div className={styles.leftPanel}>
             <div className={styles.sessionHeader}>
-              <button onClick={handleGenerateSummary} disabled={state.isGeneratingSummary || !state.currentConversationId} className={styles.summaryButton}>
+              <button
+                onClick={handleGenerateSummary}
+                disabled={state.isGeneratingSummary || (transcript.length === 0 && !state.currentConversationId) || showChecklist}
+                className={styles.summaryButton}
+              >
                 {state.isGeneratingSummary ? '要約を生成中...' : '会話を終了して要約'}
               </button>
               {state.appState === 'support_started' && (

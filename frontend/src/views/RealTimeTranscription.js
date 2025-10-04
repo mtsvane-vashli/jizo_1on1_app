@@ -18,6 +18,9 @@ const RealTimeTranscription = ({
   const audioStreamRef = useRef(null);
   const socketRef = useRef(null);
   const restartTimeoutRef = useRef(null);
+  const isTranscriptionActiveRef = useRef(false);
+  const socketReadyRef = useRef(false);
+  const pendingStartRef = useRef(false);
   const lastSpeakerTag = useRef(null);
   const transcriptDisplayRef = useRef(null);
 
@@ -44,14 +47,31 @@ const RealTimeTranscription = ({
     };
 
     const handleRestart = (payload) => restartRecording(payload || {});
+    const handleConnect = () => {
+      socketReadyRef.current = true;
+      if (pendingStartRef.current) {
+        socketRef.current.emit('start_transcription', { lastSpeakerTag: lastSpeakerTag.current });
+        pendingStartRef.current = false;
+      }
+    };
+    const handleDisconnect = () => {
+      socketReadyRef.current = false;
+      pendingStartRef.current = false;
+    };
 
     socketRef.current.on('transcript_data', handleTranscriptData);
     socketRef.current.on('transcription_restart', handleRestart);
+    socketRef.current.on('connect', handleConnect);
+    socketRef.current.on('disconnect', handleDisconnect);
 
     return () => {
+      pendingStartRef.current = false;
+      socketReadyRef.current = false;
       if (socketRef.current) {
         socketRef.current.off('transcript_data', handleTranscriptData);
         socketRef.current.off('transcription_restart', handleRestart);
+        socketRef.current.off('connect', handleConnect);
+        socketRef.current.off('disconnect', handleDisconnect);
         socketRef.current.disconnect();
       }
       if (restartTimeoutRef.current) {
@@ -62,12 +82,25 @@ const RealTimeTranscription = ({
   }, [onTranscriptUpdate, restartRecording]);
 
   const stopRecording = useCallback(() => {
+    isTranscriptionActiveRef.current = false;
+
+    pendingStartRef.current = false;
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
     }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder) {
+      try {
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
+        }
+      } catch (err) {
+        console.warn('MediaRecorder stop failed:', err);
+      }
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      mediaRecorderRef.current = null;
     }
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => track.stop());
@@ -88,17 +121,33 @@ const RealTimeTranscription = ({
       });
       audioStreamRef.current = stream;
 
-      if (socketRef.current) {
+      if (socketRef.current?.connected && socketReadyRef.current) {
         socketRef.current.emit('start_transcription', { lastSpeakerTag: lastSpeakerTag.current });
+      } else {
+        pendingStartRef.current = true;
+        console.warn('Socket not connected, transcription start has been queued.');
       }
 
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && socketRef.current) {
+        if (
+          event.data.size > 0 &&
+          isTranscriptionActiveRef.current &&
+          socketRef.current?.connected &&
+          socketReadyRef.current
+        ) {
           socketRef.current.emit('audio_stream', event.data);
         }
+      };
+
+      recorder.onstart = () => {
+        isTranscriptionActiveRef.current = true;
+      };
+
+      recorder.onstop = () => {
+        isTranscriptionActiveRef.current = false;
       };
 
       recorder.start(1000);

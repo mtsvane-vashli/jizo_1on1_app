@@ -6,16 +6,97 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const speechClient = new SpeechClient();
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
+const escapeControlCharsInJsonStrings = (jsonText = '') => {
+  let result = '';
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < jsonText.length; i += 1) {
+    const char = jsonText[i];
+
+    if (!inString) {
+      if (char === '"') {
+        inString = true;
+      }
+      result += char;
+      continue;
+    }
+
+    if (isEscaped) {
+      result += char;
+      isEscaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      result += char;
+      isEscaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      result += char;
+      inString = false;
+      continue;
+    }
+
+    const code = char.charCodeAt(0);
+    if (code === 0x0a) {
+      result += '\\n';
+      continue;
+    }
+    if (code === 0x0d) {
+      result += '\\r';
+      continue;
+    }
+    if (code === 0x09) {
+      result += '\\t';
+      continue;
+    }
+    if (code < 0x20) {
+      result += `\\u${code.toString(16).padStart(4, '0')}`;
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result;
+};
+
+const tryParseJson = (rawText) => {
+  if (!rawText) {
+    throw new Error('Empty JSON payload');
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    const sanitized = escapeControlCharsInJsonStrings(rawText);
+    if (sanitized !== rawText) {
+      try {
+        const parsed = JSON.parse(sanitized);
+        console.warn('Gemini応答内の制御文字をエスケープしてJSONを解析しました。');
+        return parsed;
+      } catch (sanitizedError) {
+        sanitizedError.originalError = error;
+        throw sanitizedError;
+      }
+    }
+    throw error;
+  }
+};
+
 /**
  * AIの応答からJSONオブジェクトを安全に抽出
  */
-const parseJsonResponse = (text) => {
+const parseJsonResponse = (text = '') => {
   try {
     const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
     if (jsonMatch && jsonMatch[1]) {
-      return JSON.parse(jsonMatch[1]);
+      return tryParseJson(jsonMatch[1]);
     }
-    return JSON.parse(text);
+    return tryParseJson(text);
   } catch (error) {
     console.error('AI応答からのJSONパースに失敗:', error);
     return {

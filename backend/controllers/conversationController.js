@@ -6,7 +6,14 @@ const aiService = require('../services/aiService');
  * 会話開始
  */
 exports.startConversation = async (req, res) => {
-    const { employeeId, employeeName, theme, stance } = req.body;
+    const {
+        employeeId,
+        employeeName,
+        theme,
+        stance,
+        transcriptionOnly = false,
+        transcript,
+    } = req.body;
     const user = req.user;
 
     // どのキーに org が入っているかを確認（開発ログ）
@@ -18,14 +25,52 @@ exports.startConversation = async (req, res) => {
         orgId: user?.orgId,
     });
 
-    if (!employeeId || !theme || !stance) {
-        return res.status(400).json({ message: 'Employee ID, theme, and stance are required' });
+    if (!employeeId) {
+        return res.status(400).json({ message: 'Employee ID is required' });
+    }
+
+    const fallbackTheme = theme || 'リアルタイム文字起こしセッション';
+    const fallbackStance = stance || '録音内容を整理したい';
+
+    if (transcriptionOnly) {
+        try {
+            const conversationId = await conversationModel.createConversation(
+                { employeeId, theme: fallbackTheme, engagement: fallbackStance },
+                user
+            );
+
+            if (typeof transcript === 'string' && transcript.trim().length > 0) {
+                await conversationModel.updateConversationTranscript(
+                    transcript,
+                    conversationId
+                );
+            }
+
+            return res.status(201).json({
+                message: 'Conversation created for transcription workflow.',
+                conversationId,
+                initialMessage: null,
+            });
+        } catch (error) {
+            console.error('Error starting transcription-only conversation:', error);
+            return res.status(500).json({ message: 'Failed to start conversation' });
+        }
+    }
+
+    if (!theme || !stance) {
+        return res
+            .status(400)
+            .json({ message: 'Theme and stance are required unless transcriptionOnly is true' });
     }
 
     try {
-        const convData = { employeeId, theme, engagement: stance };
+        const convData = { employeeId, theme: fallbackTheme, engagement: fallbackStance };
         const conversationId = await conversationModel.createConversation(convData, user);
-        const initialAiData = await aiService.generateInitialMessage(employeeName || '部下', theme, stance);
+        const initialAiData = await aiService.generateInitialMessage(
+            employeeName || '部下',
+            theme,
+            stance
+        );
 
         await conversationModel.addMessage(
             conversationId,
