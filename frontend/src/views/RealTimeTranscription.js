@@ -32,7 +32,7 @@ const RealTimeTranscription = ({
 
   // Socket.IOの初期化とイベントリスナーの設定
   useEffect(() => {
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = '';
     socketRef.current = io(backendUrl);
 
     const handleTranscriptData = (data) => {

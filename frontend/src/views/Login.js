@@ -1,10 +1,11 @@
 // frontend/src/views/Login.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Auth.module.css';
 // ★ 修正: ThemeToggleButtonのインポートを削除
 import { FiHome } from 'react-icons/fi';
+import { fetchMaintenanceInfo } from '../services/maintenanceService';
 
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -24,8 +25,32 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [maintenanceContent, setMaintenanceContent] = useState('');
+  const [maintenanceUpdatedAt, setMaintenanceUpdatedAt] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const maintenanceLines = maintenanceContent ? maintenanceContent.split('\n') : [];
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadMaintenance = async () => {
+      try {
+        const data = await fetchMaintenanceInfo();
+        if (isMounted && data) {
+          setMaintenanceContent(data.content || '');
+          setMaintenanceUpdatedAt(data.updatedAt || null);
+        }
+      } catch (maintenanceError) {
+        console.warn('Failed to load maintenance info:', maintenanceError);
+      }
+    };
+
+    loadMaintenance();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,6 +112,24 @@ export default function Login() {
           </form>
 
         </div>
+        {maintenanceContent && (
+          <div className={styles.maintenanceCard}>
+            <h2 className={styles.maintenanceTitle}>メンテナンス情報</h2>
+            <p className={styles.maintenanceBody}>
+              {maintenanceLines.map((line, index) => (
+                <span key={index}>
+                  {line}
+                  {index !== maintenanceLines.length - 1 && <br />}
+                </span>
+              ))}
+            </p>
+            {maintenanceUpdatedAt && (
+              <p className={styles.maintenanceTimestamp}>
+                更新日時: {new Date(maintenanceUpdatedAt).toLocaleString('ja-JP')}
+              </p>
+            )}
+          </div>
+        )}
         <div className={styles.homeLinkContainer}>
           <Link to="/" className={styles.homeLink}>
             <FiHome />

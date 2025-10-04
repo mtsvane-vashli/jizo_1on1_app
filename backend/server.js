@@ -62,6 +62,12 @@ app.use(express.json());
 
 // --- ルーターの接続 ---
 // ★ ベースパス '/api' を維持
+const authenticateToken = require('./middleware/authMiddleware');
+const maintenanceController = require('./controllers/maintenanceController');
+
+app.get('/api/maintenance', maintenanceController.getMaintenanceMessage);
+app.post('/api/maintenance', authenticateToken, maintenanceController.updateMaintenanceMessage);
+
 app.use('/api', require('./routes/authRoutes'));
 app.use('/api', require('./routes/employeeRoutes'));
 app.use('/api', require('./routes/conversationRoutes'));

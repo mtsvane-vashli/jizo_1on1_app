@@ -200,6 +200,38 @@
   transition: var(--transition-fast);
 }
 
+.maintenanceCard {
+  background-color: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-xl);
+  max-width: 25rem;
+  width: 100%;
+  text-align: left;
+  border-left: 4px solid var(--color-warning, #f4c430);
+}
+
+.maintenanceTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text-primary);
+}
+
+.maintenanceBody {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-sm);
+  white-space: pre-line;
+}
+
+.maintenanceTimestamp {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary, #666666);
+  text-align: right;
+}
+
 .homeLink:hover {
   background-color: var(--color-bg-hover);
   color: var(--color-text-primary);

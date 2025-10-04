@@ -61,6 +61,12 @@
     background-color: var(--color-bg-disabled);
 }
 
+.textarea {
+  min-height: 8rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
 .buttonGroup {
   display: flex;
   justify-content: flex-end;
@@ -147,6 +153,30 @@
 .successText {
   color: #38a169;
   margin-bottom: var(--space-md);
+}
+
+.noticeBox {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  background-color: var(--color-bg-app);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  font-size: 0.9rem;
+  min-height: 5rem;
+}
+
+.captionText {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-align: right;
+  margin-top: var(--space-sm);
+}
+
+.helperText {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-md);
 }
 
 .userList {

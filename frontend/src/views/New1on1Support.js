@@ -659,7 +659,7 @@ function New1on1Support() {
   // Socket 接続（再起動イベント購読付き）
   useEffect(() => {
     if (!isSessionView) return;
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = '';
     socketRef.current = io(backendUrl);
     socketRef.current.on('transcript_data', handleTranscriptUpdate);
     const handleRestart = (payload) => {

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { createUser, getOrganizationUsers, updateOrganizationUser } from '../services/userService';
-import { getEmployees, createEmployee, deleteEmployee } from '../services';
+import { getEmployees, createEmployee, deleteEmployee, fetchMaintenanceInfo, updateMaintenanceInfo } from '../services';
 import styles from './Settings.module.css'; // ★ CSSモジュールをインポート
 import layoutStyles from '../App.module.css';
 
@@ -30,6 +30,15 @@ function Settings() {
   const [employeeError, setEmployeeError] = useState('');
   const [newEmployeeName, setNewEmployeeName] = useState('');
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
+
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [maintenanceUpdatedAt, setMaintenanceUpdatedAt] = useState(null);
+  const [isMaintenanceLoading, setIsMaintenanceLoading] = useState(true);
+  const [maintenanceError, setMaintenanceError] = useState('');
+  const [maintenanceSuccess, setMaintenanceSuccess] = useState('');
+  const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
+
+  const maintenanceDisplayLines = maintenanceMessage ? maintenanceMessage.split('\n') : [];
 
   const fetchOrgUsers = useCallback(async () => {
       if (!user || user.role !== 'admin') {
@@ -190,11 +199,115 @@ function Settings() {
     }
   }, [fetchEmployees]);
 
+  const loadMaintenanceInfo = useCallback(async () => {
+    setIsMaintenanceLoading(true);
+    setMaintenanceError('');
+    setMaintenanceSuccess('');
+    try {
+      const data = await fetchMaintenanceInfo();
+      setMaintenanceMessage(data?.content || '');
+      setMaintenanceUpdatedAt(data?.updatedAt || null);
+    } catch (err) {
+      setMaintenanceError(`メンテナンス情報の取得に失敗しました: ${err.message}`);
+    } finally {
+      setIsMaintenanceLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMaintenanceInfo();
+  }, [loadMaintenanceInfo]);
+
+  const handleSaveMaintenance = useCallback(async () => {
+    setIsSavingMaintenance(true);
+    setMaintenanceError('');
+    setMaintenanceSuccess('');
+    try {
+      const result = await updateMaintenanceInfo(maintenanceMessage);
+      setMaintenanceMessage(result?.content || '');
+      setMaintenanceUpdatedAt(result?.updatedAt || null);
+      setMaintenanceSuccess('メンテナンス情報を更新しました。');
+    } catch (err) {
+      setMaintenanceError(`メンテナンス情報の更新に失敗しました: ${err.message}`);
+    } finally {
+      setIsSavingMaintenance(false);
+    }
+  }, [maintenanceMessage]);
+
   return (
     // ★ view-containerなどは全体レイアウトなのでグローバルクラス名のまま
     <div className={layoutStyles.viewContainer || ''}>
       <h2 className={layoutStyles.screenHeader || ''}>設定</h2>
       <p className={layoutStyles.screenDescription || ''}>アカウント情報、組織のユーザーを管理します。</p>
+
+      <div className={styles.card}>
+        <h3 className={styles.sectionHeader}>メンテナンス情報</h3>
+        <p className={styles.sectionDescription}>ログイン画面に表示されるお知らせを設定します。未入力の場合は表示されません。</p>
+        {maintenanceError && <p className={styles.errorText}>{maintenanceError}</p>}
+        {maintenanceSuccess && <p className={styles.successText}>{maintenanceSuccess}</p>}
+        {isMaintenanceLoading ? (
+          <p className={styles.loadingText}>情報を読み込み中...</p>
+        ) : (
+          <>
+            {user && user.role === 'admin' ? (
+              <>
+                <div className={styles.inputGroup}>
+                  <label htmlFor="maintenance-message">お知らせ内容</label>
+                  <textarea
+                    id="maintenance-message"
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={maintenanceMessage}
+                    onChange={(e) => {
+                      setMaintenanceMessage(e.target.value);
+                      setMaintenanceSuccess('');
+                      setMaintenanceError('');
+                    }}
+                    placeholder="例: 〇月〇日 21:00〜22:00 の間、システムメンテナンスを実施します。"
+                    rows={5}
+                    disabled={isSavingMaintenance}
+                  />
+                </div>
+                {maintenanceUpdatedAt && (
+                  <p className={styles.captionText}>
+                    最終更新: {new Date(maintenanceUpdatedAt).toLocaleString('ja-JP')}
+                  </p>
+                )}
+                <div className={styles.buttonGroup}>
+                  <button
+                    type="button"
+                    className={styles.saveButton}
+                    onClick={handleSaveMaintenance}
+                    disabled={isSavingMaintenance}
+                  >
+                    {isSavingMaintenance ? '保存中...' : '保存'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.noticeBox} role="note">
+                  {maintenanceMessage ? (
+                    maintenanceDisplayLines.map((line, index) => (
+                      <span key={index}>
+                        {line}
+                        {index !== maintenanceDisplayLines.length - 1 && <br />}
+                      </span>
+                    ))
+                  ) : (
+                    <span>現在表示するメンテナンス情報はありません。</span>
+                  )}
+                </div>
+                {maintenanceUpdatedAt && (
+                  <p className={styles.captionText}>
+                    最終更新: {new Date(maintenanceUpdatedAt).toLocaleString('ja-JP')}
+                  </p>
+                )}
+                <p className={styles.helperText}>メンテナンス情報の編集は管理者のみが行えます。</p>
+              </>
+            )}
+          </>
+        )}
+      </div>
 
       {/* ユーザー情報カード */}
       <div className={styles.card}> {/* ★ classNameをstylesオブジェクトから指定 */}
