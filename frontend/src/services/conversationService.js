@@ -1,5 +1,6 @@
 // frontend/src/services/conversationService.js
 import apiClient from './apiClient';
+import { getToken } from './tokenService';
 
 /**
  * 会話開始
@@ -118,4 +119,45 @@ export const onePointAdvice = (conversationId) => {
   return apiClient(`/api/conversations/${conversationId}/one-point-advice`, {
     method: 'POST',
   });
+};
+
+/**
+ * 文字起こしファイルをダウンロード
+ */
+export const downloadConversationTranscript = async (conversationId) => {
+  const token = getToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`/api/conversations/${conversationId}/transcript/download`, {
+    headers,
+  });
+
+  if (response.status === 204) {
+    return { blob: null };
+  }
+
+  if (!response.ok) {
+    let message = '文字起こしのダウンロードに失敗しました。';
+    try {
+      const text = await response.text();
+      if (text) {
+        try {
+          const parsed = JSON.parse(text);
+          message = parsed.message || parsed.error || message;
+        } catch (_) {
+          message = text;
+        }
+      }
+    } catch (_) {
+      // ignore parse errors and use default message
+    }
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename="(.+)"/);
+  const filename = match && match[1] ? match[1] : `transcript_${conversationId}.txt`;
+
+  return { blob, filename };
 };

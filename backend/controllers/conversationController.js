@@ -177,6 +177,39 @@ exports.getConversationDetails = async (req, res) => {
 };
 
 /**
+ * 文字起こしダウンロード
+ */
+exports.downloadTranscript = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const conversation = await conversationModel.getConversationById(id, req.user);
+        if (!conversation) {
+            return res
+                .status(404)
+                .json({ error: 'Conversation not found or permission denied.' });
+        }
+
+        const transcript = typeof conversation.transcript === 'string'
+            ? conversation.transcript
+            : '';
+
+        if (!transcript || transcript.trim().length === 0) {
+            return res.status(204).end();
+        }
+
+        const filename = `transcript_${id}.txt`;
+        res.set({
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+        });
+        res.send(transcript);
+    } catch (error) {
+        console.error(`Error downloading transcript for conversation ${id}:`, error);
+        res.status(500).json({ error: 'Failed to download transcript.' });
+    }
+};
+
+/**
  * 部分更新（memo / mindMapData / transcript）
  */
 exports.updateConversation = async (req, res) => {

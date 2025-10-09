@@ -29,6 +29,13 @@ router.get(
     conversationController.getConversationDetails
 );
 
+// GET /api/conversations/:id/transcript/download -> 文字起こしダウンロード
+router.get(
+    '/conversations/:id/transcript/download',
+    authenticateToken,
+    conversationController.downloadTranscript
+);
+
 // PATCH /api/conversations/:id -> 会話更新（メモ・マインドマップ・文字起こしなど）
 router.patch(
     '/conversations/:id',

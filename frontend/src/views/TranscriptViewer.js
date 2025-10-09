@@ -1,7 +1,11 @@
 // frontend/src/views/TranscriptViewer.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getConversationById, updateConversationTranscript } from '../services/conversationService';
+import {
+    getConversationById,
+    updateConversationTranscript,
+    downloadConversationTranscript,
+} from '../services/conversationService';
 import { deepDive } from '../services';
 import styles from './TranscriptViewer.module.css';
 import { marked } from 'marked';
@@ -24,6 +28,7 @@ function TranscriptViewer() {
     const [editingId, setEditingId] = useState(null);
     const [editingText, setEditingText] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const [isTranscriptOpen, setIsTranscriptOpen] = useState(true);
     const [isToolsOpen, setIsToolsOpen] = useState(true);
@@ -220,6 +225,33 @@ function TranscriptViewer() {
         }
     };
 
+    const handleTranscriptDownload = async () => {
+        if (isDownloading) return;
+        setIsDownloading(true);
+        try {
+            const result = await downloadConversationTranscript(id);
+
+            if (!result?.blob) {
+                window.alert('文字起こしデータがありません。');
+                return;
+            }
+
+            const blobUrl = window.URL.createObjectURL(result.blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = result.filename || `transcript_${id}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error(err);
+            window.alert(err.message || '文字起こしのダウンロードに失敗しました。');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     if (isLoading) {
         return <div className={styles.viewerContainer}><p>読み込み中...</p></div>;
     }
@@ -236,9 +268,18 @@ function TranscriptViewer() {
         <div className={styles.viewerContainer}>
             <div className={styles.header}>
                 <h2 className={styles.title}>会話ログ詳細</h2>
-                <button onClick={() => navigate('/app/logs')} className={styles.backButton}>
-                    &larr; ログ一覧に戻る
-                </button>
+                <div className={styles.headerActions}>
+                    <button
+                        onClick={handleTranscriptDownload}
+                        className={styles.downloadButton}
+                        disabled={isDownloading}
+                    >
+                        {isDownloading ? 'ダウンロード中...' : '文字起こしをダウンロード'}
+                    </button>
+                    <button onClick={() => navigate('/app/logs')} className={styles.backButton}>
+                        &larr; ログ一覧に戻る
+                    </button>
+                </div>
             </div>
 
             <div className={styles.metaInfo}>
