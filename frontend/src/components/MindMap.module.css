@@ -1,3 +1,4 @@
+/* frontend/src/views/MindMap.module.css */
 .mindMapContainer {
     width: 100%;
     height: 100%;
@@ -15,10 +16,18 @@
 }
 
 /* ===== キー捕捉用ラッパ ===== */
+/* ★ 修正：pointer-events: none を撤廃して React Flow がイベントを受け取れるようにする */
 .keyCapture {
     outline: none;
     height: 100%;
     width: 100%;
+    position: relative;
+    /* pointer-events: none; ← 削除（これが原因で操作が届かなかった） */
+}
+
+/* React Flow 本体は通常どおり操作可能 */
+.keyCapture .react-flow {
+    pointer-events: auto;
 }
 
 /* コントロール群（右上） */
@@ -26,9 +35,11 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    z-index: 10;
+    z-index: 10000;
+    /* 最前面 */
     display: flex;
     gap: 8px;
+    pointer-events: auto;
 }
 
 .controls button {
@@ -141,6 +152,7 @@
     opacity: 0;
     transition: opacity .12s ease;
     pointer-events: none;
+    z-index: 2;
 }
 
 .node:hover .nodeToolbar,
@@ -180,7 +192,7 @@
     stroke-width: 2.25px;
 }
 
-/* 左右のみハンドル（接続点） */
+/* ハンドル */
 .handle {
     width: 10px;
     height: 10px;
@@ -198,13 +210,86 @@
     right: -6px;
 }
 
-/* 念のため上下ハンドルが出ても非表示 */
-.react-flow__handle[data-handlepos="top"],
-.react-flow__handle[data-handlepos="bottom"] {
-    display: none !important;
+/* ============= Debug Panel ============= */
+.debugWrap {
+    position: absolute;
+    left: 12px;
+    top: 60px;
+    width: 520px;
+    max-height: calc(100% - 80px);
+    overflow: auto;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, 0.16);
+    z-index: 5000;
+    pointer-events: auto;
 }
 
-/* ヒント（左下） */
+.debugTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #0f172a;
+}
+
+.debugBadge {
+    font-size: 12px;
+    background: #eef2ff;
+    color: #3730a3;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid #c7d2fe;
+}
+
+.debugSection {
+    margin-top: 10px;
+}
+
+.debugSectionTitle {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #1f2937;
+}
+
+.debugTable {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.debugRowHeader,
+.debugRow {
+    display: grid;
+    grid-template-columns: 90px 70px 80px 70px 70px 60px 60px 70px 70px 80px 1fr;
+    font-size: 12px;
+}
+
+.debugRowHeader {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+.debugRowHeader>div,
+.debugRow>div {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.debugRow:nth-child(odd) {
+    background: #fbfdff;
+}
+
+.debugWarn {
+    color: #b91c1c;
+    font-weight: 700;
+}
+
+/* ヒント */
 .hint {
     position: absolute;
     left: 10px;

@@ -1,21 +1,19 @@
 // frontend/src/views/MindMap.js
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
-    ReactFlowProvider,
-    MiniMap,
-    Controls,
     Background,
-    addEdge,
-    applyNodeChanges,
-    applyEdgeChanges,
+    MiniMap,
     MarkerType,
     Position,
     Handle,
-    useStoreApi,
+    useEdgesState,
+    useNodesState,
     useReactFlow,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
-import styles from './MindMap.module.css';
+    ReactFlowProvider,
+    Controls,
+} from "reactflow";
+import "reactflow/dist/style.css";
+import styles from "./MindMap.module.css";
 import {
     FiRotateCcw,
     FiRotateCw,
@@ -25,724 +23,712 @@ import {
     FiCornerDownRight,
     FiTrash2,
     FiRefreshCw,
-    FiCrosshair, // ← 新規：選択ノードへ移動（照準）
-} from 'react-icons/fi';
+    FiCrosshair,
+} from "react-icons/fi";
 
-/** ====================== 配置・間隔 定数 ====================== */
-const NODE_WIDTH_FALLBACK = 180;
+/**
+ * 仕様ポイント
+ * - 背景ドラッグでパン（panOnDrag）、スクロールでパン（zoomOnScroll=false + panOnScroll）、ピンチでズーム
+ * - Space 押下中はノード上でもパン（panActivationKeyCode="Space"）
+ * - Enter で兄弟、Tab で子の追加（IME中は無効）
+ * - ノード左右ハンドル + step エッジ + ArrowClosed
+ * - フルスクリーン切替
+ * - 自動レイアウト（COLUMN_GAP / MIN_SIBLING_V_GAP / 上下対称 / ルート縦整列）
+ * - ドラッグで手動座標を保存（以後は自動より優先）
+ * - ★ デフォルト名は常に「新しいノード」
+ */
+
+// -------------------- 定数 --------------------
+const NODE_MIN_W = 160;
 const NODE_HEIGHT_FALLBACK = 60;
-const H_GAP_PARENT_CHILD = 36;        // 親→子の水平距離
-const MIN_SIBLING_V_GAP = 56;         // 兄弟の最小縦間隔
-const SIBLING_EXTRA_PADDING = 12;     // 兄弟間隔に足す余白
-const GROUP_GAP_BETWEEN_BLOCKS = 24;  // 同レベルの「子ノード群」同士の最小間隔
-const ROOT_X = 100;
-const ROOT_START_Y = 100;
-const ROOT_V_GAP = 160;
+const COLUMN_GAP = 250; // 列間（水平距離）
+const MIN_SIBLING_V_GAP = 56;
+const EXTRA_MARGIN = 12;
+const ROOT_ROW_GAP = 160;
+const INITIAL_ZOOM_TO_NODE = 1.2;
+const ID = () => Math.random().toString(36).slice(2, 10);
 
-/** ====================== Undo/Redo ====================== */
-const useHistory = (initialState) => {
-    const [history, setHistory] = useState([initialState]);
-    const [idx, setIdx] = useState(0);
+// -------------------- ユーティリティ --------------------
+const deepClone = (x) => JSON.parse(JSON.stringify(x));
 
-    const setState = useCallback((updater, overwrite = false) => {
-        const prev = history[idx];
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        if (!overwrite && JSON.stringify(next) === JSON.stringify(prev)) return;
-
-        const base = overwrite ? history.slice(0, idx) : history.slice(0, idx + 1);
-        setHistory([...base, next]);
-        setIdx(base.length);
-    }, [history, idx]);
-
-    const undo = useCallback(() => { if (idx > 0) setIdx(idx - 1); }, [idx]);
-    const redo = useCallback(() => { if (idx < history.length - 1) setIdx(idx + 1); }, [idx, history.length]);
-
-    return [history[idx], setState, undo, redo, idx > 0, idx < history.length - 1];
-};
-
-/** ====================== 内部ノード実測ヘルパ ====================== */
-function getRectFromInternal(internal) {
-    const w = internal?.measured?.width ?? internal?.width ?? NODE_WIDTH_FALLBACK;
-    const h = internal?.measured?.height ?? internal?.height ?? NODE_HEIGHT_FALLBACK;
-    return { w, h };
+function buildIndex(nodes) {
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const children = new Map();
+    for (const n of nodes) {
+        if (n.parentId) {
+            if (!children.has(n.parentId)) children.set(n.parentId, []);
+            children.get(n.parentId).push(n);
+        }
+    }
+    return { byId, children };
 }
 
-/** ====================== 汎用 ====================== */
-const extractNum = (id) => {
-    const m = String(id).match(/\d+$/);
-    return m ? parseInt(m[0], 10) : 0;
-};
-const nextNodeId = (nodes) => `node_${nodes.reduce((m, n) => Math.max(m, extractNum(n.id)), 0) + 1}`;
-const isEditingElement = () => {
-    const el = document.activeElement;
-    if (!el) return false;
-    const tag = el.tagName?.toLowerCase();
-    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
-};
+function isAncestor(id, targetId, childrenMap) {
+    const stack = [id];
+    while (stack.length) {
+        const cur = stack.pop();
+        const kids = childrenMap.get(cur) || [];
+        for (const k of kids) {
+            if (k.id === targetId) return true;
+            stack.push(k.id);
+        }
+    }
+    return false;
+}
 
-/** ====================== カスタムノード ====================== */
-const MindMapNode = ({ id, data, selected }) => {
+// -------------------- カスタムノード --------------------
+function MindMapNode({ id, data, selected }) {
     const [editing, setEditing] = useState(false);
-    const [value, setValue] = useState(data.label || '');
+    const [value, setValue] = useState(data.label || "新しいノード");
 
-    useEffect(() => setValue(data.label || ''), [data.label]);
+    useEffect(() => setValue(data.label || "新しいノード"), [data.label]);
 
-    const startEdit = (e) => { e.stopPropagation(); setEditing(true); };
-    const commit = () => { data.updateNodeLabel?.(id, value?.trim() || ''); setEditing(false); };
-    const cancel = () => { setValue(data.label || ''); setEditing(false); };
-
+    const startEdit = (e) => {
+        e.stopPropagation();
+        setEditing(true);
+    };
+    const commit = () => {
+        const v = (value ?? "").trim() || "新しいノード";
+        data.updateNodeLabel?.(id, v);
+        setEditing(false);
+    };
+    const cancel = () => {
+        setValue(data.label || "新しいノード");
+        setEditing(false);
+    };
     const onKeyDown = (e) => {
-        if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return; // IME確定中は流す
-        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commit(); }
-        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
-        else if (e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); commit(); }
+        if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return;
+        if (e.key === "Enter" || e.key === "Tab") {
+            e.preventDefault();
+            e.stopPropagation();
+            commit();
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            cancel();
+        }
     };
 
     return (
-        <div className={`${styles.node} ${selected ? styles.nodeSelected : ''} ${data.collapsed ? styles.nodeCollapsed : ''}`}>
+        <div
+            className={[
+                styles.node,
+                selected ? styles.nodeSelected : "",
+                data.collapsed ? styles.nodeCollapsed : "",
+            ].join(" ")}
+        >
+            {/* 折りたたみトグル（右上） */}
             {data.hasChildren ? (
                 <button
-                    className={`${styles.collapseBtn} ${data.collapsed ? styles.collapsed : ''}`}
-                    title={data.collapsed ? '展開' : '折りたたみ'}
-                    onClick={(e) => { e.stopPropagation(); data.onToggleCollapse?.(id); }}
+                    className={`${styles.collapseBtn} ${data.collapsed ? styles.collapsed : ""}`}
+                    title={data.collapsed ? "展開" : "折りたたみ"}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        data.onToggleCollapse?.(id);
+                    }}
                 >
-                    {data.collapsed ? '+' : '−'}
+                    {data.collapsed ? "+" : "−"}
                 </button>
             ) : null}
 
-            <div className={styles.nodeToolbar}>
-                <button className={styles.nodeToolBtn} title="子ノードを追加（Tab）" onClick={(e) => { e.stopPropagation(); data.onAddChild?.(id); }}>
+            {/* ノードツールバー（子/兄弟/削除） */}
+            <div className={styles.nodeToolbar} onMouseDown={(e) => e.stopPropagation()}>
+                <button
+                    className={styles.nodeToolBtn}
+                    title="子ノード追加（Tab）"
+                    onClick={() => data.onAddChild?.(id)}
+                    aria-label="Add child"
+                >
                     <FiCornerRightDown />
                 </button>
-                <button className={styles.nodeToolBtn} title="兄弟ノードを追加（Enter）" onClick={(e) => { e.stopPropagation(); data.onAddSibling?.(id); }}>
+                <button
+                    className={styles.nodeToolBtn}
+                    title="兄弟ノード追加（Enter）"
+                    onClick={() => data.onAddSibling?.(id)}
+                    aria-label="Add sibling"
+                >
                     <FiCornerDownRight />
                 </button>
-                <button className={styles.nodeToolBtnDanger} title="このノード以下を削除（Delete/Backspace）" onClick={(e) => { e.stopPropagation(); data.onDeleteSubtree?.(id); }}>
+                <button
+                    className={styles.nodeToolBtnDanger}
+                    title="サブツリー削除（Delete/Backspace）"
+                    onClick={() => data.onDeleteSubtree?.(id)}
+                    aria-label="Delete subtree"
+                >
                     <FiTrash2 />
                 </button>
             </div>
 
-            <Handle id="l" type="target" position={Position.Left} className={`${styles.handle} ${styles.handleLeft}`} />
-            <Handle id="r" type="source" position={Position.Right} className={`${styles.handle} ${styles.handleRight}`} />
+            {/* 接続ハンドル（左右） */}
+            <Handle
+                id="left"
+                type="target"
+                position={Position.Left}
+                className={`${styles.handle} ${styles.handleLeft}`}
+            />
+            <Handle
+                id="right"
+                type="source"
+                position={Position.Right}
+                className={`${styles.handle} ${styles.handleRight}`}
+            />
 
+            {/* ラベル or 入力 */}
             {editing ? (
                 <input
                     className={styles.nodeInput}
-                    autoFocus
                     value={value}
+                    autoFocus
                     onChange={(e) => setValue(e.target.value)}
                     onBlur={commit}
                     onKeyDown={onKeyDown}
-                    placeholder="ノード名"
+                    placeholder="新しいノード"
                 />
             ) : (
-                <div className={styles.nodeLabel} onDoubleClick={startEdit} title="ダブルクリックで名称編集">
-                    {data.label || 'ノード'}
+                <div className={styles.nodeLabel} onDoubleClick={startEdit} title="ダブルクリックで編集">
+                    {data.label || "新しいノード"}
                 </div>
             )}
         </div>
     );
-};
-
+}
 const nodeTypes = { editable: MindMapNode };
 
-/** ====================== Provider配下 ====================== */
-const MindMapInner = ({ mindMapData, setMindMapData, mindMapRef, isFullscreen, setIsFullscreen }) => {
-    const [state, setState, undo, redo, canUndo, canRedo] = useHistory({ nodes: [], edges: [] });
-    const { nodes, edges } = state;
-    const isInitialized = useRef(false);
-    const [selectedNodeId, setSelectedNodeId] = useState(null);
+// -------------------- Top Controls（アイコンのみ） --------------------
+function TopControls({
+    hasSelection,
+    createChild,
+    createSibling,
+    deleteSubtree,
+    relayout,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    centerToSelected,
+    isFullscreen,
+    toggleFullscreen,
+}) {
+    return (
+        <div className={styles.controls}>
+            {/* 兄弟 or ルート追加（Enter相当） */}
+            <button
+                onClick={createSibling}
+                title={hasSelection ? "兄弟ノード追加（Enter）" : "ルート追加"}
+                aria-label="Add sibling or root"
+            >
+                <FiCornerDownRight />
+            </button>
 
-    const storeApi = useStoreApi();
+            {/* 子追加（Tab相当） */}
+            <button
+                onClick={createChild}
+                title="子ノード追加（Tab）"
+                aria-label="Add child"
+                disabled={!hasSelection}
+            >
+                <FiCornerRightDown />
+            </button>
+
+            {/* サブツリー削除 */}
+            <button
+                onClick={deleteSubtree}
+                title="サブツリー削除（Delete/Backspace）"
+                aria-label="Delete subtree"
+                disabled={!hasSelection}
+            >
+                <FiTrash2 />
+            </button>
+
+            {/* レイアウト / Undo / Redo / センタリング */}
+            <button onClick={relayout} title="全体を整列" aria-label="Layout">
+                <FiRefreshCw />
+            </button>
+            <button onClick={undo} title="元に戻す" aria-label="Undo" disabled={!canUndo}>
+                <FiRotateCcw />
+            </button>
+            <button onClick={redo} title="やり直す" aria-label="Redo" disabled={!canRedo}>
+                <FiRotateCw />
+            </button>
+            <button onClick={centerToSelected} title="選択ノードへ移動（照準）" aria-label="Center">
+                <FiCrosshair />
+            </button>
+
+            {/* フルスクリーン */}
+            <button onClick={toggleFullscreen} title="フルスクリーン" aria-label="Fullscreen">
+                {isFullscreen ? <FiMinimize /> : <FiMaximize />}
+            </button>
+        </div>
+    );
+}
+
+// -------------------- ラッパ（Provider） --------------------
+export default function MindMap(props) {
+    return (
+        <ReactFlowProvider>
+            <MindMapInner {...props} />
+        </ReactFlowProvider>
+    );
+}
+
+// -------------------- メイン --------------------
+function MindMapInner({
+    mindMapData,
+    onChange, // (modelArray) => void
+    fullscreenDefault = false,
+}) {
+    // 初期モデル（★ すべて「新しいノード」）
+    const initialModel = useMemo(() => {
+        if (mindMapData && Array.isArray(mindMapData) && mindMapData.length > 0) {
+            // 受け取ったデータ中の空ラベルも「新しいノード」に補正
+            return deepClone(mindMapData).map((n) => ({
+                ...n,
+                label: (n.label ?? "").trim() ? n.label : "新しいノード",
+            }));
+        }
+        const root = { id: "root", label: "新しいノード", parentId: null, collapsed: false };
+        const c1 = { id: ID(), label: "新しいノード", parentId: "root", collapsed: false };
+        return [root, c1];
+    }, [mindMapData]);
+
+    // 履歴
+    const historyRef = useRef({ past: [], present: initialModel, future: [] });
+
+    // 実測サイズ（レイアウト用）
+    const measuredRef = useRef(new Map()); // id -> {w,h}
+
+    // UI 状態
+    const [selectedId, setSelectedId] = useState(initialModel[0]?.id ?? null);
+    const [fullscreen, setFullscreen] = useState(fullscreenDefault);
+
+    // Flow
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const rf = useReactFlow();
 
-    /** ---------- 初期化（強化版） ---------- */
+    // ResizeObserver の警告抑止（開発時のノイズ対策）
     useEffect(() => {
-        if (mindMapData && !isInitialized.current) {
-            // 元データを反映
-            let initialNodes = (mindMapData.nodes || []).map((n) => ({
-                ...n,
-                type: 'editable',
-                parentId: typeof n.parentId === 'undefined' ? null : n.parentId,
-                collapsed: !!n.collapsed,
-            }));
-            let initialEdges = (mindMapData.edges || []).map((e) => ({
-                ...e,
-                id: e.id || `e_${e.source}_${e.target}`,
-                type: undefined,
-                markerEnd: { type: MarkerType.ArrowClosed },
-            }));
-
-            // ★ 必ず「親＋子＋エッジ」を保証する
-            const ensureSeed = () => {
-                if (initialNodes.length === 0) {
-                    // まっさら → 親子を生成
-                    const rootId = 'node_1';
-                    const childId = 'node_2';
-                    initialNodes.push(
-                        {
-                            id: rootId,
-                            type: 'editable',
-                            position: { x: ROOT_X, y: ROOT_START_Y },
-                            data: { label: '中心トピック' },
-                            parentId: null,
-                            collapsed: false,
-                        },
-                        {
-                            id: childId,
-                            type: 'editable',
-                            position: { x: ROOT_X + NODE_WIDTH_FALLBACK + H_GAP_PARENT_CHILD, y: ROOT_START_Y },
-                            data: { label: '子トピック' },
-                            parentId: rootId,
-                            collapsed: false,
-                            selected: true,
-                        }
-                    );
-                    initialEdges.push({
-                        id: `e_${rootId}_${childId}`,
-                        source: rootId,
-                        target: childId,
-                        type: undefined,
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                    });
-                    return;
-                }
-
-                // ノードはあるが、親子関係がない/エッジが無い → 最初のルートに子を付ける
-                const hasAnyEdge = initialEdges.length > 0;
-                const hasAnyParentChild = initialNodes.some((n) => n.parentId !== null);
-                if (!hasAnyEdge || !hasAnyParentChild) {
-                    // 既存のルート（parentId=null）があればそこへ、なければ最初のノードをルート扱い
-                    const root = initialNodes.find((n) => n.parentId === null) || initialNodes[0];
-                    const usedIds = new Set(initialNodes.map((n) => n.id));
-                    let i = 1;
-                    let childId;
-                    do { childId = `node_${i++}`; } while (usedIds.has(childId));
-
-                    const child = {
-                        id: childId,
-                        type: 'editable',
-                        position: { x: (root.position?.x || ROOT_X) + NODE_WIDTH_FALLBACK + H_GAP_PARENT_CHILD, y: root.position?.y || ROOT_START_Y },
-                        data: { label: '子トピック' },
-                        parentId: root.id,
-                        collapsed: false,
-                        selected: true,
-                    };
-                    initialNodes.push(child);
-                    initialEdges.push({
-                        id: `e_${root.id}_${child.id}`,
-                        source: root.id,
-                        target: child.id,
-                        type: undefined,
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                    });
-                }
-            };
-
-            ensureSeed();
-
-            const laid = reflowRoots(initialNodes);
-            setState({ nodes: laid, edges: initialEdges }, true);
-            isInitialized.current = true;
-        }
-    }, [mindMapData, setState]);
-
-    /** ---------- 親へ同期（保存用） ---------- */
-    useEffect(() => {
-        if (isInitialized.current) setMindMapData(state);
-    }, [state, setMindMapData]);
-
-    /** ---------- 変更ハンドラ ---------- */
-    const onNodesChange = useCallback(
-        (changes) => {
-            if (!changes || changes.length === 0) return;
-            setState((cur) => ({ ...cur, nodes: applyNodeChanges(changes, cur.nodes) }), true);
-        },
-        [setState]
-    );
-    const onEdgesChange = useCallback(
-        (changes) => {
-            if (!changes || changes.length === 0) return;
-            setState((cur) => ({ ...cur, edges: applyEdgeChanges(changes, cur.edges) }), true);
-        },
-        [setState]
-    );
-
-    /** ---------- 接続（ドラッグ）→ 階層にも反映 ---------- */
-    const onConnect = useCallback((connection) => {
-        const { source, target } = connection;
-        if (!source || !target) return;
-
-        setState((cur) => {
-            const isAncestor = (startId, maybeAncestorId) => {
-                let n = cur.nodes.find((x) => x.id === startId);
-                const visited = new Set();
-                while (n && n.parentId && !visited.has(n.parentId)) {
-                    if (n.parentId === maybeAncestorId) return true;
-                    visited.add(n.parentId);
-                    n = cur.nodes.find((x) => x.id === n.parentId);
-                }
-                return false;
-            };
-            const allowParentSet = !isAncestor(source, target);
-
-            let edges = cur.edges.filter((e) => !(e.target === target && e.source !== source));
-            const edgeWithArrow = { ...connection, id: connection.id || `e_${source}_${target}`, type: undefined, markerEnd: { type: MarkerType.ArrowClosed } };
-            edges = addEdge(edgeWithArrow, edges);
-
-            let oldParent = null;
-            let nodes = cur.nodes.map((n) => {
-                if (n.id === target && allowParentSet) {
-                    oldParent = n.parentId ?? null;
-                    return { ...n, parentId: source };
-                }
-                return n;
-            });
-
-            if (allowParentSet) {
-                const internals = storeApi.getState().nodeInternals;
-                nodes = reflowLevelForParent(nodes, source, internals);
-                if (oldParent) nodes = reflowLevelForParent(nodes, oldParent, internals);
-            }
-            return { ...cur, nodes, edges };
-        });
-    }, [setState, storeApi]);
-
-    /** ---------- ラベル編集 ---------- */
-    const updateNodeLabel = useCallback((nodeId, newLabel) => {
-        setState((cur) => {
-            let nodes = cur.nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n));
-            const me = nodes.find((n) => n.id === nodeId);
-            if (!me) return { ...cur, nodes };
-
-            const internals = storeApi.getState().nodeInternals;
-            if (nodes.some((n) => n.parentId === nodeId)) {
-                nodes = reflowLevelForParent(nodes, nodeId, internals);
-            }
-            if (me.parentId) nodes = reflowLevelForParent(nodes, me.parentId, internals);
-            else nodes = reflowRoots(nodes);
-
-            return { ...cur, nodes };
-        });
-    }, [setState, storeApi]);
-
-    const onSelectionChange = useCallback(({ nodes: sel }) => {
-        setSelectedNodeId(sel && sel.length ? sel[0].id : null);
+        const swallow = (e) => {
+            const msg = e?.message || e?.reason?.message || "";
+            if (msg.includes("ResizeObserver loop")) e.stopImmediatePropagation?.();
+        };
+        window.addEventListener("error", swallow);
+        window.addEventListener("unhandledrejection", swallow);
+        return () => {
+            window.removeEventListener("error", swallow);
+            window.removeEventListener("unhandledrejection", swallow);
+        };
     }, []);
 
-    /** ---------- 手動 全体整列 ---------- */
-    const reflowAll = useCallback(() => {
-        setState((cur) => {
-            let nArr = reflowRoots(cur.nodes);
-            const internals = storeApi.getState().nodeInternals;
-            const levels = computeLevels(nArr);
-            for (const depth of levels.order) {
-                const parentIds = levels.parentsByDepth.get(depth) || [];
-                nArr = reflowLevelForParentList(nArr, parentIds, internals);
-            }
-            return { ...cur, nodes: nArr };
-        }, true);
-    }, [setState, storeApi]);
+    // ---- レイアウト関数 ----
+    const layout = useCallback((model) => {
+        const { byId, children } = buildIndex(model);
 
-    /** ---------- 生成/削除 ---------- */
-    const createChild = useCallback((parentId) => {
-        setState((cur) => {
-            const parent = cur.nodes.find((n) => n.id === parentId);
-            if (!parent) return cur;
-
-            const newId = nextNodeId(cur.nodes);
-            const internals = storeApi.getState().nodeInternals;
-            const { w: pW } = getRectFromInternal(internals.get?.(parentId));
-
-            const newNode = {
-                id: newId,
-                type: 'editable',
-                position: { x: (parent.position?.x || 0) + pW + H_GAP_PARENT_CHILD, y: (parent.position?.y || 0) },
-                data: { label: '新しいノード' },
-                parentId,
-                collapsed: false,
-                selected: true,
-            };
-
-            const deselected = cur.nodes.map((n) => ({ ...n, selected: false, ...(n.id === parentId ? { collapsed: false } : {}) }));
-            let nodes = [...deselected, newNode];
-            let edges = [...cur.edges, { id: `e_${parentId}_${newId}`, source: parentId, target: newId, type: undefined, markerEnd: { type: MarkerType.ArrowClosed } }];
-
-            nodes = reflowLevelForParent(nodes, parentId, internals);
-            return { ...cur, nodes, edges };
-        });
-    }, [setState, storeApi]);
-
-    const createSibling = useCallback((baseId) => {
-        setState((cur) => {
-            const base = cur.nodes.find((n) => n.id === baseId);
-            if (!base) return cur;
-
-            const parentId = base.parentId ?? null;
-            const newId = nextNodeId(cur.nodes);
-
-            const newNode = {
-                id: newId,
-                type: 'editable',
-                position: { x: base.position?.x || 0, y: base.position?.y || 0 },
-                data: { label: '新しいノード' },
-                parentId,
-                collapsed: false,
-                selected: true,
-            };
-
-            const deselected = cur.nodes.map((n) => ({ ...n, selected: false }));
-            let nodes = [...deselected, newNode];
-            let edges = [...cur.edges];
-
-            const internals = storeApi.getState().nodeInternals;
-
-            if (parentId) {
-                edges.push({ id: `e_${parentId}_${newId}`, source: parentId, target: newId, type: undefined, markerEnd: { type: MarkerType.ArrowClosed } });
-                nodes = reflowLevelForParent(nodes, parentId, internals);
-            } else {
-                nodes = reflowRoots(nodes);
-            }
-            return { ...cur, nodes, edges };
-        });
-    }, [setState, storeApi]);
-
-    const deleteSubtree = useCallback((rootId) => {
-        setState((cur) => {
-            if (!rootId) return cur;
-            const target = cur.nodes.find((n) => n.id === rootId);
-            const parentId = target?.parentId ?? null;
-
-            const ids = [rootId, ...collectSubtreeIds(cur.nodes, rootId)];
-            let nodes = cur.nodes.filter((n) => !ids.includes(n.id));
-            const edges = cur.edges.filter((e) => !ids.includes(e.source) && !ids.includes(e.target));
-
-            const internals = storeApi.getState().nodeInternals;
-            nodes = parentId ? reflowLevelForParent(nodes, parentId, internals) : reflowRoots(nodes);
-            return { ...cur, nodes, edges };
-        });
-        setSelectedNodeId(null);
-    }, [setState, storeApi]);
-
-    function collectSubtreeIds(allNodes, rootId) {
-        const out = [];
-        const walk = (pid) => {
-            const kids = allNodes.filter((n) => n.parentId === pid);
-            for (const k of kids) { out.push(k.id); walk(k.id); }
+        // 深さマップ
+        const depth = new Map();
+        const roots = model.filter((n) => !n.parentId);
+        const dfsDepth = (id, d) => {
+            depth.set(id, d);
+            for (const c of children.get(id) || []) dfsDepth(c.id, d + 1);
         };
-        walk(rootId);
-        return out;
-    }
+        for (const r of roots) dfsDepth(r.id, 0);
 
-    /** ---------- 折りたたみ/展開 ---------- */
-    const onToggleCollapse = useCallback((nodeId) => {
-        setState((cur) => {
-            const node = cur.nodes.find((n) => n.id === nodeId);
-            if (!node) return cur;
-            const willCollapse = !node.collapsed;
+        // ルートのYセンタ等間隔
+        let curY = 0;
+        const rootY = new Map();
+        roots.forEach((r, i) => {
+            rootY.set(r.id, i === 0 ? 0 : (curY += ROOT_ROW_GAP));
+        });
 
-            const targetIds = collectSubtreeIds(cur.nodes, nodeId);
-            let nodes = cur.nodes.map((n) => {
-                if (n.id === nodeId) return { ...n, collapsed: willCollapse };
-                if (targetIds.includes(n.id)) return { ...n, hidden: willCollapse };
-                return n;
+        const getMeasuredH = (id) => measuredRef.current.get(id)?.h ?? 40;
+
+        const pos = new Map();
+
+        const subtreeHeight = (id) => {
+            if (byId.get(id).collapsed) {
+                return Math.max(getMeasuredH(id), MIN_SIBLING_V_GAP);
+            }
+            const kids = children.get(id) || [];
+            if (!kids.length) return Math.max(getMeasuredH(id), MIN_SIBLING_V_GAP);
+            const needs = kids.map((k) => {
+                const h = subtreeHeight(k.id);
+                return Math.max(h, getMeasuredH(k.id) + EXTRA_MARGIN, MIN_SIBLING_V_GAP);
             });
-            const edges = cur.edges.map((e) =>
-                (targetIds.includes(e.target) || targetIds.includes(e.source)) ? { ...e, hidden: willCollapse } : e
+            const total = needs.reduce((a, b) => a + b, 0);
+            return Math.max(total, getMeasuredH(id));
+        };
+
+        const place = (id, baseX, centerY) => {
+            const d = depth.get(id) || 0;
+            const x = baseX + d * COLUMN_GAP;
+            const hSelf = getMeasuredH(id);
+            const yTop = centerY - Math.round(hSelf / 2);
+            pos.set(id, { x, y: yTop });
+
+            if (byId.get(id).collapsed) return;
+
+            const kids = children.get(id) || [];
+            if (!kids.length) return;
+
+            const heights = kids.map((k) => subtreeHeight(k.id));
+            const minGaps = kids.map((k) =>
+                Math.max(getMeasuredH(k.id) + EXTRA_MARGIN, MIN_SIBLING_V_GAP)
+            );
+            const totalH = Math.max(
+                heights.reduce((a, b) => a + b, 0),
+                minGaps.reduce((a, b) => a + b, 0)
             );
 
-            const internals = storeApi.getState().nodeInternals;
-            nodes = reflowLevelForParent(nodes, nodeId, internals);
-
-            return { ...cur, nodes, edges };
-        });
-    }, [setState, storeApi]);
-
-    /** ---------- フルスクリーン ---------- */
-    const handleFullscreen = () => {
-        const elem = mindMapRef.current;
-        if (!document.fullscreenElement) { elem?.requestFullscreen?.(); }
-        else { document.exitFullscreen?.(); }
-    };
-    useEffect(() => {
-        const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-        document.addEventListener('fullscreenchange', onFsChange);
-        return () => document.removeEventListener('fullscreenchange', onFsChange);
-    }, [setIsFullscreen]);
-
-    /** ---------- キー操作 ---------- */
-    useEffect(() => {
-        const handler = (e) => {
-            if (isEditingElement()) return;
-
-            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedNodeId) {
-                e.preventDefault();
-                deleteSubtree(selectedNodeId);
-                return;
-            }
-            if (!selectedNodeId) return;
-
-            if (e.nativeEvent?.isComposing || e.keyCode === 229) return; // IME確定中は無視
-
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                createChild(selectedNodeId);
-                return;
-            }
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                createSibling(selectedNodeId);
-                return;
+            let cursor = centerY - Math.round(totalH / 2);
+            for (let i = 0; i < kids.length; i++) {
+                const kid = kids[i];
+                const need = Math.max(heights[i], minGaps[i]);
+                const kidCenter = cursor + Math.round(need / 2);
+                place(kid.id, baseX, kidCenter);
+                cursor += need;
             }
         };
-        window.addEventListener('keydown', handler, { capture: true });
-        return () => window.removeEventListener('keydown', handler, { capture: true });
-    }, [selectedNodeId, createChild, createSibling, deleteSubtree]);
 
-    /** ---------- data拡張（メモ化） ---------- */
-    const nodesWithData = useMemo(() => {
-        const hasKids = Object.fromEntries(nodes.map((n) => [n.id, nodes.some((m) => m.parentId === n.id)]));
-        return nodes.map((n) => ({
-            ...n,
-            data: {
-                ...(n.data || {}),
-                updateNodeLabel,
-                onToggleCollapse,
-                onAddChild: createChild,
-                onAddSibling: createSibling,
-                onDeleteSubtree: deleteSubtree,
-                collapsed: !!n.collapsed,
-                hasChildren: !!hasKids[n.id],
-            },
-            sourcePosition: Position.Right,
-            targetPosition: Position.Left,
-        }));
-    }, [nodes, updateNodeLabel, onToggleCollapse, createChild, createSibling, deleteSubtree]);
+        for (const r of roots) {
+            place(r.id, 0, rootY.get(r.id) ?? 0);
+        }
 
-    /** ---------- ビュー操作：選択ノードへ移動 ---------- */
-    const centerToSelected = useCallback(() => {
-        const id = selectedNodeId || nodes[0]?.id;
-        if (!id) return;
+        return pos;
+    }, []);
 
-        const internals = storeApi.getState().nodeInternals;
-        const ni = internals?.get?.(id);
-        const fallback = nodes.find((n) => n.id === id);
+    // ---- Flow 投影 ----
+    const projectToFlow = useCallback(
+        (model, fit = false) => {
+            const { children } = buildIndex(model);
+            const autoPos = layout(model);
 
-        const x = (ni?.positionAbsolute?.x ?? fallback?.position?.x ?? 0);
-        const y = (ni?.positionAbsolute?.y ?? fallback?.position?.y ?? 0);
-        const { w, h } = getRectFromInternal(ni);
+            // 折りたたみ子孫を非表示
+            const hiddenSet = new Set();
+            const hideDesc = (id) => {
+                for (const c of children.get(id) || []) {
+                    hiddenSet.add(c.id);
+                    hideDesc(c.id);
+                }
+            };
+            for (const n of model) if (n.collapsed) hideDesc(n.id);
 
-        // 中心に寄せる（少し拡大）
-        rf.setCenter(x + w / 2, y + h / 2, { zoom: 1.2, duration: 400 });
-    }, [selectedNodeId, nodes, rf, storeApi]);
+            // ノード（手動座標 x,y があればそれを優先）
+            const rfNodes = model.map((m) => {
+                const kids = children.get(m.id) || [];
+                const manual = Number.isFinite(m.x) && Number.isFinite(m.y);
+                const pos = manual ? { x: m.x, y: m.y } : (autoPos.get(m.id) || { x: 0, y: 0 });
+                return {
+                    id: m.id,
+                    type: "editable",
+                    data: {
+                        label: m.label || "新しいノード",
+                        collapsed: m.collapsed,
+                        hasChildren: kids.length > 0,
+                        onAddChild: (pid) => addChild(pid),
+                        onAddSibling: (id) => addSibling(id),
+                        onDeleteSubtree: (id) => deleteSubtree(id),
+                        onToggleCollapse: (id) => toggleCollapse(id),
+                        updateNodeLabel: (id, v) => renameNode(id, v),
+                    },
+                    position: pos,
+                    draggable: true,
+                    selectable: true,
+                    hidden: hiddenSet.has(m.id) && m.parentId !== null,
+                    style: { minWidth: NODE_MIN_W },
+                };
+            });
+
+            // エッジ（直角step + 矢印）
+            const rfEdges = [];
+            for (const m of model) {
+                if (!m.parentId) continue;
+                if (hiddenSet.has(m.id)) continue;
+                rfEdges.push({
+                    id: `${m.parentId}-${m.id}`,
+                    source: m.parentId,
+                    target: m.id,
+                    sourceHandle: "right",
+                    targetHandle: "left",
+                    type: "step",
+                    markerEnd: { type: MarkerType.ArrowClosed },
+                    selectable: false,
+                    updatable: false,
+                });
+            }
+
+            setNodes(rfNodes);
+            setEdges(rfEdges);
+
+            if (fit) {
+                requestAnimationFrame(() => rf.fitView({ padding: 0.2, minZoom: 0.25, maxZoom: 2 }));
+            }
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [layout]
+    );
+
+    // ---- 履歴操作 ----
+    const commitModel = useCallback(
+        (next, { replace = false } = {}) => {
+            const hist = historyRef.current;
+            historyRef.current = replace
+                ? { past: hist.past, present: next, future: [] }
+                : { past: [...hist.past, hist.present], present: next, future: [] };
+
+            onChange?.(next);
+            setSelectedId((prev) => (prev && next.some((n) => n.id === prev) ? prev : next[0]?.id ?? null));
+            projectToFlow(next, true);
+        },
+        [onChange, projectToFlow]
+    );
+
+    const undo = useCallback(() => {
+        const hist = historyRef.current;
+        if (!hist.past.length) return;
+        const previous = hist.past[hist.past.length - 1];
+        historyRef.current = {
+            past: hist.past.slice(0, -1),
+            present: previous,
+            future: [hist.present, ...hist.future],
+        };
+        onChange?.(previous);
+        projectToFlow(previous, true);
+    }, [onChange, projectToFlow]);
+
+    const redo = useCallback(() => {
+        const hist = historyRef.current;
+        if (!hist.future.length) return;
+        const next = hist.future[0];
+        historyRef.current = {
+            past: [...hist.past, hist.present],
+            present: next,
+            future: hist.future.slice(1),
+        };
+        onChange?.(next);
+        projectToFlow(next, true);
+    }, [onChange, projectToFlow]);
+
+    // ---- 編集操作群（★ ラベルは常に「新しいノード」初期化） ----
+    const addChild = useCallback(
+        (parentId) => {
+            const current = historyRef.current.present;
+            const newNode = { id: ID(), label: "新しいノード", parentId, collapsed: false };
+            commitModel([...current, newNode]);
+            setSelectedId(newNode.id);
+        },
+        [commitModel]
+    );
+
+    const addSibling = useCallback(
+        (id) => {
+            const current = historyRef.current.present;
+            const me = current.find((n) => n.id === id);
+            if (!me || !me.parentId) {
+                // ルート追加
+                const newRoot = { id: ID(), label: "新しいノード", parentId: null, collapsed: false };
+                commitModel([...current, newRoot]);
+                setSelectedId(newRoot.id);
+                return;
+            }
+            const newNode = { id: ID(), label: "新しいノード", parentId: me.parentId, collapsed: false };
+            commitModel([...current, newNode]);
+            setSelectedId(newNode.id);
+        },
+        [commitModel]
+    );
+
+    const deleteSubtree = useCallback(
+        (id) => {
+            if (!id) return;
+            const current = historyRef.current.present;
+            const { children } = buildIndex(current);
+            const del = new Set();
+            const dfs = (nid) => {
+                del.add(nid);
+                for (const c of children.get(nid) || []) dfs(c.id);
+            };
+            dfs(id);
+            const next = current.filter((n) => !del.has(n.id));
+            commitModel(next);
+            setSelectedId(next[0]?.id ?? null);
+        },
+        [commitModel]
+    );
+
+    const toggleCollapse = useCallback(
+        (id) => {
+            const current = historyRef.current.present;
+            const next = current.map((n) => (n.id === id ? { ...n, collapsed: !n.collapsed } : n));
+            commitModel(next);
+            setSelectedId(id);
+        },
+        [commitModel]
+    );
+
+    const renameNode = useCallback(
+        (id, label) => {
+            const newLabel = (label ?? "").trim() || "新しいノード";
+            const current = historyRef.current.present;
+            const next = current.map((n) => (n.id === id ? { ...n, label: newLabel } : n));
+            commitModel(next);
+            setSelectedId(id);
+        },
+        [commitModel]
+    );
+
+    const relayoutAll = useCallback(() => {
+        // 手動座標をクリアしてからレイアウト
+        const current = historyRef.current.present;
+        const cleared = current.map((n) => {
+            const { x, y, ...rest } = n;
+            return rest;
+        });
+        commitModel(cleared);
+    }, [commitModel]);
+
+    // ---- Flow イベント ----
+    const onConnect = useCallback(
+        (conn) => {
+            const { source, target } = conn;
+            if (!source || !target || source === target) return;
+            const model = historyRef.current.present;
+            const { children } = buildIndex(model);
+            // 循環防止
+            if (isAncestor(target, source, children)) return;
+            const next = model.map((n) => (n.id === target ? { ...n, parentId: source } : n));
+            commitModel(next);
+            setSelectedId(target);
+        },
+        [commitModel]
+    );
+
+    const onSelectionChange = useCallback(({ nodes }) => {
+        if (nodes?.length) setSelectedId(nodes[0].id);
+    }, []);
+
+    const getNodeRect = (n) => {
+        const w = n?.width ?? NODE_MIN_W;
+        const h = n?.height ?? NODE_HEIGHT_FALLBACK;
+        return { w, h };
+    };
+
+    const centerOnSelected = useCallback(() => {
+        const n = nodes.find((x) => x.id === selectedId);
+        if (!n) return;
+        const { w, h } = getNodeRect(n);
+        const cx = n.position.x + w / 2;
+        const cy = n.position.y + h / 2;
+        rf.setCenter(cx, cy, { zoom: INITIAL_ZOOM_TO_NODE, duration: 400 });
+    }, [nodes, rf, selectedId]);
+
+    // ---- ドラッグで自由配置（ドラッグ終了時に手動座標を保存） ----
+    const onNodeDragStop = useCallback((_evt, node) => {
+        const current = historyRef.current.present;
+        const next = current.map((n) =>
+            n.id === node.id ? { ...n, x: node.position.x, y: node.position.y } : n
+        );
+        commitModel(next);
+        setSelectedId(node.id);
+    }, [commitModel]);
+
+    // ---- キーボード（Enter=兄弟 / Tab=子 / Delete=削除） ----
+    const keyCaptureRef = useRef(null);
+    useEffect(() => {
+        const onKey = (e) => {
+            // IME中は無効
+            if (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229) return;
+
+            // 編集中の input には干渉しない
+            const tag = document.activeElement?.tagName?.toLowerCase();
+            if (tag === "input" || tag === "textarea") return;
+
+            if (!selectedId) return;
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+                addSibling(selectedId);
+            } else if (e.key === "Tab") {
+                e.preventDefault();
+                addChild(selectedId);
+            } else if (e.key === "Delete" || e.key === "Backspace") {
+                e.preventDefault();
+                deleteSubtree(selectedId);
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+                e.preventDefault();
+                if (e.shiftKey) redo();
+                else undo();
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+                e.preventDefault();
+                redo();
+            }
+        };
+
+        const el = keyCaptureRef.current;
+        window.addEventListener("keydown", onKey);
+        el?.focus?.();
+
+        return () => window.removeEventListener("keydown", onKey);
+    }, [addChild, addSibling, deleteSubtree, redo, selectedId, undo]);
+
+    // ---- 初期投影 ----
+    useEffect(() => {
+        projectToFlow(historyRef.current.present, true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ---- フルスクリーン ----
+    const toggleFullscreen = useCallback(() => setFullscreen((v) => !v), []);
 
     return (
-        <>
-            <div className={styles.keyCapture} tabIndex={0} onKeyDown={() => { }}>
+        <div
+            className={`${styles.mindMapContainer} ${fullscreen ? styles.fullscreen : ""}`}
+        >
+            <div className={styles.keyCapture} tabIndex={0} ref={keyCaptureRef}>
                 <ReactFlow
-                    nodes={nodesWithData}
+                    nodes={nodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
                     onSelectionChange={onSelectionChange}
+                    onNodeDragStop={onNodeDragStop}
                     nodeTypes={nodeTypes}
                     fitView
-                    proOptions={{ hideAttribution: true }}
-                    nodesConnectable={true}
-                    edgesUpdatable={false}
-                    elevateEdgesOnSelect
+                    /* ====== ビューポート操作（ここが重要） ====== */
+                    panOnDrag                       // 背景ドラッグでパン
+                    selectionOnDrag={false}         // 背景ドラッグは矩形選択ではなくパン
+                    zoomOnScroll={false}            // スクロールはズームに使わない
+                    panOnScroll                     // スクロールでパン
+                    panOnScrollMode="free"          // 縦横いずれもパン
+                    panOnScrollSpeed={0.9}          // パン速度（好みで調整）
+                    zoomOnPinch                     // ピンチズーム
+                    zoomOnDoubleClick               // ダブルクリックズーム
+                    panActivationKeyCode="Space"    // Space 押下中は常時パン
+                    /* ======================================== */
+                    nodesConnectable
+                    elementsSelectable
+                    deleteKeyCode={null}
                 >
-                    {/* FitView のデフォルトアイコンは非表示にする（全画面と紛らわしいため） */}
-                    <Controls showInteractive={false} showFitView={false} />
                     <MiniMap />
+                    <Controls showInteractive={true} />
                     <Background variant="dots" gap={12} size={1} />
                 </ReactFlow>
             </div>
 
-            <div className={styles.controls}>
-                {/* 兄弟 or ルート追加：アイコンを ⊕ に変更 */}
-                <button
-                    onClick={() =>
-                        selectedNodeId
-                            ? createSibling(selectedNodeId)
-                            : (() => {
-                                const newRootId = nextNodeId(nodes);
-                                setState((cur) => {
-                                    const deselected = cur.nodes.map((n) => ({ ...n, selected: false }));
-                                    const nodesNext = [...deselected, {
-                                        id: newRootId,
-                                        type: 'editable',
-                                        position: { x: ROOT_X, y: ROOT_START_Y },
-                                        data: { label: '新しいノード' },
-                                        parentId: null,
-                                        collapsed: false,
-                                        selected: true,
-                                    }];
-                                    return { ...cur, nodes: reflowRoots(nodesNext) };
-                                });
-                            })()
-                    }
-                    title={selectedNodeId ? '兄弟ノードを追加（Enter）' : 'ルートを追加'}
-                >
-                    {/* ここを ⊕ に */}
-                    <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⊕</span>
-                </button>
-
-                <button onClick={() => selectedNodeId && createChild(selectedNodeId)} disabled={!selectedNodeId} title="子ノードを追加（Tab）">
-                    <FiCornerRightDown />
-                </button>
-
-                <button onClick={() => selectedNodeId && deleteSubtree(selectedNodeId)} disabled={!selectedNodeId} title="このノード以下を削除（Delete/Backspace）">
-                    <FiTrash2 />
-                </button>
-
-                <button onClick={reflowAll} title="全体を整列"><FiRefreshCw /></button>
-                <button onClick={undo} disabled={!canUndo} title="元に戻す"><FiRotateCcw /></button>
-                <button onClick={redo} disabled={!canRedo} title="やり直す"><FiRotateCw /></button>
-
-                {/* ← 新規：選択ノードへ移動（デフォルトのFit Viewは非表示にしてこちらを使う） */}
-                <button onClick={centerToSelected} title="選択ノードへ移動（照準）"><FiCrosshair /></button>
-
-                <button onClick={handleFullscreen} title="フルスクリーン">{isFullscreen ? <FiMinimize /> : <FiMaximize />}</button>
-            </div>
-
-            {/* 左下ヒントは削除済み */}
-        </>
-    );
-};
-
-/** ====================== 外側（Provider） ====================== */
-const MindMap = ({ mindMapData, setMindMapData }) => {
-    const mindMapRef = useRef(null);
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
-    useEffect(() => {
-        const el = mindMapRef.current?.querySelector(`.${styles.keyCapture}`);
-        el?.focus?.();
-    }, []);
-
-    return (
-        <div className={`${styles.mindMapContainer} ${isFullscreen ? styles.fullscreen : ''}`} ref={mindMapRef}>
-            <ReactFlowProvider>
-                <MindMapInner
-                    mindMapData={mindMapData}
-                    setMindMapData={setMindMapData}
-                    mindMapRef={mindMapRef}
-                    isFullscreen={isFullscreen}
-                    setIsFullscreen={setIsFullscreen}
-                />
-            </ReactFlowProvider>
+            <TopControls
+                hasSelection={!!selectedId}
+                createChild={() => selectedId && addChild(selectedId)}
+                createSibling={() => selectedId ? addSibling(selectedId) : addSibling(null)}
+                deleteSubtree={() => selectedId && deleteSubtree(selectedId)}
+                relayout={relayoutAll}
+                undo={undo}
+                redo={redo}
+                canUndo={historyRef.current.past.length > 0}
+                canRedo={historyRef.current.future.length > 0}
+                centerToSelected={centerOnSelected}
+                isFullscreen={fullscreen}
+                toggleFullscreen={toggleFullscreen}
+            />
         </div>
     );
-};
-
-export default MindMap;
-
-/** ====================== レイアウト純関数群 ====================== */
-
-// ルート整列（縦に等間隔）
-function reflowRoots(nodesArr) {
-    const arr = [...nodesArr];
-    const roots = arr.filter((n) => n.parentId === null).sort((a, b) => extractNum(a.id) - extractNum(b.id));
-    roots.forEach((r, i) => { r.position = { x: ROOT_X, y: ROOT_START_Y + i * ROOT_V_GAP }; });
-    return arr;
-}
-
-// 深さ（レベル）計算と親一覧
-function computeLevels(nodesArr) {
-    const arr = [...nodesArr];
-    const roots = arr.filter((n) => n.parentId === null);
-    const parentsByDepth = new Map(); // depth -> parentIds[]
-    const depthMap = new Map();       // nodeId -> depth
-
-    const q = [...roots];
-    roots.forEach(r => depthMap.set(r.id, 0));
-
-    while (q.length) {
-        const p = q.shift();
-        const d = depthMap.get(p.id) ?? 0;
-        if (!parentsByDepth.has(d)) parentsByDepth.set(d, []);
-        if (!parentsByDepth.get(d).includes(p.id)) parentsByDepth.get(d).push(p.id);
-
-        const kids = arr.filter((n) => n.parentId === p.id);
-        for (const k of kids) {
-            if (!depthMap.has(k.id)) {
-                depthMap.set(k.id, d + 1);
-                q.push(k);
-            }
-        }
-    }
-
-    for (const n of arr) if (!depthMap.has(n.id)) depthMap.set(n.id, 0);
-
-    const order = Array.from(parentsByDepth.keys()).sort((a, b) => a - b);
-    return { depthMap, parentsByDepth, order };
-}
-
-// ある親と同じ深さにいる「親たち」全員の子群をまとめて再配置
-function reflowLevelForParent(nodesArr, parentId, internals) {
-    const { depthMap, parentsByDepth } = computeLevels(nodesArr);
-    const depth = depthMap.get(parentId) ?? 0;
-    const parentIds = parentsByDepth.get(depth) || [];
-    return reflowLevelForParentList(nodesArr, parentIds, internals);
-}
-
-// 親IDリスト（同じ深さの親群）に対して、子ノード群を縦パック
-function reflowLevelForParentList(nodesArr, parentIds, internals) {
-    const arr = [...nodesArr];
-
-    let maxChildH = 0;
-    for (const pid of parentIds) {
-        const kids = arr.filter((n) => n.parentId === pid && !n.hidden);
-        for (const k of kids) {
-            const ki = internals?.get?.(k.id);
-            const ch = ki?.measured?.height ?? ki?.height ?? NODE_HEIGHT_FALLBACK;
-            if (ch > maxChildH) maxChildH = ch;
-        }
-    }
-    const SLOT = Math.max(MIN_SIBLING_V_GAP, maxChildH + SIBLING_EXTRA_PADDING);
-    const REF_H = maxChildH || NODE_HEIGHT_FALLBACK;
-
-    const sortedParents = parentIds
-        .map((pid) => arr.find((n) => n.id === pid))
-        .filter(Boolean)
-        .sort((a, b) => (a.position?.y || 0) - (b.position?.y || 0));
-
-    let prevBottom = -Infinity;
-
-    for (const parent of sortedParents) {
-        const pid = parent.id;
-        const kids = arr
-            .filter((n) => n.parentId === pid && !n.hidden)
-            .sort((a, b) => extractNum(a.id) - extractNum(b.id));
-
-        if (kids.length === 0) continue;
-
-        const pI = internals?.get?.(pid);
-        const { w: pW, h: pH } = getRectFromInternal(pI);
-        const pTop = parent.position?.y || 0;
-        const pLeft = parent.position?.x || 0;
-        const pCenterY = pTop + pH / 2;
-        const pRightX = pLeft + pW;
-
-        const groupH = (kids.length - 1) * SLOT + REF_H;
-
-        const desiredTop = pCenterY - groupH / 2;
-
-        const top = Math.max(desiredTop, prevBottom + GROUP_GAP_BETWEEN_BLOCKS);
-
-        for (let i = 0; i < kids.length; i++) {
-            const ki = internals?.get?.(kids[i].id);
-            const ch = ki?.measured?.height ?? ki?.height ?? NODE_HEIGHT_FALLBACK;
-            const centerY = top + i * SLOT + REF_H / 2;
-            const childTop = centerY - ch / 2;
-            const leftX = pRightX + H_GAP_PARENT_CHILD;
-            kids[i].position = { x: leftX, y: childTop };
-        }
-
-        prevBottom = top + groupH;
-    }
-
-    return arr;
 }
