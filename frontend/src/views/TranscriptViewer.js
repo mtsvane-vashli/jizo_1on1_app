@@ -14,6 +14,7 @@ import Memo from '../components/Memo';
 import MindMap from '../components/MindMap';
 import Tabs from '../components/Tabs';
 import { FiAlertTriangle } from 'react-icons/fi';
+import { normalizeMindMapModel } from '../utils/mindMap';
 
 function TranscriptViewer() {
     const { id } = useParams();
@@ -24,7 +25,7 @@ function TranscriptViewer() {
     const [activeTab, setActiveTab] = useState('memo');
 
     const [memo, setMemo] = useState('');
-    const [mindMapData, setMindMapData] = useState({ nodes: [], edges: [] });
+    const [mindMapData, setMindMapData] = useState(() => normalizeMindMapModel(null));
     const [editingId, setEditingId] = useState(null);
     const [editingText, setEditingText] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -90,7 +91,7 @@ function TranscriptViewer() {
 
                 setConversation(data);
                 setMemo(data.memo || '');
-                setMindMapData(data.mind_map_data || { nodes: [], edges: [] });
+                setMindMapData(normalizeMindMapModel(data.mind_map_data));
 
             } catch (err) {
                 setError('会話データの読み込みに失敗しました。');
@@ -298,7 +299,7 @@ function TranscriptViewer() {
                         <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
                         <div className={styles.tabContent}>
                             {activeTab === 'memo' && <Memo memo={memo} setMemo={() => { }} />}
-                            {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={() => { }} isReadOnly={true} />}
+                            {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} onChange={() => { }} isReadOnly={true} />}
                         </div>
                     </div>
                 )}

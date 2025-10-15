@@ -14,6 +14,7 @@ import ThemeToggleButton from '../components/ThemeToggleButton';
 import BrainJuiceButton from '../components/BrainJuiceButton';
 import { io } from 'socket.io-client';
 import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle, FiZap } from 'react-icons/fi';
+import { normalizeMindMapModel } from '../utils/mindMap';
 
 
 /**
@@ -290,9 +291,6 @@ const INTERACTIONS = [
   { id: 5, text: '状況や結果を共有・報告したい' },
   { id: 6, text: 'その他' },
 ];
-const initialNodes = [
-  { id: '1', type: 'default', data: { label: '中心テーマ' }, position: { x: 250, y: 150 } },
-];
 const AUTO_TRANSCRIPT_THEME = { id: 'auto-transcript-theme', text: 'リアルタイム文字起こしセッション' };
 const AUTO_TRANSCRIPT_INTERACTION = { id: 'auto-transcript-interaction', text: '録音内容を整理したい' };
 
@@ -367,7 +365,7 @@ function New1on1Support() {
 
   const [activeTab, setActiveTab] = useState('memo');
   const [memo, setMemo] = useState('');
-  const [mindMapData, setMindMapData] = useState({ nodes: initialNodes, edges: [] });
+  const [mindMapData, setMindMapData] = useState(() => normalizeMindMapModel(null));
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -910,6 +908,10 @@ function New1on1Support() {
     }
   }, [cleanupVoiceRecognition, isVoiceInputActive]);
 
+  const handleMindMapChange = useCallback((nextModel) => {
+    setMindMapData(normalizeMindMapModel(nextModel));
+  }, []);
+
   const persistMemo = useCallback(async (nextMemo) => {
     if (!state.currentConversationId) return;
     setMemoSaveState('saving');
@@ -936,9 +938,10 @@ function New1on1Support() {
     setMemoSaveError('');
     try {
       const formattedTranscript = transcript.map(item => `${item.speakerTag ? `話者${item.speakerTag}: ` : ''}${item.transcript}`).join('\n');
+      const normalizedMindMap = normalizeMindMapModel(mindMapData);
       await updateConversation(targetConversationId, {
         memo,
-        mindMapData,
+        mindMapData: normalizedMindMap,
         transcript: formattedTranscript
       });
       lastSavedMemoRef.current = memo;
@@ -1533,7 +1536,7 @@ function New1on1Support() {
               <Tabs activeTab={activeTab} onTabClick={setActiveTab} />
               <div className={styles.tabContent}>
                 {activeTab === 'memo' && <Memo memo={memo} setMemo={setMemo} saveState={memoSaveState} errorMessage={memoSaveError} />}
-                {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} setMindMapData={setMindMapData} />}
+                {activeTab === 'mindmap' && <MindMap mindMapData={mindMapData} onChange={handleMindMapChange} />}
               </div>
             </div>
           </div>

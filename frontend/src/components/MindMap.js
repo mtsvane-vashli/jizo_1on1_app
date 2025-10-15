@@ -467,6 +467,48 @@ function MindMapInner({
         [layout]
     );
 
+    useEffect(() => {
+        const currentSerialized = JSON.stringify(historyRef.current.present);
+
+        if (!Array.isArray(mindMapData) || mindMapData.length === 0) {
+            const defaultSerialized = JSON.stringify(initialModel);
+            if (currentSerialized !== defaultSerialized) {
+                const fallbackId = initialModel.length > 0 && typeof initialModel[0].id !== "undefined"
+                    ? initialModel[0].id
+                    : null;
+                historyRef.current = { past: [], present: initialModel, future: [] };
+                setSelectedId(fallbackId);
+                projectToFlow(initialModel, true);
+            }
+            return;
+        }
+
+        const sanitized = deepClone(mindMapData).map((n) => {
+            const label = typeof n.label === "string" ? n.label.trim() : "";
+            const normalized = {
+                ...n,
+                label: label ? label : "新しいノード",
+            };
+            return normalized;
+        });
+
+        const nextSerialized = JSON.stringify(sanitized);
+        if (currentSerialized === nextSerialized) return;
+
+        const fallbackId = sanitized.length > 0 && typeof sanitized[0].id !== "undefined"
+            ? sanitized[0].id
+            : null;
+
+        historyRef.current = { past: [], present: sanitized, future: [] };
+        setSelectedId((prev) => {
+            if (prev && sanitized.some((node) => node.id === prev)) {
+                return prev;
+            }
+            return fallbackId !== undefined && fallbackId !== null ? fallbackId : null;
+        });
+        projectToFlow(sanitized, true);
+    }, [mindMapData, initialModel, projectToFlow]);
+
     // ---- 履歴操作 ----
     const commitModel = useCallback(
         (next, { replace = false } = {}) => {
@@ -607,9 +649,9 @@ function MindMapInner({
     }, []);
 
     const getNodeRect = (n) => {
-        const w = n?.width ?? NODE_MIN_W;
-        const h = n?.height ?? NODE_HEIGHT_FALLBACK;
-        return { w, h };
+        const nodeWidth = n && typeof n.width === "number" ? n.width : NODE_MIN_W;
+        const nodeHeight = n && typeof n.height === "number" ? n.height : NODE_HEIGHT_FALLBACK;
+        return { w: nodeWidth, h: nodeHeight };
     };
 
     const centerOnSelected = useCallback(() => {
