@@ -1,16 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiArrowUpRight } from 'react-icons/fi';
 import styles from './Home.module.css';
 
 /**
- * Home: トップページ（コピー統合・重複解消版）
- * - スクロールリビール演出を維持
- * - 追加/更新: Careers / Message / Vision / Company の文面を提供コピーに合わせて反映
- * - 重複解消: 既存の「会社概要（サマリ）」セクションを削除し、Companyに一本化
- * - 既存維持: Hero / 1on1推進事業 / 事業内容 / 企画書 / 取引企業 / お問い合わせ
+ * Home: mono-make風に統一しつつ要望反映
+ * - ヒーロー見出しとサブ2行をそれぞれ改行で独立表示
+ * - ボタン2つも縦並びで1行ずつ表示
+ * - 既存の構成/演出は維持
  */
+
 function Home() {
+  useEffect(() => {
+    document.title = '株式会社メメント｜Memento';
+  }, []);
+
   // スムーズスクロール
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
@@ -21,7 +24,7 @@ function Home() {
     window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
   };
 
-  // セクションのリビール
+  // 出現アニメ
   const observed = useRef([]);
   useEffect(() => {
     const targets = document.querySelectorAll('[data-reveal]');
@@ -43,290 +46,242 @@ function Home() {
     return () => io.disconnect();
   }, []);
 
+  // スライド埋め込み（既存）
   const slidesEmbedUrl =
     'https://docs.google.com/presentation/d/1-1ogWEprs_wNI0mcxvGjUvORIdZ4OXZSIqajL_t56xI/embed?start=false&loop=false&delayms=3000&rm=minimal';
 
   return (
     <div className={styles.pageContainer}>
-      {/* Sticky Glass Header */}
+      {/* Header */}
       <header className={styles.header}>
         <div className={styles.navContainer}>
           <span className={styles.logo}>Memento</span>
           <nav className={styles.nav}>
-            <button onClick={() => scrollToSection('home')} className={styles.navLink}>ホーム</button>
-            <button onClick={() => scrollToSection('careers')} className={styles.navLink}>採用</button>
-            <button onClick={() => scrollToSection('company')} className={styles.navLink}>会社情報</button>
-            <button onClick={() => scrollToSection('services')} className={styles.navLink}>事業内容</button>
-            <button onClick={() => scrollToSection('clients')} className={styles.navLink}>取引企業</button>
-            <button onClick={() => scrollToSection('contact')} className={styles.navLink}>お問い合わせ</button>
-            <Link to="/login" className={`${styles.navLink} ${styles.navLinkJizo}`}>地蔵1on1</Link>
+            <button onClick={() => scrollToSection('home')} className={`${styles.navLink} ${styles.navUnderline}`}>ホーム</button>
+            <button onClick={() => scrollToSection('message')} className={`${styles.navLink} ${styles.navUnderline}`}>創業の思い</button>
+            <button onClick={() => scrollToSection('company')} className={`${styles.navLink} ${styles.navUnderline}`}>会社情報</button>
+            <button onClick={() => scrollToSection('founder')} className={`${styles.navLink} ${styles.navUnderline}`}>代表紹介</button>
+            <button onClick={() => scrollToSection('services')} className={`${styles.navLink} ${styles.navUnderline}`}>事業内容</button>
+            <Link to="/jizo-1on1" className={`${styles.navLink} ${styles.navLinkJizo}`}>1on1事業</Link>
+            <button onClick={() => scrollToSection('trial')} className={`${styles.navLink} ${styles.navUnderline}`}>無料相談</button>
           </nav>
         </div>
       </header>
 
-      <main>
-        {/* HERO */}
-        <section id="home" className={styles.hero}>
-          {/* 背景オーナメント */}
-          <div className={styles.heroBg}>
-            <span className={`${styles.blob} ${styles.blobA}`} aria-hidden="true" />
-            <span className={`${styles.blob} ${styles.blobB}`} aria-hidden="true" />
-            <span className={styles.gridGlow} aria-hidden="true" />
-          </div>
-
-          <div className={styles.heroContent} data-reveal>
-            <h1 className={styles.mainTitle}>
-              人の記憶や想いを大切にし、<br />未来へと繋ぐ。
+      <main className={styles.main}>
+        {/* ===== HERO ===== */}
+        <section
+          id="home"
+          className={styles.hero}
+          style={{
+            backgroundImage: `
+              linear-gradient(
+                to top,
+                rgba(0,0,0,0.50) 0%,
+                rgba(0,0,0,0.30) 35%,
+                rgba(0,0,0,0.12) 65%,
+                rgba(0,0,0,0.00) 100%
+              ),
+              url(${process.env.PUBLIC_URL + '/assets/homepage_background.png'})
+            `
+          }}
+        >
+          <div className={`${styles.heroInner} ${styles.maskIn}`} data-reveal>
+            {/* それぞれ改行で独立表示 */}
+            <h1 className={`${styles.mainTitle} ${styles.flowStagger}`}>
+              <span>メメント・モリ</span>
             </h1>
-            <p className={styles.subtitle}>
-              株式会社メメントは、人の記憶や想いを大切にし、未来へと繋ぐサービスを展開する。
+            <p className={`${styles.subline} ${styles.flowStagger}`}>
+              <span>死を思うことで、今日を大切に生きる。</span>
             </p>
-            <Link to="/login" className={styles.ctaButton}>地蔵1on1を始める</Link>
-
-            <button
-              onClick={() => scrollToSection('careers')}
-              className={styles.scrollDown}
-              aria-label="採用セクションへスクロール"
-            >
-              <span className={styles.scrollDot} />
-            </button>
-          </div>
-        </section>
-
-        {/* ====== CAREERS（採用） ====== */}
-        <section id="careers" className={`${styles.section} ${styles.careersSection}`} data-reveal>
-          <div className={styles.careersHeader}>
-            <span className={styles.eyebrow}>careers at 株式会社メメント</span>
-            <h2 className={styles.careersTitle}>今日を一生懸命生きる</h2>
-            <p className={styles.careersStat}>1 職種で積極採用中！</p>
-          </div>
-
-          <div className={styles.jobsGrid}>
-            <article className={styles.jobCard}>
-              <div className={styles.jobMeta}>
-                <span className={styles.pill}>業務委託</span>
-                <span className={styles.pillMuted}>リモート可</span>
-              </div>
-              <h3 className={styles.jobTitle}>
-                1on1ミーティング導入支援のベンチャーで、事業の仕組み化のアシスタント募集（業務委託）
-              </h3>
-              <p className={styles.jobDesc}>
-                1on1導入支援事業のオペレーション構築を、経営直下で推進するポジション。
-                ドキュメント整備、ワークフロー設計、ナレッジ基盤づくり等を担い、0→1 / 1→10の拡張を加速させる。
-              </p>
-              <div className={styles.jobActions}>
-                <a href="#job-details" className={styles.jobButtonPrimary}>
-                  募集要項を見る <FiArrowRight aria-hidden="true" />
-                </a>
-                <a
-                  href="mailto:info@memento-inc.net?subject=%E6%8E%A1%E7%94%A8%E5%BF%9C%E5%8B%9F%20%28%E4%BA%8B%E6%A5%AD%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF%E5%8C%96ASST%29"
-                  className={styles.jobButtonGhost}
-                >
-                  応募する <FiArrowUpRight aria-hidden="true" />
-                </a>
-              </div>
-            </article>
-          </div>
-
-          {/* 募集要項（簡易版） */}
-          <div id="job-details" className={styles.jobDetails}>
-            <div className={styles.detailCol}>
-              <h4>業務内容</h4>
-              <ul className={styles.bulletList}>
-                <li>1on1導入支援の標準オペレーション策定・改善</li>
-                <li>テンプレート・ガイド・チェックリストの整備</li>
-                <li>顧客オンボーディング〜運用の仕組み化</li>
-                <li>ナレッジ管理と事例の体系化</li>
-              </ul>
-            </div>
-            <div className={styles.detailCol}>
-              <h4>歓迎要件</h4>
-              <ul className={styles.bulletList}>
-                <li>誰かのサポートにやりがいを感じる姿勢</li>
-                <li>0→1、1→10の変化を楽しめる適応力</li>
-                <li>経営近接で事業創造プロセスを学ぶ意欲</li>
-                <li>自分のアイデアを発信し、仕組みを磨く実行力</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* ====== MESSAGE（創業の思い） ====== */}
-        <section id="message" className={`${styles.section} ${styles.messageSection}`} data-reveal>
-          <div className={styles.messageHeader}>
-            <span className={styles.eyebrow}>MESSAGE</span>
-            <h2 className={styles.sectionTitle}>創業の思い</h2>
-            <p className={styles.messageLead}>明日死ぬなら今何をするか</p>
-          </div>
-
-          <div className={styles.messageBody}>
-            <p>
-              メメント・モリという言葉はご存知でしょうか？ラテン語で「自分がいつか必ず死ぬことを忘れるな」「人に訪れる死を忘ることなかれ」という意味です。
-            </p>
-            <p>
-              私はあることがきっかけで生死をさまよいました。以降、私が常に意識していることは「明日死ぬなら今何をするか」。
-            </p>
-            <p>
-              人は本当にいつ死ぬか分かりません。だったら毎日楽しく生きていこうと考えています。
-            </p>
-            <p>
-              そして、あなたと一緒に思い出を作り、死んでいきたいと思っています。まだ生まれたばかりの会社です。あなたと作り上げていきたい。
-            </p>
-            <p>
-              何をするかではなく誰とするか。新しく出会うご縁を楽しみに、今日も一生懸命生きていきます。
-            </p>
-          </div>
-        </section>
-
-        {/* ====== VISION / MORE INFO ====== */}
-        <section id="vision" className={`${styles.section} ${styles.visionSection} ${styles.bgGray}`} data-reveal>
-          <div className={styles.visionHeader}>
-            <span className={styles.eyebrow}>MORE INFO</span>
-            <h2 className={styles.sectionTitle}>(株)メメントが目指すビジョン</h2>
-            <p className={styles.visionTagline}>「これやってみたい！」を形にできる会社にする</p>
-          </div>
-
-          <div className={styles.visionBody}>
-            <h3 className={styles.visionSub}>当社の理念「今日を一生懸命生きる」</h3>
-            <p>
-              普通の会社は恐らく顧客第一という会社が多いと思います。私は違うと考えています。身の回りの人の心が豊かになって初めて、顧客の課題や幸せを考えることができると考えています。
-            </p>
-            <p>
-              そして、「何をするかではなく誰とするか」。私が目指す道は、先程も申し上げた通り100億・1000億という大きな会社ではありません。朝起きて、「よし！今日も楽しく生きよう」と毎日が楽しくなる会社を作りたいと考えています。
-            </p>
-            <p>
-              超優秀なメンバーが揃った楽しくない組織よりも、毎日楽しくイキイキとしている組織の方が事業は成功すると確信しています。
-            </p>
-            <p>
-              そもそも商売とは「誰かの課題を解決する＝助ける」ことです。それが卵だったり、採用だったりと形が変わるだけです。極論を言えば、扱う商品なんてどうでも良い。商品を扱っている「人」が一番大事です。
-            </p>
-            <p>
-              私は初めての起業で一番そこを学びました。特殊な技術を除けば、うまくいく人は何をしてもうまくいきます。そんな仲間が集まったとき、「これやったら面白そうじゃない？ちょっとやってみようよ！」と言える会社。それが目標であり、ビジョンです。
+            <p className={`${styles.subline} ${styles.flowStagger}`}>
+              <span>株式会社メメントは、人の記憶や想いを大切にし、未来へつなぐサービスを展開しています。</span>
             </p>
 
-            <div className={styles.fitListWrap}>
-              <h4 className={styles.visionSubSmall}>こんな方と働きたい</h4>
-              <ul className={styles.checkList}>
-                <li>誰かのサポートをすることにやりがいを感じる方</li>
-                <li>0→1、1→10のフェーズを楽しみながら、変化に対応できる方</li>
-                <li>経営者の近くで、事業創造のプロセスを学びたい方</li>
-                <li>自分のアイデアや意見を発信し、事業をより良くしていくことに意欲的な方</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* ====== COMPANY（詳細情報） ====== */}
-        <section id="company" className={`${styles.section} ${styles.companySection}`} data-reveal>
-          <h2 className={styles.sectionTitle}>COMPANY / 会社情報</h2>
-
-          <div className={styles.companyGrid}>
-            <div className={styles.infoCard}>
-              <h4>会社概要</h4>
-              <dl className={styles.kvList}>
-                <div><dt>会社名</dt><dd>株式会社メメント</dd></div>
-                <div>
-                  <dt>事業内容</dt>
-                  <dd>
-                    人材サービス事業（1on1ミーティング推進事業、新卒採用支援事業、新規事業開発支援事業）
-                  </dd>
-                </div>
-                <div>
-                  <dt>企業WEBサイト</dt>
-                  <dd>
-                    <a href="https://mementoink.wixsite.com/memento" target="_blank" rel="noopener noreferrer">
-                      https://mementoink.wixsite.com/memento
-                    </a>
-                  </dd>
-                </div>
-                <div><dt>企業SNS</dt><dd>—</dd></div>
-              </dl>
-            </div>
-
-            <div className={styles.infoCard}>
-              <h4>所在地</h4>
-              <div className={styles.addressBlock}>
-                <p><strong>本社</strong><br />福岡県福岡市西区横浜3丁目6番31ー105号</p>
-              </div>
-              <div className={styles.addressBlock}>
-                <p><strong>養鶏事業所</strong><br />福岡県飯塚市馬敷1321-2</p>
-              </div>
-            </div>
-
-            <div className={styles.infoCard}>
-              <h4>メメント・モリとは</h4>
-              <p className={styles.smallNote}>
-                私が起業した理由は、サラリーマン時代に過労で倒れたことがきっかけでした。それ以降、私のモットーは「明日死ぬなら今何をするか？」です。この思いに賛同してくれる仲間を探し、毎日を一生懸命生きています。自分のため、家族のため、大事な人のため——生き方は様々です。仕事ばかりが人生ではありません。一人ひとりに沿った働き方を提供できる企業になりたいと考えています。
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ====== 1on1 推進事業（既存） ====== */}
-        <section id="promotion" className={styles.section} data-reveal>
-          <h2 className={styles.sectionTitle}>1on1推進事業</h2>
-          <p className={styles.sectionText}>
-            AIを活用した1on1支援ツール「地蔵1on1」で、効果的な対話を促進し、組織と個人の成長をサポートする。
-            上司と部下の継続的なコミュニケーションを通じて、エンゲージメントと生産性の向上を実現する。
-          </p>
-        </section>
-
-        {/* ====== 事業内容（既存） ====== */}
-        <section id="services" className={styles.section} data-reveal>
-          <h2 className={styles.sectionTitle}>事業内容</h2>
-          <div className={styles.serviceGrid}>
-            <div className={`${styles.serviceCard} ${styles.tilt}`}>
-              <h3>人材事業</h3>
-              <p>
-                企業向け1on1導入支援、当社オリジナル「地蔵1on1メソッド」、管理職向け研修などを通じて、
-                組織のコミュニケーションを活性化させる。
-              </p>
-              <button onClick={() => scrollToSection('presentation')} className={styles.serviceLink}>
-                企画書を見る
+            {/* ボタンは1行ずつ縦並び */}
+            <div className={`${styles.ctaColumn} ${styles.stagger}`}>
+              <Link to="/jizo-1on1" className={styles.primaryBtn}>1on1事業を見る</Link>
+              <button
+                onClick={() => scrollToSection('message')}
+                className={styles.linkBtn}
+                aria-label="次のセクションへスクロール"
+              >
+                もっと見る
               </button>
             </div>
-            <div className={`${styles.serviceCard} ${styles.tilt}`}>
-              <h3>養鶏事業</h3>
-              <p>福岡県飯塚市にて平飼い養鶏場「あかね農場」を運営。健康で美味しいたまごを生産する。</p>
+          </div>
+        </section>
+
+        {/* ===== MESSAGE ===== */}
+        <section id="message" className={styles.section} data-reveal>
+          {/* 見出しを2行で表示 */}
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}>
+            <span>創業の思い</span><br />
+            <span className={styles.sectionTitleSub}>明日死ぬなら今何をするか。</span>
+          </h2>
+
+          <div className={`${styles.messageBody} ${styles.stagger}`}>
+            <p>
+              「メメント・モリ」は、ラテン語で「いつか必ず死ぬことを忘れるな」という意味です。私は生死をさまよう経験を通じて、「明日死ぬなら今何をするか」を常に意識するようになりました。
+            </p>
+            <p>
+              人は本当にいつ亡くなるか分かりません。だからこそ、毎日を楽しく、精一杯生きたいと考えています。
+            </p>
+            <p>
+              まだ生まれたばかりの会社ですが、皆さまと一緒に思い出をつくりながら成長していきたいと思っています。何をするかではなく、誰とするか。新しいご縁を楽しみに、日々取り組んでまいります。
+            </p>
+          </div>
+        </section>
+
+        {/* ===== COMPANY ===== */}
+        <section id="company" className={styles.section} data-reveal>
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}><span>COMPANY / 会社情報</span></h2>
+
+          <div className={`${styles.companyGrid} ${styles.stagger}`}>
+            {/* 左カード：ロゴ + 左カラム情報 */}
+            <div className={styles.card}>
+              <div className={styles.companyLogoWrap}>
+                <img
+                  src={process.env.PUBLIC_URL + '/assets/memento_logo.png'}
+                  alt="株式会社メメント ロゴ"
+                  className={styles.companyLogo}
+                  loading="lazy"
+                />
+              </div>
+
+              <h3 className={styles.cardTitle}>会社概要</h3>
+
+              <div className={styles.companyTwoCols}>
+                <dl className={styles.kvList}>
+                  <div><dt>会社名</dt><dd>株式会社メメント</dd></div>
+                  <div><dt>ミッション</dt><dd>30分で社会を前進させます。</dd></div>
+                  <div><dt>ビジョン</dt><dd>人々がハッとする瞬間を増やします。</dd></div>
+                  <div><dt>バリュー</dt><dd>幸せのバケツを満たし、分け与えます。</dd></div>
+                  <div><dt>所在地</dt><dd>福岡県福岡市早良区南庄6丁目1-12 602</dd></div>
+                </dl>
+
+                <dl className={styles.kvList}>
+                  <div><dt>設立</dt><dd>令和4年4月12日</dd></div>
+                  <div><dt>取引銀行</dt><dd>福岡県信用組合 周船寺支店、楽天銀行</dd></div>
+                  <div><dt>TEL</dt><dd>080-2744-8543</dd></div>
+                  <div>
+                    <dt>企業WEBサイト</dt>
+                    <dd>
+                      <a href="https://mementoink.wixsite.com/memento" target="_blank" rel="noopener noreferrer">
+                        https://mementoink.wixsite.com/memento
+                      </a>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            {/* 右カード：メメント・モリとは */}
+            <div className={styles.card}>
+              <h3 className={styles.cardTitle}>メメント・モリとは</h3>
+              <p className={styles.sectionText}>
+                私が起業した理由は、会社員時代に過労で倒れた経験がきっかけです。以降、「明日死ぬなら今何をするか」をモットーに生きています。この思いに共感してくださる仲間とともに、一人ひとりに合った働き方をつくり、毎日を大切にできる社会づくりに貢献していきます。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== FOUNDER ===== */}
+        <section id="founder" className={styles.section} data-reveal>
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}><span>代表紹介</span></h2>
+          <div className={`${styles.founderRow} ${styles.stagger}`}>
+            <div className={styles.founderAvatar}>
+              <img
+                src={process.env.PUBLIC_URL + '/assets/daihyou.png'}
+                alt="代表写真"
+                loading="lazy"
+              />
+            </div>
+            <div>
+              <p className={styles.sectionText}>
+                大学卒業後、株式会社マイナビで求人広告の営業職として入社しました。アルバイト情報サイト・就職情報サイトにおける求人広告の営業や、採用HP・パンフレット等の新卒採用に関わるディレクション、その他中途採用業務に従事しました。趣味はサウナや筋トレ、落語（好きな演目：芝浜）です。
+              </p>
+              <p className={styles.sectionText}>
+                6年間勤めた後、養鶏事業を行う CraftFoodClub 株式会社を創業し、同年9月に退任しました。2023年4月、株式会社メメントを創業し、人材事業を展開しています。翌年9月には福岡県飯塚市の養鶏場を事業譲渡により取得し、人材と養鶏の事業を行っています。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== SERVICES ===== */}
+        <section id="services" className={styles.section} data-reveal>
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}><span>事業内容</span></h2>
+
+          {/* 左寄せ・枠線なし・約1/3幅 */}
+          <Link to="/jizo-1on1" className={styles.serviceBannerLink} aria-label="1on1詳細ページへ">
+            <img
+              src={process.env.PUBLIC_URL + '/assets/1on1_banner.png'}
+              alt="1on1コミュニケーション事業のご案内"
+              className={styles.serviceBanner}
+              loading="lazy"
+            />
+          </Link>
+
+          <div className={`${styles.serviceStack} ${styles.stagger}`}>
+            <article className={styles.serviceBlock}>
+              <h3 className={styles.cardTitle}>1on1推進事業</h3>
+              <p className={styles.sectionText}>
+                AIを活用した1on1支援ツール「地蔵1on1」により、上司と部下の継続的なコミュニケーションを支援します。対話の質を高め、エンゲージメントと生産性の向上につなげます。
+              </p>
+              <Link to="/jizo-1on1" className={styles.textLink}>1on1の詳細を見る</Link>
+            </article>
+
+            <article className={styles.serviceBlock}>
+              <h3 className={styles.cardTitle}>新卒採用支援（追記）</h3>
+              <p className={styles.sectionText}>
+                当社の新卒採用支援は、現場のマネジメント層と1on1ミーティングを行うための社内の状況や強みの分析と、これまでの新卒採用経験を融合させています。単なるノウハウ提供にとどまらず、現場の課題やニーズを深く理解し、貴社独自の採用戦略を共に構築します。
+              </p>
+            </article>
+
+            <article className={styles.serviceBlock}>
+              <h3 className={styles.cardTitle}>養鶏事業</h3>
+              <p className={styles.sectionText}>
+                福岡県飯塚市の平飼い養鶏場「あかね農場」を運営し、安心でおいしい卵を生産しています。
+              </p>
               <a
                 href="https://akanefarm.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={styles.serviceLink}
+                className={styles.textLink}
               >
                 あかね農場ウェブサイト
               </a>
-            </div>
-            <div className={`${styles.serviceCard} ${styles.tilt}`}>
-              <h3>人材紹介事業</h3>
-              <p>企業と求職者の最適なマッチングを支援（許可No. 40-ユ-301391）。</p>
-            </div>
+            </article>
+
+            <article className={styles.serviceBlock}>
+              <h3 className={styles.cardTitle}>人材紹介事業</h3>
+              <p className={styles.sectionText}>
+                企業と求職者の最適なマッチングを支援します（許可 No. 40-ユ-301391）。
+              </p>
+            </article>
           </div>
         </section>
 
-        {/* 企画書（既存） */}
-        <section
-          id="presentation"
-          className={`${styles.section} ${styles.bgGray} ${styles.presentationSection}`}
-          data-reveal
-        >
-          <h2 className={styles.sectionTitle}>企画書</h2>
-          <div className={styles.presentationContainer}>
+        {/* ===== PRESENTATION（既存） ===== */}
+        <section id="presentation" className={styles.section} data-reveal>
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}><span>企画書</span></h2>
+          <div className={`${styles.embed} ${styles.stagger}`}>
             <iframe
               src={slidesEmbedUrl}
               frameBorder="0"
               allowFullScreen={true}
               title="企画書スライド"
+              style={{ aspectRatio: '16 / 9', border: 0 }}
             />
           </div>
         </section>
 
-        {/* 取引企業（既存） */}
+        {/* ===== CLIENTS（残す） ===== */}
         <section id="clients" className={styles.section} data-reveal>
-          <h2 className={styles.sectionTitle}>主な取引企業</h2>
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}><span>主な取引企業</span></h2>
           <p className={styles.sectionText}>
-            日野出株式会社, タンスのゲン株式会社, 第一交通産業グループ, 麻生セメント株式会社,
-            双日九州株式会社, 自然電力株式会社, 株式会社タカミヤ, 株式会社福住, エフコープ生活協同組合（順不同）。
+            日野出株式会社、タンスのゲン株式会社、第一交通産業グループ、麻生セメント株式会社、双日九州株式会社、
+            自然電力株式会社、株式会社タカミヤ、株式会社福住、エフコープ生活協同組合（順不同）とお取引があります。
           </p>
 
           <div className={styles.marqueeWrap} aria-hidden="true">
@@ -347,15 +302,17 @@ function Home() {
           </div>
         </section>
 
-        {/* お問い合わせ（既存） */}
-        <section id="contact" className={`${styles.section} ${styles.bgGray}`} data-reveal>
-          <h2 className={styles.sectionTitle}>お問い合わせ</h2>
-          <p className={styles.sectionText}>
-            事業に関するご相談やお見積もりのご依頼は、下記より気軽にご連絡ください。
-          </p>
-          <a href="mailto:info@memento-inc.net" className={styles.contactButton}>
-            メールで問い合わせる
-          </a>
+        {/* ===== TRIAL（無料相談→Jizoフォーム） ===== */}
+        <section id="trial" className={styles.section} data-reveal>
+          <h2 className={`${styles.sectionTitle} ${styles.underlineGrow} ${styles.flowStagger}`}><span>無料相談・フリートライアルのご案内</span></h2>
+          <div className={`${styles.card} ${styles.center} ${styles.stagger}`}>
+            <p className={styles.sectionText}>
+              導入前の無料相談と、1名30分の1on1フリートライアルをご用意しています。お気軽にご相談ください。
+              <br />
+              <small className={styles.smallNote}>無料体験後のアンケートでは、92%の方が「1on1に満足」と回答しました。</small>
+            </p>
+            <a href="/jizo-1on1#form" className={styles.primaryBtn}>お問い合わせフォームへ</a>
+          </div>
         </section>
       </main>
 

@@ -7,6 +7,7 @@ import { FiMenu } from 'react-icons/fi';
 
 import ThemeToggleButton from './components/ThemeToggleButton';
 import Home from './views/Home.js';
+import Jizo1on1 from './views/Jizo1on1.js';
 import New1on1Support from './views/New1on1Support.js';
 import SessionLog from './views/SessionLog.js';
 import TranscriptViewer from './views/TranscriptViewer.js';
@@ -148,6 +149,7 @@ function AppRoutes() {
       <Routes>
         {/* 公開ルート */}
         <Route path="/" element={<Home />} />
+        <Route path="/jizo-1on1" element={<Jizo1on1 />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
