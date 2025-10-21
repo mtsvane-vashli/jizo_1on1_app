@@ -59,7 +59,52 @@ const sendPasswordResetEmail = async ({ to, resetUrl, token }) => {
     return { delivered: true };
 };
 
+const formatDateInJst = (input) => {
+    const date = input instanceof Date ? input : new Date(input);
+    return new Intl.DateTimeFormat('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Tokyo'
+    }).format(date);
+};
+
+const sendOneOnOneReminderEmail = async ({ to, username, items, reminderDays }) => {
+    if (!isEmailConfigured) {
+        console.warn('[email] SMTP settings are missing. 1on1 reminder was not emailed.');
+        return { delivered: false };
+    }
+
+    const textList = items
+        .map((item) => `・${item.employeeName} さん（最終実施日: ${formatDateInJst(item.lastConversationAt)}）`)
+        .join('\n');
+
+    const htmlList = items
+        .map((item) => `<li>${item.employeeName} さん（最終実施日: ${formatDateInJst(item.lastConversationAt)}）</li>`)
+        .join('');
+
+    const subject = `【地蔵1on1】前回の1on1から${reminderDays}日が経過しました`;
+    const message = {
+        from: RESET_EMAIL_FROM,
+        to,
+        subject,
+        text: `${username} さん\n\n以下の部下との前回の1on1から${reminderDays}日が経過しました。\n再度の1on1実施をご検討ください。\n\n${textList}\n\n地蔵1on1`,
+        html: `
+            <p>${username} さん</p>
+            <p>以下の部下との前回の1on1から${reminderDays}日が経過しました。再度の1on1実施をご検討ください。</p>
+            <ul>${htmlList}</ul>
+            <p>地蔵1on1</p>
+        `
+    };
+
+    await getTransporter().sendMail(message);
+    return { delivered: true };
+};
+
 module.exports = {
     sendPasswordResetEmail,
-    isEmailConfigured
+    isEmailConfigured,
+    sendOneOnOneReminderEmail
 };

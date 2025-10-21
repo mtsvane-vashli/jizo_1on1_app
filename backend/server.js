@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
+const { scheduleOneOnOneReminders } = require('./services/reminderService');
 
 // --- CORS設定 ---
 const whitelist = [
@@ -148,3 +149,5 @@ const port = process.env.PORT || 5000;
 server.listen(port, () => {
   console.log(`Backend server listening at http://localhost:${port}`);
 });
+
+scheduleOneOnOneReminders();
