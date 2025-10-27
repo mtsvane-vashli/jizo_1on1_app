@@ -13,7 +13,7 @@ import TranscriptPopup from '../components/TranscriptPopup';
 import ThemeToggleButton from '../components/ThemeToggleButton';
 import BrainJuiceButton from '../components/BrainJuiceButton';
 import { io } from 'socket.io-client';
-import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle, FiZap } from 'react-icons/fi';
+import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle, FiZap, FiExternalLink } from 'react-icons/fi';
 import { normalizeMindMapModel } from '../utils/mindMap';
 
 
@@ -413,6 +413,16 @@ function New1on1Support() {
   const [adviceContent, setAdviceContent] = useState('');
 
   const isSessionView = location.pathname === '/session';
+
+  // 最新のAIメッセージのインデックスを計算（そのメッセージにのみ操作ボタンを表示）
+  const latestAiIndex = (() => {
+    let idx = -1;
+    for (let i = state.chatHistory.length - 1; i >= 0; i--) {
+      if (state.chatHistory[i]?.sender === 'ai') { idx = i; break; }
+    }
+    return idx;
+  })();
+
 
   // 深掘り（要約/ネクストアクション）用の状態はコンポーネント直下で宣言（Hooks順序を守る）
   const [isDeepDiveOpen, setDeepDiveOpen] = useState(false);
@@ -1300,25 +1310,16 @@ function New1on1Support() {
                     <FiRefreshCw />
                     <span>テーマを変更</span>
                   </button>
-                  <button
-                    onClick={handleRefreshSuggestions}
-                    className={styles.refreshSugButton}
-                    disabled={isRefreshingSug || showChecklist}
-                    title="新しい質問例を4つ提案"
+                  <a
+                    href="/app/logs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.logLinkButton}
+                    title="新しいタブでセッションログを開く"
                   >
-                    <FiRefreshCw />
-                    <span>{isRefreshingSug ? '更新中...' : '質問例を更新'}</span>
-                  </button>
-
-                  <button
-                    onClick={handleOpenAdvice}
-                    className={styles.adviceButton}
-                    disabled={showChecklist}
-                    title="会話の感情・傾聴・次の一言などのコーチングを表示"
-                  >
-                    <FiZap />
-                    <span>ワンポイントアドバイス</span>
-                  </button>
+                    <FiExternalLink />
+                    <span>過去のセッションログ</span>
+                  </a>
                 </>
               )}
               {/* 脳汁ボタン：小型アイコン＋15秒沈黙タイマー */}
@@ -1418,7 +1419,35 @@ function New1on1Support() {
               <div className={styles.chatWindow}>
                 {state.chatHistory.map((chat, index) => (
                   <div key={index} className={`${styles.message} ${styles[chat.sender]}`}>
-                    <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : (chat.sender === 'employee' ? state.currentEmployee?.name || '部下' : 'AIアシスタント')}:</strong>
+
+                    <div className={styles.messageHeader}>
+                      <strong className={styles.sender}>{chat.sender === 'user' ? 'あなた' : (chat.sender === 'employee' ? (state.currentEmployee?.name || '部下') : 'AIアシスタント')}:</strong>
+                      {chat.sender === 'ai' && index === latestAiIndex && state.appState === 'support_started' && (
+                        <div className={styles.toolButtonsRow}>
+                          <button
+                            onClick={handleRefreshSuggestions}
+                            className={styles.refreshSugButton}
+                            disabled={isRefreshingSug || showChecklist}
+                            title="新しい質問例を4つ提案"
+                            type="button"
+                          >
+                            <FiRefreshCw />
+                            <span>{isRefreshingSug ? '更新中...' : '質問例を更新'}</span>
+                          </button>
+                          <button
+                            onClick={handleOpenAdvice}
+                            className={styles.adviceButton}
+                            disabled={showChecklist}
+                            title="会話の感情・傾聴・次の一言などのコーチングを表示"
+                            type="button"
+                          >
+                            <FiZap />
+                            <span>ワンポイントアドバイス</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     <div className={styles.text} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(chat.message)) }}></div>
                     {chat.sender === 'ai' && (chat.suggested_questions || overrideSuggestions.length > 0) && (
                       <div className={styles.suggestions}>

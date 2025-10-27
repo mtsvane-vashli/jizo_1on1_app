@@ -2,8 +2,10 @@
 
 .accordion {
   width: 100%;
-  max-width: 900px; /* コンテンツの最大幅を設定 */
-  margin: 2rem auto; /* 中央寄せ */
+  max-width: 900px;
+  /* コンテンツの最大幅を設定 */
+  margin: 2rem auto;
+  /* 中央寄せ */
 }
 
 .accordionItem {
@@ -11,14 +13,17 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   margin-bottom: 1rem;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  overflow: hidden; /* 角丸を維持するため */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  /* 角丸を維持するため */
 }
 
 .accordionTitle {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  /* タイトル / 右ボタン / 矢印 */
   align-items: center;
+  column-gap: 0.75rem;
   width: 100%;
   padding: 1.25rem 1.5rem;
   font-size: 1.2rem;
@@ -34,10 +39,21 @@
   background-color: #f8f9fa;
 }
 
+.accordionTitleText {
+  /* 省略時の… 対応 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accordionRight {
+  justify-self: end;
+}
+
 .accordionIcon {
   transition: transform 0.3s ease-in-out;
   flex-shrink: 0;
-  margin-left: 1rem;
+  margin-left: 0.5rem;
 }
 
 .accordionIcon.open {
@@ -52,7 +68,8 @@
 }
 
 .accordionContent.open {
-  max-height: 5000px; /* 十分な高さを設定 */
+  max-height: 5000px;
+  /* 十分な高さを設定 */
   padding-bottom: 1.5rem;
 }
 
@@ -70,6 +87,7 @@
   border-bottom: 2px solid #007bff;
   padding-bottom: 0.5rem;
 }
+
 .accordionContentInner h4 {
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
@@ -112,7 +130,7 @@
   width: 100%;
   border-collapse: collapse;
   margin: 2rem 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .table th,
@@ -152,5 +170,32 @@
   content: '・';
   display: inline-block;
   transform: translateY(-0.05em);
-  /* 必要ならフォントサイズや太さを調整可 */
+}
+
+/* ====== ダウンロードボタン ====== */
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0056b3;
+  text-decoration: none;
+  border: 1px solid #cfe2ff;
+  background: #eff6ff;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+}
+
+.downloadBtn:hover {
+  background: #dbeafe;
+  border-color: #b6d4fe;
+  color: #00408e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+}
+
+.downloadIcon {
+  font-size: 1rem;
+  line-height: 1;
 }

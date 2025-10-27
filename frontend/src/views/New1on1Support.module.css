@@ -1000,7 +1000,7 @@ html.dark .summaryAlert {
   color: var(--primary-text-color);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  box-shadow: 0 16px 34px rgba(0,0,0,.2);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .2);
   padding: 1rem 1.25rem;
 }
 
@@ -1069,8 +1069,14 @@ html.dark .summaryAlert {
   transform: rotate(45deg);
 }
 
-.deepDiveArrow.bottom { top: -8px; }
-.deepDiveArrow.top { bottom: -8px; transform: rotate(225deg); }
+.deepDiveArrow.bottom {
+  top: -8px;
+}
+
+.deepDiveArrow.top {
+  bottom: -8px;
+  transform: rotate(225deg);
+}
 
 
 /* 質問例更新ボタン */
@@ -1132,7 +1138,8 @@ html.dark .summaryAlert {
 
 /* 背景を白、文字を濃いめに。余白・段落も強化 */
 .adviceModal {
-  background: #fff;                 /* ← 白 */
+  background: #fff;
+  /* ← 白 */
   color: #2c3e50;
   width: min(880px, 92vw);
   max-height: 80vh;
@@ -1144,13 +1151,29 @@ html.dark .summaryAlert {
 }
 
 /* 見出し＆本文タイポグラフィ */
-.adviceContent :is(h2, h3, h4) { margin: 1rem 0 .6rem; }
-.adviceContent p { line-height: 1.9; margin: .6rem 0; }
-.adviceContent ul { padding-left: 1.25rem; margin: .6rem 0; }
-.adviceContent li { line-height: 1.8; margin: .35rem 0; }
+.adviceContent :is(h2, h3, h4) {
+  margin: 1rem 0 .6rem;
+}
+
+.adviceContent p {
+  line-height: 1.9;
+  margin: .6rem 0;
+}
+
+.adviceContent ul {
+  padding-left: 1.25rem;
+  margin: .6rem 0;
+}
+
+.adviceContent li {
+  line-height: 1.8;
+  margin: .35rem 0;
+}
 
 /* 重要語を色分けしたい時に使える軽いアクセント */
-.adviceContent strong { color: #8e44ad; }
+.adviceContent strong {
+  color: #8e44ad;
+}
 
 
 .adviceModalHeader {
@@ -1186,4 +1209,49 @@ html.dark .summaryAlert {
 .adviceContent p,
 .adviceContent li {
   line-height: 1.7;
+}
+
+/* === AI返答バブル内のツール行 === */
+.aiToolRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+
+/* === 過去ログリンクボタン（右上コントロール列） === */
+.logLinkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--secondary-background-color);
+  color: var(--primary-text-color);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+
+.logLinkButton:hover {
+  background-color: var(--hover-color);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+
+/* === メッセージヘッダー行（送信者名と操作ボタンを左右に） === */
+.messageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .25rem;
+}
+
+.toolButtonsRow {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
 }
