@@ -71,11 +71,8 @@
    ========================= */
 :root {
     --glow-cyan-1: rgba(56, 189, 248, 0.40);
-    /* 濃い発光リング */
     --glow-cyan-2: rgba(56, 189, 248, 0.22);
-    /* 中間 */
     --glow-cyan-3: rgba(56, 189, 248, 0.10);
-    /* 外側の柔らかい滲み */
 }
 
 .node {
@@ -85,37 +82,29 @@
     border: 1px solid #dfe4ea;
     border-radius: 12px;
     background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
-    /* ベースの軽い影（中央には一切オーバーレイしない） */
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
     position: relative;
     transition: box-shadow .18s ease, border-color .18s ease, transform .06s ease;
     z-index: 0;
 }
 
-/* ホバー時：外側だけを光らせる（多層 box-shadow） */
+/* ホバーはグレーでうっすら */
 .node:hover {
-    border-color: #93c5fd;
+    border-color: #cbd5e1;
     box-shadow:
-        /* 近いリング（輪郭） */
-        0 0 0 3px rgba(59, 130, 246, 0.18),
-        /* 水色の発光を外側へ広げる */
-        0 0 18px 6px var(--glow-cyan-1),
-        0 0 34px 14px var(--glow-cyan-2),
-        0 0 60px 26px var(--glow-cyan-3),
-        /* ベース影を最後に */
+        0 0 0 3px rgba(148, 163, 184, 0.35),
+        0 8px 20px rgba(15, 23, 42, 0.03),
         0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
-/* 選択時 / フォーカス時も同様に外側だけ光る */
+/* 選択時は青でしっかり */
 .nodeSelected,
 .node:focus-within {
     border-color: #93c5fd;
     box-shadow:
-        0 0 0 4px rgba(59, 130, 246, 0.22),
-        0 0 20px 8px var(--glow-cyan-1),
-        0 0 40px 16px var(--glow-cyan-2),
-        0 0 70px 30px var(--glow-cyan-3),
-        0 2px 6px rgba(15, 23, 42, 0.06);
+        0 0 0 4px rgba(59, 130, 246, 0.45),
+        0 10px 30px rgba(59, 130, 246, 0.12),
+        0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
 .nodeCollapsed {
@@ -168,7 +157,7 @@
 .collapseBtn:hover {
     background: #f9fafb;
     box-shadow:
-        0 0 0 5px rgba(56, 189, 248, 0.15),
+        0 0 0 5px rgba(148, 163, 184, 0.25),
         0 6px 16px rgba(15, 23, 42, 0.16);
 }
 
@@ -177,8 +166,7 @@
     background: #eef2f7;
 }
 
-/* ===== ノード内ツールバー（子/兄弟/削除） ===== */
-/* 常時表示・クリック可能 */
+/* ノード上のツールバー */
 .nodeToolbar {
     position: absolute;
     left: 50%;
@@ -210,7 +198,7 @@
 .nodeToolBtnDanger:hover {
     background-color: #f7f8fa;
     box-shadow:
-        0 0 0 6px rgba(56, 189, 248, 0.18),
+        0 0 0 6px rgba(148, 163, 184, 0.25),
         0 6px 16px rgba(15, 23, 42, 0.16);
 }
 
@@ -247,12 +235,12 @@
 .handle:hover {
     transform: scale(1.15);
     box-shadow:
-        0 0 0 6px rgba(56, 189, 248, 0.20),
-        0 0 0 12px rgba(56, 189, 248, 0.08),
+        0 0 0 6px rgba(148, 163, 184, 0.25),
+        0 0 0 12px rgba(148, 163, 184, 0.10),
         0 2px 8px rgba(15, 23, 42, 0.16);
 }
 
-/* ============= Debug Panel ============= */
+/* Debug / hint はそのまま */
 .debugWrap {
     position: absolute;
     left: 12px;
@@ -311,11 +299,6 @@
     font-size: 12px;
 }
 
-.debugRowHeader {
-    background: #f3f4f6;
-    font-weight: 600;
-}
-
 .debugRowHeader>div,
 .debugRow>div {
     padding: 6px 8px;
@@ -331,7 +314,6 @@
     font-weight: 700;
 }
 
-/* ヒント */
 .hint {
     position: absolute;
     left: 10px;

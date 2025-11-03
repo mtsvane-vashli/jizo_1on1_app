@@ -298,7 +298,14 @@ function MindMapInner({
     const measuredRef = useRef(new Map()); // id -> {w,h}
 
     // UI 状態
-    const [selectedId, setSelectedId] = useState(initialModel[0]?.id ?? null);
+    const [selectedId, _setSelectedId] = useState(initialModel[0]?.id ?? null);
+    // ★ ReactFlow に渡し直すときにも使えるように ref でも持つ
+    const selectedIdRef = useRef(initialModel[0]?.id ?? null);
+    const setSelectedId = (nextId) => {
+        selectedIdRef.current = nextId;
+        _setSelectedId(nextId);
+    };
+
     const [fullscreen, setFullscreen] = useState(fullscreenDefault);
 
     // Flow
@@ -401,6 +408,7 @@ function MindMapInner({
         (model, fit = false) => {
             const { children } = buildIndex(model);
             const autoPos = layout(model);
+            const currentSelectedId = selectedIdRef.current;
 
             // 折りたたみ子孫を非表示
             const hiddenSet = new Set();
@@ -435,6 +443,8 @@ function MindMapInner({
                     selectable: true,
                     hidden: hiddenSet.has(m.id) && m.parentId !== null,
                     style: { minWidth: NODE_MIN_W },
+                    // ★ ここで React Flow にも選択状態を渡す
+                    selected: m.id === currentSelectedId,
                 };
             });
 
@@ -500,12 +510,16 @@ function MindMapInner({
             : null;
 
         historyRef.current = { past: [], present: sanitized, future: [] };
-        setSelectedId((prev) => {
+        const resolvedId = (prev) => {
             if (prev && sanitized.some((node) => node.id === prev)) {
                 return prev;
             }
             return fallbackId !== undefined && fallbackId !== null ? fallbackId : null;
-        });
+        };
+        const nextId = resolvedId(selectedIdRef.current);
+        selectedIdRef.current = nextId;
+        _setSelectedId(nextId);
+
         projectToFlow(sanitized, true);
     }, [mindMapData, initialModel, projectToFlow]);
 
@@ -518,7 +532,13 @@ function MindMapInner({
                 : { past: [...hist.past, hist.present], present: next, future: [] };
 
             onChange?.(next);
-            setSelectedId((prev) => (prev && next.some((n) => n.id === prev) ? prev : next[0]?.id ?? null));
+            const nextSel = (prev) =>
+                prev && next.some((n) => n.id === prev) ? prev : next[0]?.id ?? null;
+
+            const resolved = nextSel(selectedIdRef.current);
+            selectedIdRef.current = resolved;
+            _setSelectedId(resolved);
+
             projectToFlow(next, true);
         },
         [onChange, projectToFlow]
@@ -534,6 +554,15 @@ function MindMapInner({
             future: [hist.present, ...hist.future],
         };
         onChange?.(previous);
+
+        // 選択を維持する
+        const nextId =
+            selectedIdRef.current && previous.some((n) => n.id === selectedIdRef.current)
+                ? selectedIdRef.current
+                : previous[0]?.id ?? null;
+        selectedIdRef.current = nextId;
+        _setSelectedId(nextId);
+
         projectToFlow(previous, true);
     }, [onChange, projectToFlow]);
 
@@ -547,6 +576,14 @@ function MindMapInner({
             future: hist.future.slice(1),
         };
         onChange?.(next);
+
+        const nextId =
+            selectedIdRef.current && next.some((n) => n.id === selectedIdRef.current)
+                ? selectedIdRef.current
+                : next[0]?.id ?? null;
+        selectedIdRef.current = nextId;
+        _setSelectedId(nextId);
+
         projectToFlow(next, true);
     }, [onChange, projectToFlow]);
 
@@ -645,7 +682,11 @@ function MindMapInner({
     );
 
     const onSelectionChange = useCallback(({ nodes }) => {
-        if (nodes?.length) setSelectedId(nodes[0].id);
+        if (nodes?.length) {
+            const newId = nodes[0].id;
+            selectedIdRef.current = newId;
+            _setSelectedId(newId);
+        }
     }, []);
 
     const getNodeRect = (n) => {
@@ -655,13 +696,13 @@ function MindMapInner({
     };
 
     const centerOnSelected = useCallback(() => {
-        const n = nodes.find((x) => x.id === selectedId);
+        const n = nodes.find((x) => x.id === selectedIdRef.current);
         if (!n) return;
         const { w, h } = getNodeRect(n);
         const cx = n.position.x + w / 2;
         const cy = n.position.y + h / 2;
         rf.setCenter(cx, cy, { zoom: INITIAL_ZOOM_TO_NODE, duration: 400 });
-    }, [nodes, rf, selectedId]);
+    }, [nodes, rf]);
 
     // ---- ドラッグで自由配置（ドラッグ終了時に手動座標を保存） ----
     const onNodeDragStop = useCallback((_evt, node) => {
@@ -684,17 +725,18 @@ function MindMapInner({
             const tag = document.activeElement?.tagName?.toLowerCase();
             if (tag === "input" || tag === "textarea") return;
 
-            if (!selectedId) return;
+            const currentSelected = selectedIdRef.current;
+            if (!currentSelected) return;
 
             if (e.key === "Enter") {
                 e.preventDefault();
-                addSibling(selectedId);
+                addSibling(currentSelected);
             } else if (e.key === "Tab") {
                 e.preventDefault();
-                addChild(selectedId);
+                addChild(currentSelected);
             } else if (e.key === "Delete" || e.key === "Backspace") {
                 e.preventDefault();
-                deleteSubtree(selectedId);
+                deleteSubtree(currentSelected);
             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
                 e.preventDefault();
                 if (e.shiftKey) redo();
@@ -710,7 +752,7 @@ function MindMapInner({
         el?.focus?.();
 
         return () => window.removeEventListener("keydown", onKey);
-    }, [addChild, addSibling, deleteSubtree, redo, selectedId, undo]);
+    }, [addChild, addSibling, deleteSubtree, redo, undo]);
 
     // ---- 初期投影 ----
     useEffect(() => {
@@ -737,15 +779,15 @@ function MindMapInner({
                     nodeTypes={nodeTypes}
                     fitView
                     /* ====== ビューポート操作（ここが重要） ====== */
-                    panOnDrag                       // 背景ドラッグでパン
-                    selectionOnDrag={false}         // 背景ドラッグは矩形選択ではなくパン
-                    zoomOnScroll={false}            // スクロールはズームに使わない
-                    panOnScroll                     // スクロールでパン
-                    panOnScrollMode="free"          // 縦横いずれもパン
-                    panOnScrollSpeed={0.9}          // パン速度（好みで調整）
-                    zoomOnPinch                     // ピンチズーム
-                    zoomOnDoubleClick               // ダブルクリックズーム
-                    panActivationKeyCode="Space"    // Space 押下中は常時パン
+                    panOnDrag
+                    selectionOnDrag={false}
+                    zoomOnScroll={false}
+                    panOnScroll
+                    panOnScrollMode="free"
+                    panOnScrollSpeed={0.9}
+                    zoomOnPinch
+                    zoomOnDoubleClick
+                    panActivationKeyCode="Space"
                     /* ======================================== */
                     nodesConnectable
                     elementsSelectable
@@ -758,10 +800,10 @@ function MindMapInner({
             </div>
 
             <TopControls
-                hasSelection={!!selectedId}
-                createChild={() => selectedId && addChild(selectedId)}
-                createSibling={() => selectedId ? addSibling(selectedId) : addSibling(null)}
-                deleteSubtree={() => selectedId && deleteSubtree(selectedId)}
+                hasSelection={!!selectedIdRef.current}
+                createChild={() => selectedIdRef.current && addChild(selectedIdRef.current)}
+                createSibling={() => selectedIdRef.current ? addSibling(selectedIdRef.current) : addSibling(null)}
+                deleteSubtree={() => selectedIdRef.current && deleteSubtree(selectedIdRef.current)}
                 relayout={relayoutAll}
                 undo={undo}
                 redo={redo}
