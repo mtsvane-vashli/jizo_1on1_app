@@ -16,6 +16,7 @@ import { io } from 'socket.io-client';
 import { FiMic, FiMicOff, FiRefreshCw, FiAlertTriangle, FiZap, FiExternalLink } from 'react-icons/fi';
 import { normalizeMindMapModel } from '../utils/mindMap';
 
+marked.setOptions({ breaks: true });
 
 /**
  * AdviceModal
