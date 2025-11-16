@@ -987,8 +987,6 @@ html.dark .summaryAlert {
   cursor: help;
 }
 
-
-
 .deepDivePopover {
   position: fixed;
   z-index: 1200;
@@ -996,7 +994,10 @@ html.dark .summaryAlert {
   max-width: 1080px;
   max-height: 60vh;
   overflow: auto;
-  background: color-mix(in srgb, var(--secondary-background-color) 75%, transparent 25%);
+
+  /* ★ ここを変更：半透明 → 不透明なカード背景にする */
+  background-color: var(--secondary-background-color);
+
   color: var(--primary-text-color);
   border: 1px solid var(--border-color);
   border-radius: 10px;
