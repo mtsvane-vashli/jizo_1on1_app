@@ -5,6 +5,7 @@ const { SpeechClient } = require('@google-cloud/speech');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const speechClient = new SpeechClient();
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const escapeControlCharsInJsonStrings = (jsonText = '') => {
   let result = '';
@@ -307,20 +308,79 @@ ${queryText}
 };
 
 /** JSON/ブロック抽出に強い汎用呼び出し */
-async function generateContent(prompt) {
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})|(\[[\s\S]*\])/);
-    if (jsonMatch) {
-      return jsonMatch[1] || jsonMatch[2] || jsonMatch[3] || text;
-    }
-    return text;
-  } catch (error) {
-    console.error('Gemini API Error:', error);
-    throw new Error('Failed to get response from AI.');
+async function callGeminiWithValidation(prompt) {
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text() || '';
+
+  const blockReason = response.promptFeedback?.blockReason;
+  const blockedByPrompt =
+    blockReason && blockReason !== 'BLOCK_REASON_UNSPECIFIED';
+
+  const firstCandidate = Array.isArray(response.candidates)
+    ? response.candidates[0]
+    : null;
+  const finishReason = firstCandidate?.finishReason;
+  const blockedByFinish =
+    finishReason &&
+    finishReason !== 'FINISH_REASON_UNSPECIFIED' &&
+    finishReason !== 'STOP';
+
+  if (blockedByPrompt || blockedByFinish) {
+    const error = new Error(
+      `Gemini response blocked (blockReason=${blockReason || 'none'}, finishReason=${finishReason || 'unknown'})`
+    );
+    error.retryable = true;
+    error.blockReason = blockReason;
+    error.finishReason = finishReason;
+    throw error;
   }
+
+  if (!text.trim()) {
+    const error = new Error('Gemini returned empty content.');
+    error.retryable = true;
+    throw error;
+  }
+
+  return text;
+}
+
+async function generateContent(prompt, options = {}) {
+  const maxRetries =
+    typeof options.maxRetries === 'number' && options.maxRetries >= 0
+      ? options.maxRetries
+      : 2;
+  const retryDelayMs =
+    typeof options.retryDelayMs === 'number' && options.retryDelayMs >= 0
+      ? options.retryDelayMs
+      : 500;
+
+  let attempt = 0;
+  let lastError = null;
+
+  while (attempt <= maxRetries) {
+    attempt += 1;
+    try {
+      const text = await callGeminiWithValidation(prompt);
+      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})|(\[[\s\S]*\])/);
+      if (jsonMatch) {
+        return jsonMatch[1] || jsonMatch[2] || jsonMatch[3] || text;
+      }
+      return text;
+    } catch (error) {
+      lastError = error;
+      console.warn(
+        `[Gemini] attempt ${attempt} failed: ${error.message} ${
+          error.blockReason ? `(blockReason=${error.blockReason})` : ''
+        }`
+      );
+      if (attempt > maxRetries) break;
+      await sleep(retryDelayMs * attempt);
+    }
+  }
+
+  console.error('Gemini API Error:', lastError);
+  throw new Error('Failed to get response from AI.');
 }
 
 /**
