@@ -321,10 +321,10 @@ async function callGeminiWithValidation(prompt) {
     ? response.candidates[0]
     : null;
   const finishReason = firstCandidate?.finishReason;
+  const allowedFinishes = new Set(['FINISH_REASON_UNSPECIFIED', 'STOP', 'MAX_TOKENS']);
   const blockedByFinish =
     finishReason &&
-    finishReason !== 'FINISH_REASON_UNSPECIFIED' &&
-    finishReason !== 'STOP';
+    !allowedFinishes.has(finishReason);
 
   if (blockedByPrompt || blockedByFinish) {
     const error = new Error(

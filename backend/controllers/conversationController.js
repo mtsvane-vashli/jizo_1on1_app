@@ -330,6 +330,20 @@ exports.summarizeConversation = async (req, res) => {
                 .json({ error: 'Conversation not found or permission denied.' });
         }
 
+        const ensureText = (value, placeholder) => {
+            const trimmed = (value || '').trim();
+            return trimmed.length > 0 ? trimmed : placeholder;
+        };
+
+        const callAiOrFallback = async (label, fn, fallbackValue) => {
+            try {
+                return await fn();
+            } catch (error) {
+                console.error(`Error generating ${label}:`, error);
+                return fallbackValue;
+            }
+        };
+
         const messages =
             await conversationModel.getMessagesByConversationId(conversationId);
         const formattedMessages = messages
@@ -338,16 +352,60 @@ exports.summarizeConversation = async (req, res) => {
             )
             .join('\n');
         const fullTranscript = transcript || conversation.transcript || '';
+        const truncatedTranscript =
+            fullTranscript && fullTranscript.length > 8000
+                ? fullTranscript.slice(-8000)
+                : fullTranscript;
 
-        const [summaryContent, keywordsText, sentimentJsonText] = await Promise.all(
-            [
-                aiService.generateContent(
-                    aiService.getSummaryPrompt(formattedMessages, fullTranscript)
-                ),
-                aiService.generateContent(aiService.getKeywordsPrompt(formattedMessages)),
-                aiService.generateContent(aiService.getSentimentPrompt(formattedMessages)),
-            ]
+        const rawHistory = (formattedMessages || '').trim();
+        const historyForPrompt = rawHistory.length > 0
+            ? rawHistory
+            : '（チャット履歴はまだ記録されていません）';
+        const transcriptForPrompt = ensureText(
+            truncatedTranscript,
+            '（文字起こしはまだ記録されていません）'
         );
+
+        const summaryContent = await callAiOrFallback(
+            'summary',
+            () =>
+                aiService.generateContent(
+                    aiService.getSummaryPrompt(historyForPrompt, transcriptForPrompt)
+                ),
+            '**要約**\n- 会話データが不足しているため、AI要約を生成できませんでした。\n\n**ネクストアクション**\n- 会話内容やメモを追加し、再度要約を実行してください。'
+        );
+
+        const hasHistoryContent = rawHistory.length > 0;
+
+        let keywordsText = '';
+        if (hasHistoryContent) {
+            keywordsText = await callAiOrFallback(
+                'keywords',
+                () =>
+                    aiService.generateContent(
+                        aiService.getKeywordsPrompt(historyForPrompt)
+                    ),
+                ''
+            );
+        }
+
+        const defaultSentiment = {
+            overall_sentiment: 'Neutral',
+            positive_score: 0,
+            negative_score: 0,
+            neutral_score: 1
+        };
+        let sentimentJsonText = JSON.stringify(defaultSentiment);
+        if (hasHistoryContent) {
+            sentimentJsonText = await callAiOrFallback(
+                'sentiment',
+                () =>
+                    aiService.generateContent(
+                        aiService.getSentimentPrompt(historyForPrompt)
+                    ),
+                JSON.stringify(defaultSentiment)
+            );
+        }
 
         // セクション抽出（既存仕様そのまま）
         const sectionRegex = /\*\*(.+?)\*\*\s*\n([\s\S]*?)(?=\n\*\*|$)/g;
@@ -392,18 +450,36 @@ exports.summarizeConversation = async (req, res) => {
                     ? legacyNextMatch[1].trim()
                     : '';
 
+        const safeSummary =
+            summary && summary.trim().length > 0
+                ? summary.trim()
+                : '**要約**\n- 会話データが不足しているため、AI要約を生成できませんでした。';
+
+        const safeNextActions =
+            nextActions && nextActions.trim().length > 0
+                ? nextActions.trim()
+                : '- 会話内容やメモを増やしてから再度生成をお試しください。';
+
         const keywords = keywordsText
-            .split(',')
-            .map((k) => k.trim())
-            .filter((k) => k.length > 0);
-        const sentimentResult = JSON.parse(
-            sentimentJsonText.replace(/```json\n|```/g, '').trim()
-        );
+            ? keywordsText
+                .split(',')
+                .map((k) => k.trim())
+                .filter((k) => k.length > 0)
+            : [];
+        let sentimentResult;
+        try {
+            sentimentResult = JSON.parse(
+                sentimentJsonText.replace(/```json\n|```/g, '').trim()
+            );
+        } catch (err) {
+            console.error('Failed to parse sentiment JSON:', err);
+            sentimentResult = defaultSentiment;
+        }
 
         await Promise.all([
             conversationModel.updateConversationSummary(
-                summary,
-                nextActions,
+                safeSummary,
+                safeNextActions,
                 conversationId
             ),
             conversationModel.saveKeywords(conversationId, keywords),
@@ -414,7 +490,7 @@ exports.summarizeConversation = async (req, res) => {
             ),
         ]);
 
-        res.json({ summary, nextActions });
+        res.json({ summary: safeSummary, nextActions: safeNextActions });
     } catch (error) {
         console.error('Error summarizing conversation:', error);
         res.status(500).json({ error: 'Failed to summarize conversation.' });
